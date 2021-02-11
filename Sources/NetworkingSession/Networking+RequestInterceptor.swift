@@ -31,8 +31,6 @@ public protocol NetworkingRequestRetrier: class {
     ///   - urlResponse: The failed `urlRequest`'s response.
     ///   - retryCount: The number of times this `urlRequest` has been retried.
     ///   - completion: Pass in a `NetworkingRequestRetrierResult` to the completion block. `NetworkingRequestRetrierResult` determines if the `urlRequest` will be retried or not.
-    ///
-    /// - Returns: The `URLRequest` that is returned is what will be sent over the wire.
     func retry(urlRequest: URLRequest,
                dueTo error: Error,
                urlResponse: HTTPURLResponse,
