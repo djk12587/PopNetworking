@@ -42,8 +42,8 @@ public class NetworkingSessionDataTask {
     }
 
     @discardableResult
-    internal func executeResponseSerializers(with urlResponseDataContainer: DataTaskResponseContainer) -> Self {
-        serializeResponses.forEach { $0(urlResponseDataContainer) }
+    internal func executeResponseSerializers(with dataTaskResponseContainer: DataTaskResponseContainer) -> Self {
+        serializeResponses.forEach { $0(dataTaskResponseContainer) }
 
         return self
     }
@@ -68,22 +68,22 @@ extension NetworkingSessionDataTask {
                                                                                            runUrlRequestCompletionHandlerOn queue: DispatchQueue,
                                                                                            urlRequestCompletionHandler: @escaping (Result<Serializer.SerializedObject, Error>) -> Void) -> ((DataTaskResponseContainer) -> Void) {
 
-        let serializeResponseFunction = { [weak self] (urlResponseDataContainer: DataTaskResponseContainer) in
+        let serializeResponseFunction = { [weak self] (dataTaskResponseContainer: DataTaskResponseContainer) in
             guard let self = self else { return }
 
             let serializerResult: Result<Serializer.SerializedObject, Error> = Result {
                 try serializer.serialize(request: self.request,
-                                         response: urlResponseDataContainer.response,
-                                         data: urlResponseDataContainer.data,
-                                         error: self.urlRequestInitializerError ?? urlResponseDataContainer.error)
+                                         response: dataTaskResponseContainer.response,
+                                         data: dataTaskResponseContainer.data,
+                                         error: self.urlRequestInitializerError ?? dataTaskResponseContainer.error)
             }
 
             //Check if the response contains an error, if not, trigger the completionHandler.
-            guard let error = self.urlRequestInitializerError ?? urlResponseDataContainer.error ?? serializerResult.error,
+            guard let error = self.urlRequestInitializerError ?? dataTaskResponseContainer.error ?? serializerResult.error,
                   let delegate = self.delegate,
                   let retrier = self.requestRetrier,
                   let urlRequest = self.request,
-                  let urlResponse = urlResponseDataContainer.response else {
+                  let urlResponse = dataTaskResponseContainer.response else {
 
                 queue.async { urlRequestCompletionHandler(serializerResult) }
                 return
