@@ -12,6 +12,7 @@ public protocol URLRequestConvertible {
     func asURLRequest() throws -> URLRequest
 }
 
+/// A `NetworkingRoute` encapsulates everything required to build a `URLRequest` and serialize the `URLRequest`'s response into a `Result<ResponseSerializer.SerializedObject, Error>`
 public protocol NetworkingRoute: URLRequestConvertible {
 
     typealias NetworkingRouteHttpHeaders = [String : String]
@@ -21,7 +22,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
     var path: String { get }
     var method: NetworkingRouteHttpMethod { get }
     var headers: NetworkingRouteHttpHeaders? { get }
-    var parameterEncoding: NetworkingRequestParameterEncodingStyle { get }
+    var parameterEncoding: NetworkingRequestParameterEncoding { get }
     var session: NetworkingSession { get }
 
     //--Response Handling--//
@@ -32,7 +33,8 @@ public protocol NetworkingRoute: URLRequestConvertible {
     func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?
 }
 
-public enum NetworkingRequestParameterEncodingStyle {
+/// `NetworkingRequestParameterEncoding` declares how your requests parameters should be added to a `URLRequest`
+public enum NetworkingRequestParameterEncoding {
     case json(params: [String: Any]?)
     case jsonData(encodedParams: Data?)
     case url(params: [String: Any]?)
@@ -45,6 +47,7 @@ public enum NetworkingRouteHttpMethod: String {
     case put
 }
 
+/// Potential errors that can be returned when attempting to create a `URLRequest` from a `NetworkingRoute`
 public enum NetworkingRouteError: Error {
     case invalidUrl
     case jsonParameterEncodingFailed(reason: Error)
