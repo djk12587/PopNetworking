@@ -29,7 +29,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
     var responseSerializer: ResponseSerializer { get }
 
     ///Responsible for turning a NetworkingRoute object into a Result<ResponseSerializer.SerializedObject, Error>
-    func request(completion: @escaping (Swift.Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?
+    func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?
 }
 
 public enum NetworkingRequestParameterEncodingStyle {

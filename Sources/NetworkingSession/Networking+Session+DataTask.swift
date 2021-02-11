@@ -71,12 +71,10 @@ extension NetworkingSessionDataTask {
         let serializeResponseFunction = { [weak self] (dataTaskResponseContainer: DataTaskResponseContainer) in
             guard let self = self else { return }
 
-            let serializerResult: Result<Serializer.SerializedObject, Error> = Result {
-                try serializer.serialize(request: self.request,
-                                         response: dataTaskResponseContainer.response,
-                                         data: dataTaskResponseContainer.data,
-                                         error: self.urlRequestInitializerError ?? dataTaskResponseContainer.error)
-            }
+            let serializerResult = serializer.serialize(request: self.request,
+                                                        response: dataTaskResponseContainer.response,
+                                                        data: dataTaskResponseContainer.data,
+                                                        error: self.urlRequestInitializerError ?? dataTaskResponseContainer.error)
 
             //Check if the response contains an error, if not, trigger the completionHandler.
             guard let error = self.urlRequestInitializerError ?? dataTaskResponseContainer.error ?? serializerResult.error,

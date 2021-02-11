@@ -22,15 +22,17 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) throws -> SerializedObject {
+        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
 
-            guard let data = data else { throw ResponseSerializerError.noData }
+            if let error = error { return .failure(error) }
+            guard let data = data else { return .failure(ResponseSerializerError.noData) }
 
             do {
-                return try jsonDecoder.decode(SerializedObject.self, from: data)
+                let serializedOjbect = try jsonDecoder.decode(SerializedObject.self, from: data)
+                return .success(serializedOjbect)
             }
             catch let serializedObjectError {
-                throw (try? jsonDecoder.decode(SerializedErrorObject.self, from: data)) ?? serializedObjectError
+                return .failure((try? jsonDecoder.decode(SerializedErrorObject.self, from: data)) ?? serializedObjectError)
             }
         }
 
@@ -44,9 +46,10 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) throws -> SerializedObject {
-            guard let response = response else { throw ResponseSerializerError.httpResponseCodeMissing }
-            return response.statusCode
+        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+            if let error = error { return .failure(error) }
+            guard let response = response else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
+            return .success(response.statusCode)
         }
 
         public enum ResponseSerializerError: Error {
@@ -59,9 +62,10 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) throws -> SerializedObject {
-            guard let data = data else { throw ResponseSerializerError.noData }
-            return data
+        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+            if let error = error { return .failure(error) }
+            guard let data = data else { return .failure(ResponseSerializerError.noData) }
+            return .success(data)
         }
 
         public enum ResponseSerializerError: Error {

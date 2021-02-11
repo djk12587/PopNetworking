@@ -19,9 +19,8 @@ public protocol NetworkingResponseSerializer {
     ///   - request:  `URLRequest` which was used to perform the request, if any.
     ///   - response: `HTTPURLResponse` received from the server, if any.
     ///   - data:     `Data` returned from the server, if any.
-    ///   - error:    `Error` produced by CrustyNetworking or the underlying `URLSession` during the request.
+    ///   - error:    `Error` produced by CrustyNetworking or the underlying `URLSession` during the request. Its normally best practice to throw the error if it is not nil.
     ///
-    /// - Returns:    The `SerializedObject`.
-    /// - Throws:     Any `Error` produced during serialization.
-    func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) throws -> SerializedObject
+    /// - Returns:    A Result<`SerializedObject`, Error>. Whatever is returned will be sent to your requests completion handler.
+    func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error>
 }
