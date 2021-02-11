@@ -9,14 +9,13 @@
 import Foundation
 
 public extension NetworkingRoute {
-
-    var headers: [String: String]? { nil }
+    var headers: NetworkingRouteHttpHeaders? { nil }
     var session: NetworkingSession { NetworkingSession() }
-    var jsonResponseDecoder: JSONDecoder? { nil }
 }
 
 extension NetworkingRoute {
 
+    /// This is a default implementation. If you require a custom implementation, you can implement your own `func asURLRequest() throws -> URLRequest`
     public func asURLRequest() throws -> URLRequest {
 
         guard let url = Foundation.URL(string: baseURL)?.appendingPathComponent(path) else {
@@ -42,6 +41,7 @@ extension NetworkingRoute {
         return mutableRequest
     }
 
+    /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?`
     @discardableResult
     public func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask? {
         return session
