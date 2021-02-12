@@ -1,3 +1,3 @@
-# CrustyNetworking
+# PopNetworking
 
-A protocol oriented HTTP CRUD networking layer
+PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for protocol-oriented programming.
