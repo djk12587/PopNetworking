@@ -45,6 +45,7 @@ public enum NetworkingRouteHttpMethod: String {
     case post
     case delete
     case put
+    case patch
 }
 
 /// Potential errors that can be returned when attempting to create a `URLRequest` from a `NetworkingRoute`
