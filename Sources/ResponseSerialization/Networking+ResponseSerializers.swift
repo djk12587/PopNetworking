@@ -10,6 +10,7 @@ import Foundation
 
 public enum NetworkingResponseSerializers {
 
+    ///Attempts to parse response `Data` into a decodable object of type `ResponseType` or a decodable error of type `ResponseErrorType`
     public class DecodableResponseSerializer<ResponseType: Decodable,
                                              ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
 
@@ -33,6 +34,32 @@ public enum NetworkingResponseSerializers {
             }
             catch let serializedObjectError {
                 return .failure((try? jsonDecoder.decode(SerializedErrorObject.self, from: data)) ?? serializedObjectError)
+            }
+        }
+
+        public enum ResponseSerializerError: Error {
+            case noData
+        }
+    }
+
+    ///Attempts to parse response `Data` into a decodable object of type `ResponseType` This class does not parse errors. To parse errors use `DecodableResponseSerializer`
+    public class DecodableResponseNoErrorSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
+
+        public typealias SerializedObject = ResponseType
+
+        private let jsonDecoder: JSONDecoder
+
+        public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
+            self.jsonDecoder = jsonDecoder
+        }
+
+        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+
+            if let error = error { return .failure(error) }
+            guard let data = data else { return .failure(ResponseSerializerError.noData) }
+
+            return Result {
+                try jsonDecoder.decode(SerializedObject.self, from: data)
             }
         }
 
