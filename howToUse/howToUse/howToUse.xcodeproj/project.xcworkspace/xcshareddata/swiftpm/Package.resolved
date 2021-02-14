@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "PopNetworking",
+        "repositoryURL": "https://github.com/djk12587/PopNetworking",
+        "state": {
+          "branch": "adding-a-sample-app",
+          "revision": "0442564dcc35d55138ba7700ef3118419b42cf49",
+          "version": null
+        }
+      }
+    ]
+  },
+  "version": 1
+}
