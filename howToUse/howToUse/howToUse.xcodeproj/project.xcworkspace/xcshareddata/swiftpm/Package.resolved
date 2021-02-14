@@ -5,9 +5,9 @@
         "package": "PopNetworking",
         "repositoryURL": "https://github.com/djk12587/PopNetworking",
         "state": {
-          "branch": "adding-a-sample-app",
-          "revision": "0442564dcc35d55138ba7700ef3118419b42cf49",
-          "version": null
+          "branch": null,
+          "revision": "3fefffcb238c3cb386fcebf5f59ecff60c0c5700",
+          "version": "0.0.4"
         }
       }
     ]

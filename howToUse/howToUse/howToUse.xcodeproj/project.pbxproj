@@ -443,8 +443,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/djk12587/PopNetworking";
 			requirement = {
-				branch = "adding-a-sample-app";
-				kind = branch;
+				kind = exactVersion;
+				version = 0.0.4;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
