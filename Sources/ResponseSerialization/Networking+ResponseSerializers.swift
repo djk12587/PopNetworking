@@ -11,8 +11,8 @@ import Foundation
 public enum NetworkingResponseSerializers {
 
     ///Attempts to parse response `Data` into a decodable object of type `ResponseType` or a decodable error of type `ResponseErrorType`
-    public class DecodableResponseSerializer<ResponseType: Decodable,
-                                             ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
+    public class DecodableResponseWithErrorSerializer<ResponseType: Decodable,
+                                                      ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
 
         public typealias SerializedObject = ResponseType
         public typealias SerializedErrorObject = ResponseErrorType
@@ -43,7 +43,7 @@ public enum NetworkingResponseSerializers {
     }
 
     ///Attempts to parse response `Data` into a decodable object of type `ResponseType` This class does not parse errors. To parse errors use `DecodableResponseSerializer`
-    public class DecodableResponseNoErrorSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
+    public class DecodableResponseSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
 
         public typealias SerializedObject = ResponseType
 
