@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:">
+      location = "self:/Users/dankoza/Documents/Development/PopNetworking/example/exampleApp.xcodeproj">
    </FileRef>
 </Workspace>

@@ -29,7 +29,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		E07A5F0E25D9C5B2008AC835 /* howToUse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = howToUse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E07A5F0E25D9C5B2008AC835 /* exampleApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = exampleApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E07A5F1125D9C5B2008AC835 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E07A5F1325D9C5B2008AC835 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		E07A5F1525D9C5B2008AC835 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -66,7 +66,7 @@
 		E07A5F0525D9C5B2008AC835 = {
 			isa = PBXGroup;
 			children = (
-				E07A5F1025D9C5B2008AC835 /* howToUse */,
+				E07A5F1025D9C5B2008AC835 /* exampleApp */,
 				E07A5F0F25D9C5B2008AC835 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -74,12 +74,12 @@
 		E07A5F0F25D9C5B2008AC835 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E07A5F0E25D9C5B2008AC835 /* howToUse.app */,
+				E07A5F0E25D9C5B2008AC835 /* exampleApp.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		E07A5F1025D9C5B2008AC835 /* howToUse */ = {
+		E07A5F1025D9C5B2008AC835 /* exampleApp */ = {
 			isa = PBXGroup;
 			children = (
 				E07A5F2A25D9C7AD008AC835 /* API */,
@@ -90,7 +90,7 @@
 				E07A5F1325D9C5B2008AC835 /* SceneDelegate.swift */,
 				E07A5F1525D9C5B2008AC835 /* ViewController.swift */,
 			);
-			path = howToUse;
+			path = exampleApp;
 			sourceTree = "<group>";
 		};
 		E07A5F2A25D9C7AD008AC835 /* API */ = {
@@ -156,9 +156,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E07A5F0D25D9C5B2008AC835 /* howToUse */ = {
+		E07A5F0D25D9C5B2008AC835 /* exampleApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E07A5F2225D9C5B4008AC835 /* Build configuration list for PBXNativeTarget "howToUse" */;
+			buildConfigurationList = E07A5F2225D9C5B4008AC835 /* Build configuration list for PBXNativeTarget "exampleApp" */;
 			buildPhases = (
 				E07A5F0A25D9C5B2008AC835 /* Sources */,
 				E07A5F0B25D9C5B2008AC835 /* Frameworks */,
@@ -168,12 +168,12 @@
 			);
 			dependencies = (
 			);
-			name = howToUse;
+			name = exampleApp;
 			packageProductDependencies = (
 				E07A5F2725D9C780008AC835 /* PopNetworking */,
 			);
 			productName = howToUse;
-			productReference = E07A5F0E25D9C5B2008AC835 /* howToUse.app */;
+			productReference = E07A5F0E25D9C5B2008AC835 /* exampleApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -190,7 +190,7 @@
 					};
 				};
 			};
-			buildConfigurationList = E07A5F0925D9C5B2008AC835 /* Build configuration list for PBXProject "howToUse" */;
+			buildConfigurationList = E07A5F0925D9C5B2008AC835 /* Build configuration list for PBXProject "exampleApp" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -206,7 +206,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E07A5F0D25D9C5B2008AC835 /* howToUse */,
+				E07A5F0D25D9C5B2008AC835 /* exampleApp */,
 			);
 		};
 /* End PBXProject section */
@@ -384,7 +384,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6QCBR94VEX;
-				INFOPLIST_FILE = "howToUse/Supporting Files/Info.plist";
+				INFOPLIST_FILE = "exampleApp/Supporting Files/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -403,7 +403,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6QCBR94VEX;
-				INFOPLIST_FILE = "howToUse/Supporting Files/Info.plist";
+				INFOPLIST_FILE = "exampleApp/Supporting Files/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -418,7 +418,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E07A5F0925D9C5B2008AC835 /* Build configuration list for PBXProject "howToUse" */ = {
+		E07A5F0925D9C5B2008AC835 /* Build configuration list for PBXProject "exampleApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E07A5F2025D9C5B4008AC835 /* Debug */,
@@ -427,7 +427,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E07A5F2225D9C5B4008AC835 /* Build configuration list for PBXNativeTarget "howToUse" */ = {
+		E07A5F2225D9C5B4008AC835 /* Build configuration list for PBXNativeTarget "exampleApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E07A5F2325D9C5B4008AC835 /* Debug */,
