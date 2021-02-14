@@ -4,3 +4,6 @@
 /*.xcodeproj
 xcuserdata/
 .swiftpm
+
+example/*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+example/*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
