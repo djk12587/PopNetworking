@@ -20,6 +20,8 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "PopNetworking",
-            path: "Sources")
+            path: "Sources",
+            exclude: ["example"] //This prevents the sample app from being added to your target.
+        )
     ]
 )
