@@ -10,7 +10,7 @@ import Foundation
 
 public extension NetworkingRoute {
     var headers: NetworkingRouteHttpHeaders? { nil }
-    var session: NetworkingSession { NetworkingSession() }
+    var session: NetworkingSession { NetworkingSession.shared }
 }
 
 extension NetworkingRoute {
