@@ -10,6 +10,15 @@ import Foundation
 
 // MARK: - NetworkingSession
 
+public extension NetworkingSession {
+    /// The shared singleton `NetworkingSession` object.
+    ///
+    /// For basic requests, the `NetworkingSession` class provides a shared singleton session object that gives you a reasonable default behavior for creating tasks.
+    ///
+    /// Unlike the other session types, you don’t create the shared session; you merely access it by using this property directly. As a result, you don’t provide a `URLSession` object, `NetworkingRequestAdapter`, or `NetworkingRequestRetrier`.
+    static let shared = NetworkingSession()
+}
+
 public class NetworkingSession {
 
     private let session: URLSession
