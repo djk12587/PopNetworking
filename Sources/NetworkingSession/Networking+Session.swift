@@ -84,7 +84,6 @@ extension NetworkingSession {
             return
         }
 
-
         requestRetrier.retry(urlRequest: urlRequest,
                              dueTo: error,
                              urlResponse: HTTPURLResponse(),
