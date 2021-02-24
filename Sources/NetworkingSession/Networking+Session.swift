@@ -34,23 +34,10 @@ public class NetworkingSession {
         self.requestRetrier = requestRetrier
     }
 
-    public func start(request requestConvertible: URLRequestConvertible) -> NetworkingSessionDataTask {
-
-        do {
-            let urlRequest = try requestConvertible.asURLRequest()
-            let networkingSessionDataTask = NetworkingSessionDataTask(request: urlRequest,
-                                                                      requestRetrier: requestRetrier,
-                                                                      delegate: self)
-            start(urlRequest, accompaniedWith: networkingSessionDataTask)
-            return networkingSessionDataTask
-        }
-        catch {
-            let networkingSessionDataTask = NetworkingSessionDataTask(request: nil,
-                                                                      requestRetrier: requestRetrier,
-                                                                      delegate: self)
-            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
-            return networkingSessionDataTask
-        }
+    public func createDataTask(from requestConvertible: URLRequestConvertible) -> NetworkingSessionDataTask {
+        return NetworkingSessionDataTask(requestConvertible: requestConvertible,
+                                         requestRetrier: requestRetrier,
+                                         delegate: self)
     }
 }
 
@@ -62,7 +49,7 @@ extension NetworkingSession {
             execute(adaptedRequest ?? urlRequest, accompaniedWith: networkingSessionDataTask)
         }
         catch {
-            attemptToRetry(urlRequest: urlRequest, becauseOf: error, accompaniedWith: networkingSessionDataTask)
+            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
         }
     }
 
@@ -78,38 +65,24 @@ extension NetworkingSession {
         dataTask.resume()
     }
 
-    private func attemptToRetry(urlRequest: URLRequest, becauseOf error: Error, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
-        guard let requestRetrier = requestRetrier else {
-            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
-            return
-        }
-
-        requestRetrier.retry(urlRequest: urlRequest,
-                             dueTo: error,
-                             urlResponse: HTTPURLResponse(),
-                             retryCount: networkingSessionDataTask.retryCount) { retryResult in
-            switch retryResult {
-                case .doNotRetry:
-                    self.executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
-
-                case .retry:
-                    networkingSessionDataTask.incrementRetryCount()
-                    self.start(urlRequest, accompaniedWith: networkingSessionDataTask)
-            }
-        }
-    }
-
     private func executeResponseSerializers(on networkingSessionDataTask: NetworkingSessionDataTask, becauseOf error: Error?) {
-        DispatchQueue.global(qos: .userInteractive).async {
-            networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
-                                                                                                 data: nil,
-                                                                                                 error: error))
-        }
+        networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
+                                                                                             data: nil,
+                                                                                             error: error))
     }
 }
 
 extension NetworkingSession: NetworkingSessionDataTaskDelegate {
     internal func restart(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
         start(urlRequest, accompaniedWith: networkingSessionDataTask)
+    }
+
+    internal func networkingSessionDataTaskIsReadyToExecute(networkingSessionDataTask: NetworkingSessionDataTask) {
+        if let urlRequest = networkingSessionDataTask.request {
+            start(urlRequest, accompaniedWith: networkingSessionDataTask)
+        }
+        else {
+            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: networkingSessionDataTask.urlRequestConvertibleError)
+        }
     }
 }
