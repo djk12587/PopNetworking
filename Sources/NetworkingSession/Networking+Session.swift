@@ -36,6 +36,7 @@ public class NetworkingSession {
 
     public func createDataTask(from requestConvertible: URLRequestConvertible) -> NetworkingSessionDataTask {
         return NetworkingSessionDataTask(requestConvertible: requestConvertible,
+                                         requestAdapter: requestAdapter,
                                          requestRetrier: requestRetrier,
                                          delegate: self)
     }
@@ -44,13 +45,7 @@ public class NetworkingSession {
 extension NetworkingSession {
 
     private func start(_ urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
-        do {
-            let adaptedRequest = try requestAdapter?.adapt(urlRequest: urlRequest, for: session)
-            execute(adaptedRequest ?? urlRequest, accompaniedWith: networkingSessionDataTask)
-        }
-        catch {
-            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
-        }
+        execute(urlRequest, accompaniedWith: networkingSessionDataTask)
     }
 
     private func execute(_ urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
@@ -64,12 +59,6 @@ extension NetworkingSession {
         networkingSessionDataTask.dataTask = dataTask
         dataTask.resume()
     }
-
-    private func executeResponseSerializers(on networkingSessionDataTask: NetworkingSessionDataTask, becauseOf error: Error?) {
-        networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
-                                                                                             data: nil,
-                                                                                             error: error))
-    }
 }
 
 extension NetworkingSession: NetworkingSessionDataTaskDelegate {
@@ -77,12 +66,7 @@ extension NetworkingSession: NetworkingSessionDataTaskDelegate {
         start(urlRequest, accompaniedWith: networkingSessionDataTask)
     }
 
-    internal func networkingSessionDataTaskIsReadyToExecute(networkingSessionDataTask: NetworkingSessionDataTask) {
-        if let urlRequest = networkingSessionDataTask.request {
-            start(urlRequest, accompaniedWith: networkingSessionDataTask)
-        }
-        else {
-            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: networkingSessionDataTask.urlRequestConvertibleError)
-        }
+    internal func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
+        start(urlRequest, accompaniedWith: networkingSessionDataTask)
     }
 }

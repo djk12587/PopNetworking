@@ -11,15 +11,14 @@ import Foundation
 /// A common use case for a `NetworkingRequestInterceptor` is to reauthenticate an expired OAuth token.
 public protocol NetworkingRequestInterceptor: NetworkingRequestAdapter & NetworkingRequestRetrier {}
 
-public protocol NetworkingRequestAdapter {
+public protocol NetworkingRequestAdapter: class {
     /// Allows you to adapt, or modify, the `URLRequest` before it gets sent over the wire.
     ///
     /// - Parameters:
     ///   - urlRequest: Modify this `URLRequest` object if necessary. If no modifications are required simply return the `urlRequest`.
-    ///   - session: This is the `URLSession` that the `urlRequest` will be sent over the wire on.
     ///
     /// - Returns: The `URLRequest` that is returned is what will be sent over the wire. Any errors thrown here will attempt to call the `NetworkingRequestRetrier` `retry()` function
-    func adapt(urlRequest: URLRequest, for session: URLSession) throws -> URLRequest
+    func adapt(urlRequest: URLRequest) throws -> URLRequest
 }
 
 public protocol NetworkingRequestRetrier: class {
