@@ -62,7 +62,7 @@ extension NetworkingSession {
             execute(adaptedRequest ?? urlRequest, accompaniedWith: networkingSessionDataTask)
         }
         catch {
-            attemptToRetry(urlRequest: urlRequest, becauseOf: error, accompaniedWith: networkingSessionDataTask)
+            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
         }
     }
 
@@ -76,27 +76,6 @@ extension NetworkingSession {
 
         networkingSessionDataTask.dataTask = dataTask
         dataTask.resume()
-    }
-
-    private func attemptToRetry(urlRequest: URLRequest, becauseOf error: Error, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
-        guard let requestRetrier = requestRetrier else {
-            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
-            return
-        }
-
-        requestRetrier.retry(urlRequest: urlRequest,
-                             dueTo: error,
-                             urlResponse: HTTPURLResponse(),
-                             retryCount: networkingSessionDataTask.retryCount) { retryResult in
-            switch retryResult {
-                case .doNotRetry:
-                    self.executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
-
-                case .retry:
-                    networkingSessionDataTask.incrementRetryCount()
-                    self.start(urlRequest, accompaniedWith: networkingSessionDataTask)
-            }
-        }
     }
 
     private func executeResponseSerializers(on networkingSessionDataTask: NetworkingSessionDataTask, becauseOf error: Error?) {
