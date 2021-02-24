@@ -17,7 +17,7 @@ public class NetworkingSessionDataTask {
     internal var dataTask: URLSessionDataTask? = nil
 
     private(set) var urlRequestInitializerError: Error?
-    private var retryCount = 0
+    private(set) var retryCount = 0
     private weak var requestRetrier: NetworkingRequestRetrier?
     private weak var delegate: NetworkingSessionDataTaskDelegate?
 
@@ -42,13 +42,6 @@ public class NetworkingSessionDataTask {
     }
 
     @discardableResult
-    internal func executeResponseSerializers(with dataTaskResponseContainer: DataTaskResponseContainer) -> Self {
-        serializeResponses.forEach { $0(dataTaskResponseContainer) }
-
-        return self
-    }
-
-    @discardableResult
     public func response<Serializer: NetworkingResponseSerializer>(serializer: Serializer,
                                                                    runCompletionHandlerOn queue: DispatchQueue = .main,
                                                                    completionHandler: @escaping (Result<Serializer.SerializedObject, Error>) -> Void) -> Self {
@@ -59,6 +52,17 @@ public class NetworkingSessionDataTask {
         serializeResponses.append(serializeResponseFunction)
 
         return self
+    }
+
+    @discardableResult
+    internal func executeResponseSerializers(with dataTaskResponseContainer: DataTaskResponseContainer) -> Self {
+        serializeResponses.forEach { $0(dataTaskResponseContainer) }
+
+        return self
+    }
+
+    internal func incrementRetryCount() {
+        retryCount += 1
     }
 }
 
@@ -97,7 +101,7 @@ extension NetworkingSessionDataTask {
                     case .doNotRetry:
                         queue.async { urlRequestCompletionHandler(serializerResult) }
                     case .retry:
-                        self.retryCount += 1
+                        self.incrementRetryCount()
                         delegate.restart(networkingSessionDataTask: self)
                 }
             }
