@@ -39,5 +39,5 @@ public protocol NetworkingRequestRetrier: class {
 
 public enum NetworkingRequestRetrierResult {
     case retry
-    case doNotRetry(error: Error)
+    case doNotRetry
 }
