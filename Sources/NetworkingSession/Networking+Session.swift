@@ -48,11 +48,7 @@ extension NetworkingSession {
     private func start(networkingSessionDataTask: NetworkingSessionDataTask) {
 
         guard let urlRequest = networkingSessionDataTask.request else {
-            DispatchQueue.global(qos: .userInteractive).async {
-                networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
-                                                                                                     data: nil,
-                                                                                                     error: nil))
-            }
+            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: nil)
             return
         }
 
@@ -69,11 +65,8 @@ extension NetworkingSession {
                     self.execute(adaptedUrlRequest, accompaniedWith: networkingSessionDataTask)
 
                 case .failure(let error):
-                    DispatchQueue.global(qos: .userInteractive).async {
-                        networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
-                                                                                                             data: nil,
-                                                                                                             error: error))
-                    }
+                    networkingSessionDataTask.incrementRetryCount()
+                    self.attemptToRetry(urlRequest: urlRequest, becauseOf: error, accompaniedWith: networkingSessionDataTask)
             }
         }
     }
@@ -88,6 +81,36 @@ extension NetworkingSession {
 
         networkingSessionDataTask.dataTask = dataTask
         dataTask.resume()
+    }
+
+    private func attemptToRetry(urlRequest: URLRequest, becauseOf error: Error, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
+        guard let requestRetrier = self.requestRetrier else {
+            executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
+            return
+        }
+
+
+        requestRetrier.retry(urlRequest: urlRequest,
+                             dueTo: error,
+                             urlResponse: HTTPURLResponse(),
+                             retryCount: networkingSessionDataTask.retryCount) { retryResult in
+            switch retryResult {
+                case .doNotRetry:
+                    self.executeResponseSerializers(on: networkingSessionDataTask, becauseOf: error)
+
+                case .retry:
+                    networkingSessionDataTask.incrementRetryCount()
+                    self.start(networkingSessionDataTask: networkingSessionDataTask)
+            }
+        }
+    }
+
+    private func executeResponseSerializers(on networkingSessionDataTask: NetworkingSessionDataTask, becauseOf error: Error?) {
+        DispatchQueue.global(qos: .userInteractive).async {
+            networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
+                                                                                                 data: nil,
+                                                                                                 error: error))
+        }
     }
 }
 
