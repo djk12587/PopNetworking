@@ -65,7 +65,6 @@ extension NetworkingSession {
                     self.execute(adaptedUrlRequest, accompaniedWith: networkingSessionDataTask)
 
                 case .failure(let error):
-                    networkingSessionDataTask.incrementRetryCount()
                     self.attemptToRetry(urlRequest: urlRequest, becauseOf: error, accompaniedWith: networkingSessionDataTask)
             }
         }
