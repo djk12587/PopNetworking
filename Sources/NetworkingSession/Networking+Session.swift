@@ -62,10 +62,6 @@ extension NetworkingSession {
 }
 
 extension NetworkingSession: NetworkingSessionDataTaskDelegate {
-    internal func restart(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
-        start(urlRequest, accompaniedWith: networkingSessionDataTask)
-    }
-
     internal func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
         start(urlRequest, accompaniedWith: networkingSessionDataTask)
     }
