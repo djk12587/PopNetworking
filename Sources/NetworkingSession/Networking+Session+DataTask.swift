@@ -8,7 +8,7 @@
 import Foundation
 
 internal protocol NetworkingSessionDataTaskDelegate: class {
-    func restart(networkingSessionDataTask: NetworkingSessionDataTask)
+    func restart(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask)
 }
 
 public class NetworkingSessionDataTask {
@@ -16,7 +16,6 @@ public class NetworkingSessionDataTask {
     internal var request: URLRequest?
     internal var dataTask: URLSessionDataTask? = nil
 
-    private(set) var urlRequestInitializerError: Error?
     private(set) var retryCount = 0
     private weak var requestRetrier: NetworkingRequestRetrier?
     private weak var delegate: NetworkingSessionDataTaskDelegate?
@@ -25,20 +24,13 @@ public class NetworkingSessionDataTask {
 
     public var task: URLSessionTask? { dataTask }
 
-    internal init(requestConvertible: URLRequestConvertible,
+    internal init(request: URLRequest?,
                   requestRetrier: NetworkingRequestRetrier? = nil,
                   delegate: NetworkingSessionDataTaskDelegate? = nil) {
 
         self.delegate = delegate
         self.requestRetrier = requestRetrier
-
-        do {
-            self.request = try requestConvertible.asURLRequest()
-        }
-        catch {
-            self.urlRequestInitializerError = error
-            self.request = nil
-        }
+        self.request = request
     }
 
     @discardableResult
@@ -78,10 +70,10 @@ extension NetworkingSessionDataTask {
             let serializerResult = serializer.serialize(request: self.request,
                                                         response: dataTaskResponseContainer.response,
                                                         data: dataTaskResponseContainer.data,
-                                                        error: self.urlRequestInitializerError ?? dataTaskResponseContainer.error)
+                                                        error: dataTaskResponseContainer.error)
 
             //Check if the response contains an error, if not, trigger the completionHandler.
-            guard let error = self.urlRequestInitializerError ?? dataTaskResponseContainer.error ?? serializerResult.error,
+            guard let error = dataTaskResponseContainer.error ?? serializerResult.error,
                   let delegate = self.delegate,
                   let retrier = self.requestRetrier,
                   let urlRequest = self.request,
@@ -102,7 +94,7 @@ extension NetworkingSessionDataTask {
                         queue.async { urlRequestCompletionHandler(serializerResult) }
                     case .retry:
                         self.incrementRetryCount()
-                        delegate.restart(networkingSessionDataTask: self)
+                        delegate.restart(urlRequest: urlRequest, accompaniedWith: self)
                 }
             }
         }
