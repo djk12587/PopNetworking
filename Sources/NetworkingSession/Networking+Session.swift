@@ -40,13 +40,6 @@ public class NetworkingSession {
                                          requestRetrier: requestRetrier,
                                          delegate: self)
     }
-}
-
-extension NetworkingSession {
-
-    private func start(_ urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
-        execute(urlRequest, accompaniedWith: networkingSessionDataTask)
-    }
 
     private func execute(_ urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
 
@@ -63,6 +56,6 @@ extension NetworkingSession {
 
 extension NetworkingSession: NetworkingSessionDataTaskDelegate {
     internal func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
-        start(urlRequest, accompaniedWith: networkingSessionDataTask)
+        execute(urlRequest, accompaniedWith: networkingSessionDataTask)
     }
 }

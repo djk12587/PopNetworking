@@ -83,10 +83,9 @@ public class NetworkingSessionDataTask {
 
         return self
     }
+}
 
-    private func incrementRetryCount() {
-        retryCount += 1
-    }
+extension NetworkingSessionDataTask {
 
     private func runAdapter(urlRequest: URLRequest) throws -> URLRequest? {
         do {
@@ -97,9 +96,6 @@ public class NetworkingSessionDataTask {
             throw error
         }
     }
-}
-
-extension NetworkingSessionDataTask {
 
     private func createSerializeResponseFunction<Serializer: NetworkingResponseSerializer>(serializer: Serializer,
                                                                                            runUrlRequestCompletionHandlerOn queue: DispatchQueue,
@@ -132,7 +128,7 @@ extension NetworkingSessionDataTask {
                     case .doNotRetry:
                         queue.async { urlRequestCompletionHandler(serializerResult) }
                     case .retry:
-                        self.incrementRetryCount()
+                        self.retryCount += 1
                         self.execute()
                 }
             }
