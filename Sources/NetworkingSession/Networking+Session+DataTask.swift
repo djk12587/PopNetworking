@@ -57,16 +57,15 @@ public class NetworkingSessionDataTask {
     public func execute() -> NetworkingSessionDataTask {
 
         do {
-            let adaptedUrlRequest: URLRequest
-
+            let request: URLRequest
             if let urlRequest = self.mostUpToDateRequest {
-                adaptedUrlRequest = urlRequest
+                request = urlRequest
             }
             else {
-                adaptedUrlRequest = try requestConvertible.asURLRequest()
+                request = try requestConvertible.asURLRequest()
             }
 
-            delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: adaptedUrlRequest, accompaniedWith: self)
+            delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: try runAdapter(urlRequest: request) ?? request, accompaniedWith: self)
         }
         catch {
             executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
