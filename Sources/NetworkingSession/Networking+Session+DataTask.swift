@@ -76,8 +76,7 @@ extension NetworkingSessionDataTask {
             guard let error = dataTaskResponseContainer.error ?? serializerResult.error,
                   let delegate = self.delegate,
                   let retrier = self.requestRetrier,
-                  let urlRequest = self.request,
-                  let urlResponse = dataTaskResponseContainer.response else {
+                  let urlRequest = self.request else {
 
                 queue.async { urlRequestCompletionHandler(serializerResult) }
                 return
@@ -86,7 +85,7 @@ extension NetworkingSessionDataTask {
             //If there is an error, we now ask the retrier if the failed request should be restarted or not
             retrier.retry(urlRequest: urlRequest,
                           dueTo: error,
-                          urlResponse: urlResponse,
+                          urlResponse: dataTaskResponseContainer.response ?? HTTPURLResponse(),
                           retryCount: self.retryCount) { retrierResult in
 
                 switch retrierResult {
