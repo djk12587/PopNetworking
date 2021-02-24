@@ -63,6 +63,7 @@ public class NetworkingSessionDataTask {
             }
             else {
                 request = try requestConvertible.asURLRequest()
+                originalRequest = request
             }
 
             delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: try runAdapter(urlRequest: request) ?? request, accompaniedWith: self)
