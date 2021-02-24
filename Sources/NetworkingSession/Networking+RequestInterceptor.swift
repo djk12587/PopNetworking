@@ -17,7 +17,7 @@ public protocol NetworkingRequestAdapter {
     /// - Parameters:
     ///   - urlRequest: Modify this `URLRequest` object if necessary. If no modifications are required simply return the `urlRequest`.
     ///   - session: This is the `URLSession` that the `urlRequest` will be sent over the wire on.
-    ///   - completion: The `Result<URLRequest, Error>` will either fire off the passed in `URLRequest`, or throw the `Error`
+    ///   - completion: The `Result<URLRequest, Error>` will either fire off the passed in `URLRequest`, or throw the `Error`. Errors passed into the completion block will not trigger the `NetworkingRequestRetrier` retry function
     func adapt(urlRequest: URLRequest, for session: URLSession, completion: @escaping (Result<URLRequest, Error>) -> Void)
 }
 
