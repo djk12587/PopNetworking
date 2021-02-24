@@ -8,17 +8,21 @@
 import Foundation
 
 internal protocol NetworkingSessionDataTaskDelegate: class {
-    func networkingSessionDataTaskIsReadyToExecute(networkingSessionDataTask: NetworkingSessionDataTask)
+    func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask)
     func restart(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask)
 }
 
 public class NetworkingSessionDataTask {
 
-    internal var request: URLRequest?
+    private let requestConvertible: URLRequestConvertible
+    private var originalRequest: URLRequest?
+    private var adaptedRequest: URLRequest?
+    private var mostUpToDateRequest: URLRequest? { adaptedRequest ?? originalRequest }
+
     internal var dataTask: URLSessionDataTask? = nil
 
-    internal let urlRequestConvertibleError: Error?
     private(set) var retryCount = 0
+    private weak var requestAdapter: NetworkingRequestAdapter?
     private weak var requestRetrier: NetworkingRequestRetrier?
     private weak var delegate: NetworkingSessionDataTaskDelegate?
 
@@ -26,21 +30,15 @@ public class NetworkingSessionDataTask {
 
     public var task: URLSessionTask? { dataTask }
 
-    internal init(requestConvertible: URLRequestConvertible?,
-                  requestRetrier: NetworkingRequestRetrier? = nil,
+    internal init(requestConvertible: URLRequestConvertible,
+                  requestAdapter: NetworkingRequestAdapter?,
+                  requestRetrier: NetworkingRequestRetrier?,
                   delegate: NetworkingSessionDataTaskDelegate) {
 
+        self.requestConvertible = requestConvertible
         self.delegate = delegate
+        self.requestAdapter = requestAdapter
         self.requestRetrier = requestRetrier
-
-        do {
-            request = try requestConvertible?.asURLRequest()
-            urlRequestConvertibleError = nil
-        }
-        catch {
-            request = nil
-            urlRequestConvertibleError = error
-        }
     }
 
     @discardableResult
@@ -58,7 +56,19 @@ public class NetworkingSessionDataTask {
 
     @discardableResult
     public func execute() -> NetworkingSessionDataTask {
-        delegate?.networkingSessionDataTaskIsReadyToExecute(networkingSessionDataTask: self)
+
+        do {
+            let urlRequest = try requestConvertible.asURLRequest()
+            self.originalRequest = urlRequest
+            self.adaptedRequest = try requestAdapter?.adapt(urlRequest: urlRequest)
+            delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: self.mostUpToDateRequest ?? urlRequest, accompaniedWith: self)
+        }
+        catch {
+            executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
+                                                                       data: nil,
+                                                                       error: error))
+        }
+
         return self
     }
 
@@ -69,7 +79,7 @@ public class NetworkingSessionDataTask {
         return self
     }
 
-    internal func incrementRetryCount() {
+    private func incrementRetryCount() {
         retryCount += 1
     }
 }
@@ -83,7 +93,7 @@ extension NetworkingSessionDataTask {
         let serializeResponseFunction = { [weak self] (dataTaskResponseContainer: DataTaskResponseContainer) in
             guard let self = self else { return }
 
-            let serializerResult = serializer.serialize(request: self.request,
+            let serializerResult = serializer.serialize(request: self.mostUpToDateRequest,
                                                         response: dataTaskResponseContainer.response,
                                                         data: dataTaskResponseContainer.data,
                                                         error: dataTaskResponseContainer.error)
@@ -92,7 +102,7 @@ extension NetworkingSessionDataTask {
             guard let error = dataTaskResponseContainer.error ?? serializerResult.error,
                   let delegate = self.delegate,
                   let retrier = self.requestRetrier,
-                  let urlRequest = self.request else {
+                  let urlRequest = self.mostUpToDateRequest else {
 
                 queue.async { urlRequestCompletionHandler(serializerResult) }
                 return
