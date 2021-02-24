@@ -45,8 +45,9 @@ extension NetworkingRoute {
     @discardableResult
     public func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask? {
         return session
-            .start(request: self)
-            .response(serializer: responseSerializer, runCompletionHandlerOn: .main, completionHandler: completion)
+            .createDataTask(from: self)
+            .appendResponse(serializer: responseSerializer, runCompletionHandlerOn: .main, completionHandler: completion)
+            .execute()
             .task
     }
 }
