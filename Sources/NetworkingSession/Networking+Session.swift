@@ -47,7 +47,7 @@ extension NetworkingSession {
 
     private func start(networkingSessionDataTask: NetworkingSessionDataTask) {
 
-        guard var urlRequest = networkingSessionDataTask.request else {
+        guard let urlRequest = networkingSessionDataTask.request else {
             DispatchQueue.global(qos: .userInteractive).async {
                 networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
                                                                                                      data: nil,
@@ -56,15 +56,34 @@ extension NetworkingSession {
             return
         }
 
-        if let adapatedRequest = requestAdapter?.adapt(urlRequest: urlRequest, for: session) {
-            urlRequest = adapatedRequest
+        guard let requestAdapter = requestAdapter else {
+            execute(urlRequest, accompaniedWith: networkingSessionDataTask)
+            return
         }
 
+        requestAdapter.adapt(urlRequest: urlRequest, for: session) { [weak self] adaptedUrlRequestResult in
+            guard let self = self else { return }
+
+            switch adaptedUrlRequestResult {
+                case .success(let adaptedUrlRequest):
+                    self.execute(adaptedUrlRequest, accompaniedWith: networkingSessionDataTask)
+
+                case .failure(let error):
+                    DispatchQueue.global(qos: .userInteractive).async {
+                        networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
+                                                                                                             data: nil,
+                                                                                                             error: error))
+                    }
+            }
+        }
+    }
+
+    private func execute(_ urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
+
         let dataTask = session.dataTask(with: urlRequest) { (responseData, response, error) in
-            let dataTaskResponseContainer = DataTaskResponseContainer(response: response as? HTTPURLResponse,
-                                                                      data: responseData,
-                                                                      error: error)
-            networkingSessionDataTask.executeResponseSerializers(with: dataTaskResponseContainer)
+            networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: response as? HTTPURLResponse,
+                                                                                                 data: responseData,
+                                                                                                 error: error))
         }
 
         networkingSessionDataTask.dataTask = dataTask
