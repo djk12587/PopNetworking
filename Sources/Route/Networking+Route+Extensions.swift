@@ -15,10 +15,10 @@ public extension NetworkingRoute {
 
 extension NetworkingRoute {
 
-    /// This is a default implementation. If you require a custom implementation, you can implement your own `func asURLRequest() throws -> URLRequest`
-    public func asURLRequest() throws -> URLRequest {
+    /// This is a default implementation. If you require a custom implementation, you can implement your own `func asUrlRequest() throws -> URLRequest`
+    public func asUrlRequest() throws -> URLRequest {
 
-        guard let url = URL(string: baseURL.appending(path)) else { throw NetworkingRouteError.invalidUrl }
+        guard let url = URL(string: baseUrl.appending(path)) else { throw NetworkingRouteError.invalidUrl }
 
         var mutableRequest = URLRequest(url: url)
         mutableRequest.httpMethod = method.rawValue

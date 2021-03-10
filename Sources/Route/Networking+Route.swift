@@ -9,7 +9,7 @@
 import Foundation
 
 public protocol URLRequestConvertible {
-    func asURLRequest() throws -> URLRequest
+    func asUrlRequest() throws -> URLRequest
 }
 
 /// A `NetworkingRoute` encapsulates everything required to build a `URLRequest` and serialize the `URLRequest`'s response into a `Result<ResponseSerializer.SerializedObject, Error>`
@@ -18,7 +18,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
     typealias NetworkingRouteHttpHeaders = [String : String]
 
     //--Request Building--//
-    var baseURL: String { get }
+    var baseUrl: String { get }
     var path: String { get }
     var method: NetworkingRouteHttpMethod { get }
     var headers: NetworkingRouteHttpHeaders? { get }

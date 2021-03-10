@@ -62,7 +62,7 @@ public class NetworkingSessionDataTask {
                 request = urlRequest
             }
             else {
-                request = try requestConvertible.asURLRequest()
+                request = try requestConvertible.asUrlRequest()
                 originalRequest = request
             }
 
