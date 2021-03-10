@@ -18,9 +18,7 @@ extension NetworkingRoute {
     /// This is a default implementation. If you require a custom implementation, you can implement your own `func asURLRequest() throws -> URLRequest`
     public func asURLRequest() throws -> URLRequest {
 
-        guard let url = Foundation.URL(string: baseURL)?.appendingPathComponent(path) else {
-            throw NetworkingRouteError.invalidUrl
-        }
+        guard let url = URL(string: baseURL.appending(path)) else { throw NetworkingRouteError.invalidUrl }
 
         var mutableRequest = URLRequest(url: url)
         mutableRequest.httpMethod = method.rawValue
