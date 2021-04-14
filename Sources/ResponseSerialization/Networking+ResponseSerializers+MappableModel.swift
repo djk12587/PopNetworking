@@ -7,12 +7,12 @@
 
 import Foundation
 
-public protocol Mappable {
+public protocol MappableModel {
     associatedtype SourceModel
     init(sourceModel: SourceModel) throws
 }
 
-extension Array: Mappable where Element: Mappable {
+extension Array: MappableModel where Element: MappableModel {
 
     public typealias SourceModel = [Element.SourceModel]
 
@@ -23,12 +23,12 @@ extension Array: Mappable where Element: Mappable {
 
 extension NetworkingResponseSerializers {
     ///Attempts to parse response `Data` into a `SourceModel`, then convert that  `SourceModel` into a  `ResponseModel`. This provides a layer of abstraction between a `ResponseModel` and `SourceModel`.
-    public class DecodableMappableResponse<ResponseModel: Mappable,
-                                           ResponseError: Mappable & Error,
-                                           SourceModel: Decodable,
-                                           SourceError: Decodable & Error>: NetworkingResponseSerializer
-                                           where SourceModel == ResponseModel.SourceModel,
-                                                 SourceError == ResponseError.SourceModel {
+    public class MappableModelResponse<ResponseModel: MappableModel,
+                                       ResponseError: MappableModel & Error,
+                                       SourceModel: Decodable,
+                                       SourceError: Decodable & Error>: NetworkingResponseSerializer
+                                       where SourceModel == ResponseModel.SourceModel,
+                                             SourceError == ResponseError.SourceModel {
 
         public typealias SerializedObject = ResponseModel
         public typealias SerializedErrorObject = ResponseError
