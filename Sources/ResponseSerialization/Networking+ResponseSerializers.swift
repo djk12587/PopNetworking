@@ -9,7 +9,8 @@
 import Foundation
 
 public protocol ViewModel {
-    init<ApiModel: Decodable>(apiModel: ApiModel)
+    associatedtype ApiModel
+    init(apiModel: ApiModel)
 }
 
 public enum NetworkingResponseSerializers {
@@ -18,7 +19,8 @@ public enum NetworkingResponseSerializers {
     public class ViewModelDecodableResponse<ViewModelType: ViewModel,
                                             ViewModelErrorType: ViewModel & Error,
                                             ApiModelType: Decodable,
-                                            ApiErrorType: Decodable & Error>: NetworkingResponseSerializer {
+                                            ApiErrorType: Decodable & Error>: NetworkingResponseSerializer where ApiModelType == ViewModelType.ApiModel,
+                                                      ApiErrorType == ViewModelErrorType.ApiModel {
 
         public typealias SerializedObject = ViewModelType
         public typealias SerializedErrorObject = ViewModelErrorType
