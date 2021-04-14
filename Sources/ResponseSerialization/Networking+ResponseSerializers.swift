@@ -8,7 +8,50 @@
 
 import Foundation
 
+public protocol ViewModel {
+    init<ApiModel: Decodable>(apiModel: ApiModel)
+}
+
 public enum NetworkingResponseSerializers {
+
+    ///Attempts to parse response `Data` into a `ApiModelType`, then convert that  `ApiModelType` into a  `ViewModelType`. This provides a layer of abstraction between a `ViewModelType` and `ApiModelType`.
+    public class ViewModelDecodableResponse<ViewModelType: ViewModel,
+                                            ViewModelErrorType: ViewModel & Error,
+                                            ApiModelType: Decodable,
+                                            ApiErrorType: Decodable & Error>: NetworkingResponseSerializer {
+
+        public typealias SerializedObject = ViewModelType
+        public typealias SerializedErrorObject = ViewModelErrorType
+
+        private let jsonDecoder: JSONDecoder
+
+        public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
+            self.jsonDecoder = jsonDecoder
+        }
+
+        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+
+            if let error = error { return .failure(error) }
+            guard let data = data else { return .failure(ResponseSerializerError.noData) }
+
+            do {
+                let apiModel = try jsonDecoder.decode(ApiModelType.self, from: data)
+                return .success(SerializedObject(apiModel: apiModel))
+            }
+            catch let serializedObjectError {
+                if let apiError = try? jsonDecoder.decode(ApiErrorType.self, from: data) {
+                    return .failure(ViewModelErrorType(apiModel: apiError))
+                }
+                else {
+                    return .failure(serializedObjectError)
+                }
+            }
+        }
+
+        public enum ResponseSerializerError: Error {
+            case noData
+        }
+    }
 
     ///Attempts to parse response `Data` into a decodable object of type `ResponseType` or a decodable error of type `ResponseErrorType`
     public class DecodableResponseWithErrorSerializer<ResponseType: Decodable,
