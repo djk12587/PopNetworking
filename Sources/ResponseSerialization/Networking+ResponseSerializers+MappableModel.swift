@@ -22,13 +22,13 @@ extension Array: Mappable where Element: Mappable {
 }
 
 extension NetworkingResponseSerializers {
-    ///Attempts to parse response `Data` into a `ApiModelType`, then convert that  `ApiModelType` into a  `ViewModelType`. This provides a layer of abstraction between a `ViewModelType` and `ApiModelType`.
-    public class ViewModelDecodableResponse<ResponseModel: Mappable,
-                                            ResponseError: Mappable & Error,
-                                            SourceModel: Decodable,
-                                            SourceError: Decodable & Error>: NetworkingResponseSerializer
-                                            where SourceModel == ResponseModel.SourceModel,
-                                                  SourceError == ResponseError.SourceModel {
+    ///Attempts to parse response `Data` into a `SourceModel`, then convert that  `SourceModel` into a  `ResponseModel`. This provides a layer of abstraction between a `ResponseModel` and `SourceModel`.
+    public class DecodableMappableResponse<ResponseModel: Mappable,
+                                           ResponseError: Mappable & Error,
+                                           SourceModel: Decodable,
+                                           SourceError: Decodable & Error>: NetworkingResponseSerializer
+                                           where SourceModel == ResponseModel.SourceModel,
+                                                 SourceError == ResponseError.SourceModel {
 
         public typealias SerializedObject = ResponseModel
         public typealias SerializedErrorObject = ResponseError
