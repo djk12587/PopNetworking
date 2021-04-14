@@ -9,15 +9,15 @@ import Foundation
 
 public protocol Mappable {
     associatedtype SourceModel
-    init(sourceModel: SourceModel)
+    init(sourceModel: SourceModel) throws
 }
 
 extension Array: Mappable where Element: Mappable {
 
     public typealias SourceModel = [Element.SourceModel]
 
-    public init(sourceModel: [Element.SourceModel]) {
-        self = sourceModel.compactMap { Element(sourceModel: $0) }
+    public init(sourceModel: [Element.SourceModel]) throws {
+        self = try sourceModel.compactMap { try Element(sourceModel: $0) }
     }
 }
 
@@ -46,20 +46,27 @@ extension NetworkingResponseSerializers {
 
             do {
                 let sourceModel = try jsonDecoder.decode(SourceModel.self, from: data)
-                return .success(SerializedObject(sourceModel: sourceModel))
+                let responseModel = try SerializedObject(sourceModel: sourceModel)
+                return .success(responseModel)
             }
-            catch let serializedObjectError {
-                if let sourceError = try? jsonDecoder.decode(SourceError.self, from: data) {
-                    return .failure(ResponseError(sourceModel: sourceError))
+            catch let modelSerializationError {
+                do {
+                    let sourceError = try jsonDecoder.decode(SourceError.self, from: data)
+                    let responseError = try ResponseError(sourceModel: sourceError)
+                    return .failure(ResponseSerializerError.errors([responseError,
+                                                                    sourceError,
+                                                                    modelSerializationError]))
                 }
-                else {
-                    return .failure(serializedObjectError)
+                catch let errorSerializerError {
+                    return .failure(ResponseSerializerError.errors([errorSerializerError,
+                                                                    modelSerializationError]))
                 }
             }
         }
 
         public enum ResponseSerializerError: Error {
             case noData
+            case errors([Error])
         }
     }
 }

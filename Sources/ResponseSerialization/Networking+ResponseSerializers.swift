@@ -33,12 +33,21 @@ public enum NetworkingResponseSerializers {
                 return .success(serializedOjbect)
             }
             catch let serializedObjectError {
-                return .failure((try? jsonDecoder.decode(SerializedErrorObject.self, from: data)) ?? serializedObjectError)
+                do {
+                    let serializedError = try jsonDecoder.decode(SerializedErrorObject.self, from: data)
+                    return .failure(ResponseSerializerError.errors([serializedError,
+                                                                    serializedObjectError]))
+                }
+                catch let errorSerializerError {
+                    return .failure(ResponseSerializerError.errors([errorSerializerError,
+                                                                    serializedObjectError]))
+                }
             }
         }
 
         public enum ResponseSerializerError: Error {
             case noData
+            case errors([Error])
         }
     }
 
