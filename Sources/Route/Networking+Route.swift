@@ -27,7 +27,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
 
     //--Response Handling--//
     associatedtype ResponseSerializer: NetworkingResponseSerializer
-    var responseSerializer: ResponseSerializer { get }
+    var responseSerializer: NetworkingResponseSerialization<ResponseSerializer> { get }
 
     ///Responsible for turning a NetworkingRoute object into a Result<ResponseSerializer.SerializedObject, Error>
     func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?
@@ -46,6 +46,21 @@ public enum NetworkingRouteHttpMethod: String {
     case delete
     case put
     case patch
+}
+
+public enum NetworkingResponseSerialization<ResponseSerializer: NetworkingResponseSerializer> {
+
+    case responseSerializer(ResponseSerializer)
+    case manual((ResponseSerializer.NetworkResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
+
+    var serializationAction: (ResponseSerializer.NetworkResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
+        switch self {
+            case .responseSerializer(let serializer):
+                return serializer.serialize
+            case .manual(let manualSerialization):
+                return manualSerialization
+        }
+    }
 }
 
 /// Potential errors that can be returned when attempting to create a `URLRequest` from a `NetworkingRoute`
