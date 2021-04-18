@@ -53,14 +53,14 @@ public typealias NetworkingResponse = (urlRequest: URLRequest?, urlResponse: HTT
 public enum NetworkingResponseSerialization<ResponseSerializer: NetworkingResponseSerializer> {
 
     case automatic(ResponseSerializer)
-    case manual((NetworkingResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
+    case override((NetworkingResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
 
     var serializationAction: (NetworkingResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
         switch self {
             case .automatic(let serializer):
                 return serializer.serialize
-            case .manual(let mockedSerialization):
-                return mockedSerialization
+            case .override(let overridenSerialization):
+                return overridenSerialization
         }
     }
 }
