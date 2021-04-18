@@ -25,24 +25,20 @@ extension NetworkingResponseSerializers {
     ///Attempts to parse response `Data` into a `SourceModel`, then convert that  `SourceModel` into a  `ResponseModel`. This provides a layer of abstraction between a `ResponseModel` and `SourceModel`.
     public struct MappableModelResponse<ResponseModel: MappableModel,
                                         SourceModel: Decodable>: NetworkingResponseSerializer
-    where SourceModel == ResponseModel.SourceModel {
+                                        where SourceModel == ResponseModel.SourceModel {
 
         public typealias SerializedObject = ResponseModel
 
         private let jsonDecoder: JSONDecoder
-        private let mockedResult: Result<SerializedObject, Error>?
 
         /// - Parameters:
         ///   - jsonDecoder: `jsonDecoder` will be used to decode the response `Data`.
-        ///   - mockedResult: For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
-        public init(jsonDecoder: JSONDecoder = JSONDecoder(), mockedResult: Result<SerializedObject, Error>? = nil) {
+        public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
-            self.mockedResult = mockedResult
         }
 
         public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
-            if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
 
@@ -74,19 +70,15 @@ extension NetworkingResponseSerializers {
         public typealias SerializedErrorObject = ResponseError
 
         private let jsonDecoder: JSONDecoder
-        private let mockedResult: Result<SerializedObject, Error>?
 
         /// - Parameters:
         ///   - jsonDecoder: `jsonDecoder` will be used to decode the response `Data`.
-        ///   - mockedResult: For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
-        public init(jsonDecoder: JSONDecoder = JSONDecoder(), mockedResult: Result<SerializedObject, Error>? = nil) {
+        public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
-            self.mockedResult = mockedResult
         }
 
         public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
-            if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
 
