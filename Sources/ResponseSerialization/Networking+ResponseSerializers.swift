@@ -15,21 +15,18 @@ public enum NetworkingResponseSerializers {
 
         public typealias SerializedObject = ResponseType
 
-        private let mockedResult: Result<SerializedObject, Error>?
         private let jsonDecoder: JSONDecoder
 
         /// Use used to convert response `Data` into a `Decodable` `SerializedObject`
         /// - Parameters:
         ///   - jsonDecoder: `jsonDecoder` will be used to decode the response `Data`.
         ///   - mockedResult: For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
-        public init(jsonDecoder: JSONDecoder = JSONDecoder(), mockedResult: Result<SerializedObject, Error>? = nil) {
+        public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
-            self.mockedResult = mockedResult
         }
 
         public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
-            if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
 
@@ -50,21 +47,18 @@ public enum NetworkingResponseSerializers {
         public typealias SerializedObject = ResponseType
         public typealias SerializedErrorObject = ResponseErrorType
 
-        private let mockedResult: Result<SerializedObject, Error>?
         private let jsonDecoder: JSONDecoder
 
         /// Use used to convert response `Data` into a `Decodable` `SerializedObject` or a `SerializedErrorObject`
         /// - Parameters:
         ///   - jsonDecoder: `jsonDecoder` will be used to decode the response `Data`.
         ///   - mockedResult: For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
-        public init(jsonDecoder: JSONDecoder = JSONDecoder(), mockedResult: Result<SerializedObject, Error>? = nil) {
+        public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
-            self.mockedResult = mockedResult
         }
 
         public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
-            if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
 
@@ -93,17 +87,8 @@ public enum NetworkingResponseSerializers {
     public struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Int
 
-        private let mockedResult: Result<SerializedObject, Error>?
-
-        /// Use used to convert a response into a `HTTPURLResponse.statusCode`
-        /// - Parameter mockedResult: For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
-        public init(mockedResult: Result<SerializedObject, Error>? = nil) {
-            self.mockedResult = mockedResult
-        }
-
         public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
-            if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
             guard let response = response.urlResponse else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
             return .success(response.statusCode)
@@ -117,16 +102,8 @@ public enum NetworkingResponseSerializers {
     public struct DataResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Data
 
-        private let mockedResult: Result<SerializedObject, Error>?
-
-        /// - Parameter mockedResult:  For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
-        public init(mockedResult: Result<SerializedObject, Error>? = nil) {
-            self.mockedResult = mockedResult
-        }
-
         public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
-            if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
             return .success(data)
