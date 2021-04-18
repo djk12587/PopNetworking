@@ -48,17 +48,19 @@ public enum NetworkingRouteHttpMethod: String {
     case patch
 }
 
+public typealias NetworkingResponse = (urlRequest: URLRequest?, urlResponse: HTTPURLResponse?, data: Data?, error: Error?)
+
 public enum NetworkingResponseSerialization<ResponseSerializer: NetworkingResponseSerializer> {
 
-    case responseSerializer(ResponseSerializer)
-    case manual((ResponseSerializer.NetworkResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
+    case automatic(ResponseSerializer)
+    case manual((NetworkingResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
 
-    var serializationAction: (ResponseSerializer.NetworkResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
+    var serializationAction: (NetworkingResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
         switch self {
-            case .responseSerializer(let serializer):
+            case .automatic(let serializer):
                 return serializer.serialize
-            case .manual(let manualSerialization):
-                return manualSerialization
+            case .manual(let mockedSerialization):
+                return mockedSerialization
         }
     }
 }

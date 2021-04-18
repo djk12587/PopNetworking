@@ -41,14 +41,13 @@ public class NetworkingSessionDataTask {
     }
 
     @discardableResult
-    public func serializeResponse<ResponseModel: NetworkingResponseSerializer>(with responseSerializer: NetworkingResponseSerialization<ResponseModel>,
+    public func serializeResponse<ResponseSerializer: NetworkingResponseSerializer>(with responseSerializer: NetworkingResponseSerialization<ResponseSerializer>,
                                                  runCompletionHandlerOn queue: DispatchQueue = .main,
-                                                 completionHandler: @escaping (Result<ResponseModel.SerializedObject, Error>) -> Void) -> Self {
+                                                 completionHandler: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Self {
 
         queueResponseSerialization(serializeAction: responseSerializer.serializationAction,
                                    runUrlRequestCompletionHandlerOn: queue,
                                    urlRequestCompletionHandler: completionHandler)
-
         return self
     }
 
@@ -96,18 +95,18 @@ extension NetworkingSessionDataTask {
         }
     }
 
-    private func queueResponseSerialization<ResponseModel>(serializeAction: @escaping (NetworkingResponseSerializer.NetworkResponse) -> Result<ResponseModel, Error>,
+    private func queueResponseSerialization<ResponseModel>(serializeAction: @escaping (NetworkingResponse) -> Result<ResponseModel, Error>,
                                                            runUrlRequestCompletionHandlerOn queue: DispatchQueue,
                                                            urlRequestCompletionHandler: @escaping (Result<ResponseModel, Error>) -> Void) {
 
         let responseSerialization = { [weak self] (dataTaskResponseContainer: DataTaskResponseContainer) in
             guard let self = self else { return }
 
-            let networkResponseParams = NetworkingResponseSerializer.NetworkResponse(self.mostUpToDateRequest,
-                                                                                     dataTaskResponseContainer.response,
-                                                                                     dataTaskResponseContainer.data,
-                                                                                     dataTaskResponseContainer.error)
-            let serializerResult = serializeAction(networkResponseParams)
+            let networkingResponse = NetworkingResponse(self.mostUpToDateRequest,
+                                                        dataTaskResponseContainer.response,
+                                                        dataTaskResponseContainer.data,
+                                                        dataTaskResponseContainer.error)
+            let serializerResult = serializeAction(networkingResponse)
             //Check if the response contains an error, if not, trigger the completionHandler.
             guard let error = dataTaskResponseContainer.error ?? serializerResult.error,
                   let retrier = self.requestRetrier,
