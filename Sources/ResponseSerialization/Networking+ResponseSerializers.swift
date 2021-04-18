@@ -27,7 +27,7 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
@@ -62,7 +62,7 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
@@ -101,7 +101,7 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
@@ -124,7 +124,7 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
             if let error = response.error { return .failure(error) }
