@@ -99,9 +99,7 @@ extension NetworkingResponseSerializers {
                 do {
                     let sourceError = try jsonDecoder.decode(SourceError.self, from: data)
                     let mappableError = try ResponseError(sourceModel: sourceError)
-                    return .failure(ResponseSerializerError.errors([mappableError,
-                                                                    sourceError,
-                                                                    modelSerializationError]))
+                    return .failure(mappableError)
                 }
                 catch let errorSerializerError {
                     return .failure(ResponseSerializerError.errors([errorSerializerError,

@@ -75,8 +75,7 @@ public enum NetworkingResponseSerializers {
             catch let serializedObjectError {
                 do {
                     let serializedError = try jsonDecoder.decode(SerializedErrorObject.self, from: data)
-                    return .failure(ResponseSerializerError.errors([serializedError,
-                                                                    serializedObjectError]))
+                    return .failure(serializedError)
                 }
                 catch let errorSerializerError {
                     return .failure(ResponseSerializerError.errors([errorSerializerError,
