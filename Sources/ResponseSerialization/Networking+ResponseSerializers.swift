@@ -11,7 +11,7 @@ import Foundation
 public enum NetworkingResponseSerializers {
 
     ///Attempts to parse response `Data` into a decodable object of type `ResponseType` This class does not parse errors. To parse errors use `DecodableResponseSerializer`
-    public class DecodableResponseSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
+    public struct DecodableResponseSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
 
         public typealias SerializedObject = ResponseType
 
@@ -27,11 +27,11 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
-            if let error = error { return .failure(error) }
-            guard let data = data else { return .failure(ResponseSerializerError.noData) }
+            if let error = response.error { return .failure(error) }
+            guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
 
             return Result {
                 try jsonDecoder.decode(SerializedObject.self, from: data)
@@ -44,8 +44,8 @@ public enum NetworkingResponseSerializers {
     }
 
     ///Attempts to parse response `Data` into a decodable object of type `ResponseType` or a decodable error of type `ResponseErrorType`
-    public class DecodableResponseWithErrorSerializer<ResponseType: Decodable,
-                                                      ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
+    public struct DecodableResponseWithErrorSerializer<ResponseType: Decodable,
+                                                       ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
 
         public typealias SerializedObject = ResponseType
         public typealias SerializedErrorObject = ResponseErrorType
@@ -62,11 +62,11 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
-            if let error = error { return .failure(error) }
-            guard let data = data else { return .failure(ResponseSerializerError.noData) }
+            if let error = response.error { return .failure(error) }
+            guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
 
             do {
                 let serializedOjbect = try jsonDecoder.decode(SerializedObject.self, from: data)
@@ -90,7 +90,7 @@ public enum NetworkingResponseSerializers {
         }
     }
 
-    public class HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
+    public struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Int
 
         private let mockedResult: Result<SerializedObject, Error>?
@@ -101,11 +101,11 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
-            if let error = error { return .failure(error) }
-            guard let response = response else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
+            if let error = response.error { return .failure(error) }
+            guard let response = response.urlResponse else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
             return .success(response.statusCode)
         }
 
@@ -114,7 +114,7 @@ public enum NetworkingResponseSerializers {
         }
     }
 
-    public class DataResponseSerializer: NetworkingResponseSerializer {
+    public struct DataResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Data
 
         private let mockedResult: Result<SerializedObject, Error>?
@@ -124,11 +124,11 @@ public enum NetworkingResponseSerializers {
             self.mockedResult = mockedResult
         }
 
-        public func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkResponse) -> Result<SerializedObject, Error> {
 
             if let mockedResult = mockedResult { return mockedResult }
-            if let error = error { return .failure(error) }
-            guard let data = data else { return .failure(ResponseSerializerError.noData) }
+            if let error = response.error { return .failure(error) }
+            guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
             return .success(data)
         }
 
