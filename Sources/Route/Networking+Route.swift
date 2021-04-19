@@ -27,7 +27,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
 
     //--Response Handling--//
     associatedtype ResponseSerializer: NetworkingResponseSerializer
-    var responseSerializer: NetworkingResponseSerialization<ResponseSerializer> { get }
+    var responseSerializationMode: NetworkingResponseSerializationMode<ResponseSerializer> { get }
 
     ///Responsible for turning a NetworkingRoute object into a Result<ResponseSerializer.SerializedObject, Error>
     func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?
@@ -48,16 +48,18 @@ public enum NetworkingRouteHttpMethod: String {
     case patch
 }
 
-public typealias NetworkingResponse = (urlRequest: URLRequest?, urlResponse: HTTPURLResponse?, data: Data?, error: Error?)
+public typealias NetworkingRawResponse = (urlRequest: URLRequest?, urlResponse: HTTPURLResponse?, data: Data?, error: Error?)
 
-public enum NetworkingResponseSerialization<ResponseSerializer: NetworkingResponseSerializer> {
+public enum NetworkingResponseSerializationMode<ResponseSerializer: NetworkingResponseSerializer> {
 
-    case automatic(ResponseSerializer)
-    case override((NetworkingResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
+    /// Utilitizes the passed in `ResponseSerializer`.
+    case standard(ResponseSerializer)
+    /// Allows you to override a `NetworkingResponseSerializer`'s `serialize` function. This is helpful for mocking networking responses. Use this for debugging/testing purposes.
+    case override((NetworkingRawResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
 
-    var serializationAction: (NetworkingResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
+    var serializationAction: (NetworkingRawResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
         switch self {
-            case .automatic(let serializer):
+            case .standard(let serializer):
                 return serializer.serialize
             case .override(let overridenSerialization):
                 return overridenSerialization

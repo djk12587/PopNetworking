@@ -22,5 +22,5 @@ public protocol NetworkingResponseSerializer {
     ///   - error:    `Error` produced by PopNetworking or the underlying `URLSession` during the request. Its normally best practice to return a Result.failure with the supplied error, if it is not nil.
     ///
     /// - Returns:    A Result<`SerializedObject`, Error>. Whatever is returned will be sent to your requests completion handler.
-    func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error>
+    func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error>
 }

@@ -41,11 +41,11 @@ public class NetworkingSessionDataTask {
     }
 
     @discardableResult
-    public func serializeResponse<ResponseSerializer: NetworkingResponseSerializer>(with responseSerializer: NetworkingResponseSerialization<ResponseSerializer>,
-                                                 runCompletionHandlerOn queue: DispatchQueue = .main,
-                                                 completionHandler: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Self {
+    public func serializeResponse<ResponseSerializer: NetworkingResponseSerializer>(with responseSerializationMode: NetworkingResponseSerializationMode<ResponseSerializer>,
+                                                                                    runCompletionHandlerOn queue: DispatchQueue = .main,
+                                                                                    completionHandler: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Self {
 
-        queueResponseSerialization(serializeAction: responseSerializer.serializationAction,
+        queueResponseSerialization(serializeAction: responseSerializationMode.serializationAction,
                                    runUrlRequestCompletionHandlerOn: queue,
                                    urlRequestCompletionHandler: completionHandler)
         return self
@@ -64,7 +64,8 @@ public class NetworkingSessionDataTask {
                 originalRequest = request
             }
 
-            delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: try runAdapter(urlRequest: request) ?? request, accompaniedWith: self)
+            let adaptedRequest = try runAdapter(urlRequest: request)
+            delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: adaptedRequest ?? request, accompaniedWith: self)
         }
         catch {
             executeResponseSerializers(with: DataTaskResponseContainer(response: nil,
@@ -95,24 +96,24 @@ extension NetworkingSessionDataTask {
         }
     }
 
-    private func queueResponseSerialization<ResponseModel>(serializeAction: @escaping (NetworkingResponse) -> Result<ResponseModel, Error>,
+    private func queueResponseSerialization<ResponseModel>(serializeAction: @escaping (NetworkingRawResponse) -> Result<ResponseModel, Error>,
                                                            runUrlRequestCompletionHandlerOn queue: DispatchQueue,
                                                            urlRequestCompletionHandler: @escaping (Result<ResponseModel, Error>) -> Void) {
 
         let responseSerialization = { [weak self] (dataTaskResponseContainer: DataTaskResponseContainer) in
             guard let self = self else { return }
 
-            let networkingResponse = NetworkingResponse(self.mostUpToDateRequest,
-                                                        dataTaskResponseContainer.response,
-                                                        dataTaskResponseContainer.data,
-                                                        dataTaskResponseContainer.error)
-            let serializerResult = serializeAction(networkingResponse)
+            let networkingRawResponse = NetworkingRawResponse(self.mostUpToDateRequest,
+                                                           dataTaskResponseContainer.response,
+                                                           dataTaskResponseContainer.data,
+                                                           dataTaskResponseContainer.error)
+            let serializedResult = serializeAction(networkingRawResponse)
             //Check if the response contains an error, if not, trigger the completionHandler.
-            guard let error = dataTaskResponseContainer.error ?? serializerResult.error,
+            guard let error = dataTaskResponseContainer.error ?? serializedResult.error,
                   let retrier = self.requestRetrier,
                   let urlRequest = self.mostUpToDateRequest else {
 
-                queue.async { urlRequestCompletionHandler(serializerResult) }
+                queue.async { urlRequestCompletionHandler(serializedResult) }
                 return
             }
 
@@ -124,7 +125,7 @@ extension NetworkingSessionDataTask {
 
                 switch retrierResult {
                     case .doNotRetry:
-                        queue.async { urlRequestCompletionHandler(serializerResult) }
+                        queue.async { urlRequestCompletionHandler(serializedResult) }
                     case .retry:
                         self.retryCount += 1
                         self.execute()
