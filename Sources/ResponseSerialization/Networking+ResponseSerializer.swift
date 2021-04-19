@@ -13,14 +13,9 @@ public protocol NetworkingResponseSerializer {
     /// The type of serialized object to be created.
     associatedtype SerializedObject
 
-    /// Serialize the response `Data` into the provided type..
+    /// Serializes the `NetworkingRawResponse` into the associatedtype type `SerializedObject`.
     ///
-    /// - Parameters:
-    ///   - request:  `URLRequest` which was used to perform the request, if any.
-    ///   - response: `HTTPURLResponse` received from the server, if any.
-    ///   - data:     `Data` returned from the server, if any.
-    ///   - error:    `Error` produced by PopNetworking or the underlying `URLSession` during the request. Its normally best practice to return a Result.failure with the supplied error, if it is not nil.
-    ///
-    /// - Returns:    A Result<`SerializedObject`, Error>. Whatever is returned will be sent to your requests completion handler.
+    /// - Parameter response: `response` is tuple of type `NetworkingRawResponse` that contains `(urlRequest: URLRequest?, urlResponse: HTTPURLResponse?, data: Data?, error: Error?)`
+    /// - Returns: A `Result` that contains a `SerializedObject` or an `Error`
     func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error>
 }
