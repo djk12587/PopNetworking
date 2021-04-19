@@ -25,7 +25,7 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
@@ -57,7 +57,7 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
@@ -87,7 +87,7 @@ public enum NetworkingResponseSerializers {
     public struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Int
 
-        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let response = response.urlResponse else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
@@ -102,7 +102,7 @@ public enum NetworkingResponseSerializers {
     public struct DataResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Data
 
-        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }

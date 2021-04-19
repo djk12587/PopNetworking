@@ -37,7 +37,7 @@ extension NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
@@ -77,7 +77,7 @@ extension NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(response: NetworkingResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
