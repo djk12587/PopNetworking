@@ -104,9 +104,9 @@ extension NetworkingSessionDataTask {
             guard let self = self else { return }
 
             let networkingRawResponse = NetworkingRawResponse(self.mostUpToDateRequest,
-                                                           dataTaskResponseContainer.response,
-                                                           dataTaskResponseContainer.data,
-                                                           dataTaskResponseContainer.error)
+                                                              dataTaskResponseContainer.response,
+                                                              dataTaskResponseContainer.data,
+                                                              dataTaskResponseContainer.error)
             let serializedResult = serializeAction(networkingRawResponse)
             //Check if the response contains an error, if not, trigger the completionHandler.
             guard let error = dataTaskResponseContainer.error ?? serializedResult.error,
