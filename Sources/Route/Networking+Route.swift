@@ -48,8 +48,6 @@ public enum NetworkingRouteHttpMethod: String {
     case patch
 }
 
-public typealias NetworkingRawResponse = (urlRequest: URLRequest?, urlResponse: HTTPURLResponse?, data: Data?, error: Error?)
-
 public enum NetworkingResponseSerializationMode<ResponseSerializer: NetworkingResponseSerializer> {
 
     /// Utilitizes the passed in `ResponseSerializer`.
@@ -57,7 +55,7 @@ public enum NetworkingResponseSerializationMode<ResponseSerializer: NetworkingRe
     /// Allows you to override a `NetworkingResponseSerializer`'s `serialize` function. This is helpful for mocking networking responses. Use this for debugging/testing purposes.
     case override((NetworkingRawResponse) -> Result<ResponseSerializer.SerializedObject, Error>)
 
-    var serializationAction: (NetworkingRawResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
+    internal var serialize: (NetworkingRawResponse) -> Result<ResponseSerializer.SerializedObject, Error> {
         switch self {
             case .standard(let serializer):
                 return serializer.serialize
@@ -71,4 +69,11 @@ public enum NetworkingResponseSerializationMode<ResponseSerializer: NetworkingRe
 public enum NetworkingRouteError: Error {
     case invalidUrl
     case jsonParameterEncodingFailed(reason: Error)
+}
+
+public struct NetworkingRawResponse {
+    let urlRequest: URLRequest?
+    let urlResponse: HTTPURLResponse?
+    let data: Data?
+    let error: Error?
 }

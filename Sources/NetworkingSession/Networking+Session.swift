@@ -44,9 +44,10 @@ public class NetworkingSession {
     private func execute(_ urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
 
         let dataTask = session.dataTask(with: urlRequest) { (responseData, response, error) in
-            networkingSessionDataTask.executeResponseSerializers(with: DataTaskResponseContainer(response: response as? HTTPURLResponse,
-                                                                                                 data: responseData,
-                                                                                                 error: error))
+            networkingSessionDataTask.executeResponseSerializers(with: NetworkingRawResponse(urlRequest: urlRequest,
+                                                                                             urlResponse: response as? HTTPURLResponse,
+                                                                                             data: responseData,
+                                                                                             error: error))
         }
 
         networkingSessionDataTask.dataTask = dataTask
