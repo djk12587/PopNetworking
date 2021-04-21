@@ -54,8 +54,9 @@ public class NetworkingSessionDataTask {
 
         do {
             let urlRequest = try request ?? requestConvertible.asUrlRequest()
+            request = urlRequest
             let adaptedUrlRequest = try requestAdapter?.adapt(urlRequest: urlRequest)
-            request = adaptedUrlRequest ?? urlRequest
+            request = adaptedUrlRequest
             delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: adaptedUrlRequest ?? urlRequest,
                                                                 accompaniedWith: self)
         }
