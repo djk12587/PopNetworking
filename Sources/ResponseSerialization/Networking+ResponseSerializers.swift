@@ -87,6 +87,8 @@ public enum NetworkingResponseSerializers {
     public struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Int
 
+        public init() {}
+
         public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
@@ -101,6 +103,8 @@ public enum NetworkingResponseSerializers {
 
     public struct DataResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Data
+
+        public init() {}
 
         public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
 
