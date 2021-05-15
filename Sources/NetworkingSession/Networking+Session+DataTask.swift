@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal protocol NetworkingSessionDataTaskDelegate: class {
+internal protocol NetworkingSessionDataTaskDelegate: AnyObject {
     func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask)
 }
 
