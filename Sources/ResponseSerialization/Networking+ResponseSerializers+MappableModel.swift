@@ -54,7 +54,6 @@ extension NetworkingResponseSerializers {
 
         public enum ResponseSerializerError: Error {
             case noData
-            case errors([Error])
         }
     }
 
@@ -94,15 +93,17 @@ extension NetworkingResponseSerializers {
                     return .failure(mappableError)
                 }
                 catch let errorSerializerError {
-                    return .failure(ResponseSerializerError.errors([errorSerializerError,
-                                                                    modelSerializationError]))
+                    return .failure(ResponseSerializerError.multipleFailures([.serializingObjectFailure(error: modelSerializationError),
+                                                                              .serializingErrorObjectFailure(error: errorSerializerError)]))
                 }
             }
         }
 
         public enum ResponseSerializerError: Error {
             case noData
-            case errors([Error])
+            case serializingObjectFailure(error: Error)
+            case serializingErrorObjectFailure(error: Error)
+            case multipleFailures([ResponseSerializerError])
         }
     }
 }
