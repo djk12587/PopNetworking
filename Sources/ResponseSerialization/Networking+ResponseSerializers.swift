@@ -26,13 +26,9 @@ public enum NetworkingResponseSerializers {
         }
 
         public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
-
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
-
-            return Result {
-                try jsonDecoder.decode(SerializedObject.self, from: data)
-            }
+            return Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
         }
 
         public enum ResponseSerializerError: Error {
@@ -72,15 +68,17 @@ public enum NetworkingResponseSerializers {
                     return .failure(serializedError)
                 }
                 catch let errorSerializerError {
-                    return .failure(ResponseSerializerError.errors([errorSerializerError,
-                                                                    serializedObjectError]))
+                    return .failure(ResponseSerializerError.multipleFailures([.serializingObjectFailure(error: serializedObjectError),
+                                                                              .serializingErrorObjectFailure(error: errorSerializerError)]))
                 }
             }
         }
 
         public enum ResponseSerializerError: Error {
             case noData
-            case errors([Error])
+            case serializingObjectFailure(error: Error)
+            case serializingErrorObjectFailure(error: Error)
+            case multipleFailures([ResponseSerializerError])
         }
     }
 
