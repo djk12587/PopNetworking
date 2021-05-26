@@ -99,8 +99,7 @@ extension NetworkingSessionDataTask {
             guard
                 let error = rawResponse.error ?? serializedResult.error,
                 let retrier = self.requestRetrier,
-                let urlRequest = rawResponse.urlRequest,
-                !self.wasCancelled
+                let urlRequest = rawResponse.urlRequest
             else {
                 queue.async { urlRequestCompletionHandler(serializedResult) }
                 return
