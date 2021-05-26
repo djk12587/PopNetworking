@@ -69,11 +69,16 @@ public enum NetworkingResponseSerializationMode<ResponseSerializer: NetworkingRe
 public enum NetworkingRouteError: Error {
     case invalidUrl
     case jsonParameterEncodingFailed(reason: Error)
+
+    public enum AggregatedRoutes: Error {
+        case routeNeverFinished
+        case multiFailure([Error])
+    }
 }
 
 public struct NetworkingRawResponse {
-    let urlRequest: URLRequest?
-    let urlResponse: HTTPURLResponse?
-    let data: Data?
-    let error: Error?
+    public let urlRequest: URLRequest?
+    public let urlResponse: HTTPURLResponse?
+    public let data: Data?
+    public let error: Error?
 }
