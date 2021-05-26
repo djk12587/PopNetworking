@@ -40,6 +40,7 @@ extension NetworkingRoute {
             }
         }
 
+        print(parentTask)
         cancellableTasks.append(urlSessionTask: parentTask)
         return cancellableTasks
     }
