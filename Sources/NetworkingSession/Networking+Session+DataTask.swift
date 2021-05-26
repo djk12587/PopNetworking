@@ -109,8 +109,7 @@ extension NetworkingSessionDataTask {
             retrier.retry(urlRequest: urlRequest,
                           dueTo: error,
                           urlResponse: rawResponse.urlResponse ?? HTTPURLResponse(),
-                          retryCount: self.retryCount) { [weak self] retrierResult in
-                guard let self = self else { return }
+                          retryCount: self.retryCount) { retrierResult in
 
                 switch retrierResult {
                     case .doNotRetry:
