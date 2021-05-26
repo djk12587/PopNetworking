@@ -19,8 +19,9 @@ internal class NetworkingRouteOperation<Route: NetworkingRoute>: AsyncOperation 
     private(set) var urlSessionTask: URLSessionTask?
     private var completion: ((Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void)?
 
-    init(run: Route, completion: (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
+    init(run: Route, completion: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
         self.route = run
+        self.completion = completion
         super.init()
     }
 
