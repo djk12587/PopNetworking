@@ -76,6 +76,11 @@ public enum NetworkingRouteError: Error {
     }
 }
 
+public protocol Cancellable {
+    ///Cancels a `NetworkingRoute`
+    func cancel()
+}
+
 public struct NetworkingRawResponse {
     public let urlRequest: URLRequest?
     public let urlResponse: HTTPURLResponse?
