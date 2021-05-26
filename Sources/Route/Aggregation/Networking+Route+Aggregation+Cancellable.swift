@@ -12,6 +12,11 @@ public protocol Cancellable {
 }
 
 public class CancellableQueue: Cancellable {
+
+    deinit {
+        print("CancellableQueue deinit")
+    }
+
     private let queue: OperationQueue
 
     internal init(queue: OperationQueue) {
