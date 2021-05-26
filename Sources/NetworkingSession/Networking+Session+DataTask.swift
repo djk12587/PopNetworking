@@ -25,7 +25,10 @@ public class NetworkingSessionDataTask {
 
     private var queuedResponseSerializers: [(NetworkingRawResponse) -> Void] = []
 
-    public var task: URLSessionTask? { dataTask }
+    public var task: URLSessionTask? {
+        print(dataTask)
+        return dataTask
+    }
 
     internal init(requestConvertible: URLRequestConvertible,
                   requestAdapter: NetworkingRequestAdapter?,
