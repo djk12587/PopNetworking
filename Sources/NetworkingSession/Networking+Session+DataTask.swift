@@ -11,7 +11,7 @@ internal protocol NetworkingSessionDataTaskDelegate: AnyObject {
     func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask)
 }
 
-public class NetworkingSessionDataTask {
+public class NetworkingSessionDataTask: Cancellable {
 
     private let requestConvertible: URLRequestConvertible
     private var request: URLRequest?
@@ -25,9 +25,12 @@ public class NetworkingSessionDataTask {
 
     private var queuedResponseSerializers: [(NetworkingRawResponse) -> Void] = []
 
-    public var task: URLSessionTask? {
-        print(dataTask)
-        return dataTask
+    public var cancellableTask: Cancellable {
+        return self
+    }
+
+    public func cancel() {
+        dataTask?.cancel()
     }
 
     internal init(requestConvertible: URLRequestConvertible,
