@@ -10,9 +10,10 @@ import Foundation
 extension NetworkingRoute {
 
     @discardableResult
-    func and<ExtraRoute: NetworkingRoute>(run route: ExtraRoute,
-                                          executeCompletionHandlerOn queue: DispatchQueue = .main,
-                                          completion: @escaping (Result<(Self.ResponseSerializer.SerializedObject, ExtraRoute.ResponseSerializer.SerializedObject), Error>) -> Void) -> Cancellable {
+    public func and<ExtraRoute: NetworkingRoute>(run route: ExtraRoute,
+                                                 executeCompletionHandlerOn queue: DispatchQueue = .main,
+                                                 completion: @escaping (Result<(Self.ResponseSerializer.SerializedObject,
+                                                                                ExtraRoute.ResponseSerializer.SerializedObject), Error>) -> Void) -> Cancellable {
         let operationQueue = OperationQueue()
         let groupedTasks = DispatchGroup()
         groupedTasks.enter()
