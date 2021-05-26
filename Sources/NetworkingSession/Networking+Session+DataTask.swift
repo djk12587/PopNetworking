@@ -17,7 +17,7 @@ public class NetworkingSessionDataTask: Cancellable {
     private var request: URLRequest?
 
     internal var dataTask: URLSessionDataTask? = nil
-    private var wasCancelled = false
+    private(set) var wasCancelled = false
 
     private(set) var retryCount = 0
     private weak var requestAdapter: NetworkingRequestAdapter?
@@ -113,8 +113,7 @@ extension NetworkingSessionDataTask {
                 guard let self = self else { return }
 
                 switch retrierResult {
-                    case .doNotRetry,
-                         .retry where self.wasCancelled:
+                    case .doNotRetry:
                         queue.async { urlRequestCompletionHandler(serializedResult) }
 
                     case .retry:

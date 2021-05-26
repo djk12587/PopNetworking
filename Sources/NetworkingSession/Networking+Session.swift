@@ -52,6 +52,10 @@ public class NetworkingSession {
 
         networkingSessionDataTask.dataTask = dataTask
         dataTask.resume()
+
+        if networkingSessionDataTask.wasCancelled {
+            dataTask.cancel()
+        }
     }
 }
 
