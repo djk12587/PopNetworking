@@ -30,7 +30,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
     var responseSerializationMode: NetworkingResponseSerializationMode<ResponseSerializer> { get }
 
     ///Responsible for turning a NetworkingRoute object into a Result<ResponseSerializer.SerializedObject, Error>
-    func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable?
+    func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
 }
 
 /// `NetworkingRequestParameterEncoding` declares how your requests parameters should be added to a `URLRequest`

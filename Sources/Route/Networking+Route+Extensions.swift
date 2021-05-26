@@ -41,7 +41,7 @@ extension NetworkingRoute {
 
     /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?`
     @discardableResult
-    public func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable? {
+    public func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
         return session
             .createDataTask(from: self)
             .serializeResponse(with: responseSerializationMode, runCompletionHandlerOn: .main, completionHandler: completion)
