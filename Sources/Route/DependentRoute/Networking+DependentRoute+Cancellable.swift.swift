@@ -9,10 +9,6 @@ import Foundation
 
 public class CancellableUrlSessionTasks: Cancellable {
 
-    deinit {
-        print("CancellableUrlSessionTasks deinit")
-    }
-
     private var urlSessionTasks: [URLSessionTask]
 
     internal init(urlSessionTasks: [URLSessionTask] = []) {
