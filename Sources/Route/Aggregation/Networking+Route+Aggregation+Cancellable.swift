@@ -7,10 +7,6 @@
 
 import Foundation
 
-public protocol Cancellable {
-    func cancel()
-}
-
 public class CancellableQueue: Cancellable {
 
     private let queue: OperationQueue
