@@ -17,6 +17,7 @@ public class NetworkingSessionDataTask: Cancellable {
     private var request: URLRequest?
 
     internal var dataTask: URLSessionDataTask? = nil
+    private var wasCancelled = false
 
     private(set) var retryCount = 0
     private weak var requestAdapter: NetworkingRequestAdapter?
@@ -30,6 +31,7 @@ public class NetworkingSessionDataTask: Cancellable {
     }
 
     public func cancel() {
+        wasCancelled = true
         dataTask?.cancel()
     }
 
@@ -94,10 +96,12 @@ extension NetworkingSessionDataTask {
 
             let serializedResult = serialize(rawResponse)
             //Check if the response contains an error, if not, trigger the completionHandler.
-            guard let error = rawResponse.error ?? serializedResult.error,
-                  let retrier = self.requestRetrier,
-                  let urlRequest = rawResponse.urlRequest else {
-
+            guard
+                let error = rawResponse.error ?? serializedResult.error,
+                let retrier = self.requestRetrier,
+                let urlRequest = rawResponse.urlRequest,
+                !self.wasCancelled
+            else {
                 queue.async { urlRequestCompletionHandler(serializedResult) }
                 return
             }
@@ -106,11 +110,14 @@ extension NetworkingSessionDataTask {
             retrier.retry(urlRequest: urlRequest,
                           dueTo: error,
                           urlResponse: rawResponse.urlResponse ?? HTTPURLResponse(),
-                          retryCount: self.retryCount) { retrierResult in
+                          retryCount: self.retryCount) { [weak self] retrierResult in
+                guard let self = self else { return }
 
                 switch retrierResult {
-                    case .doNotRetry:
+                    case .doNotRetry,
+                         .retry where self.wasCancelled:
                         queue.async { urlRequestCompletionHandler(serializedResult) }
+
                     case .retry:
                         self.retryCount += 1
                         self.execute()
