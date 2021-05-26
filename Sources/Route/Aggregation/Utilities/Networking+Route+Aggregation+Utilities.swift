@@ -16,7 +16,7 @@ internal class NetworkingRouteOperation<Route: NetworkingRoute>: AsyncOperation 
     }
 
     private let route: Route
-    private(set) var urlSessionTask: URLSessionTask?
+    private(set) var cancellableTask: Cancellable?
     private var completion: ((Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void)?
 
     init(run: Route, completion: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
@@ -27,7 +27,7 @@ internal class NetworkingRouteOperation<Route: NetworkingRoute>: AsyncOperation 
 
     override func cancel() {
         super.cancel()
-        urlSessionTask?.cancel()
+        cancellableTask?.cancel()
         state = .finished
         executeCompletionBlock(with: .failure(RouteOperationError(route: route, failureReason: "The request was cancelled", code: NSURLErrorCancelled)))
     }
@@ -49,7 +49,7 @@ internal class NetworkingRouteOperation<Route: NetworkingRoute>: AsyncOperation 
             return
         }
 
-        urlSessionTask = route.request() { [weak self] result in
+        cancellableTask = route.request() { [weak self] result in
             guard let self = self else { return }
             self.executeCompletionBlock(with: result)
             self.state = .finished

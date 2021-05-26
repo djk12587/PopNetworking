@@ -21,7 +21,7 @@ extension NetworkingRoute {
                                                                   initializeWith dependentRouteRequiredParams: DependentRoute.RequiredParams? = nil,
                                                                   completion: @escaping (Result<DependentRoute.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
                                                                   where Self.ResponseSerializer.SerializedObject == DependentRoute.ParentRoute.ResponseSerializer.SerializedObject {
-        let cancellableTasks = CancellableUrlSessionTasks()
+        let cancellableTasks = CancellableTasks()
 
         let parentTask = request { parentResult in
             switch parentResult {
@@ -42,7 +42,7 @@ extension NetworkingRoute {
         }
 
         print(parentTask)
-        cancellableTasks.append(urlSessionTask: parentTask)
+        cancellableTasks.append(cancellablesTask: parentTask)
         return cancellableTasks
     }
 }

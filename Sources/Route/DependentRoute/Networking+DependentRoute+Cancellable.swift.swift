@@ -7,20 +7,20 @@
 
 import Foundation
 
-public class CancellableUrlSessionTasks: Cancellable {
+public class CancellableTasks: Cancellable {
 
-    private var urlSessionTasks: [URLSessionTask]
+    private var cancellablesTasks: [Cancellable]
 
-    internal init(urlSessionTasks: [URLSessionTask] = []) {
-        self.urlSessionTasks = urlSessionTasks
+    internal init(cancellablesTasks: [Cancellable] = []) {
+        self.cancellablesTasks = cancellablesTasks
     }
 
-    internal func append (urlSessionTask: URLSessionTask?) {
-        guard let urlSessionTask = urlSessionTask else { return }
-        urlSessionTasks.append(urlSessionTask)
+    internal func append(cancellablesTask: Cancellable?) {
+        guard let cancellablesTask = cancellablesTask else { return }
+        cancellablesTasks.append(cancellablesTask)
     }
 
     public func cancel() {
-        urlSessionTasks.forEach { $0.cancel() }
+        cancellablesTasks.forEach { $0.cancel() }
     }
 }
