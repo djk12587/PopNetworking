@@ -17,10 +17,10 @@ public protocol DependentNetworkingRoute: NetworkingRoute {
 extension NetworkingRoute {
 
     @discardableResult
-    func andThen<DependentRoute: DependentNetworkingRoute>(run dependentRouteType: DependentRoute.Type,
-                                                           initializeWith dependentRouteRequiredParams: DependentRoute.RequiredParams? = nil,
-                                                           completion: @escaping (Result<DependentRoute.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
-                                                           where Self.ResponseSerializer.SerializedObject == DependentRoute.ParentRoute.ResponseSerializer.SerializedObject {
+    public func andThen<DependentRoute: DependentNetworkingRoute>(run dependentRouteType: DependentRoute.Type,
+                                                                  initializeWith dependentRouteRequiredParams: DependentRoute.RequiredParams? = nil,
+                                                                  completion: @escaping (Result<DependentRoute.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
+                                                                  where Self.ResponseSerializer.SerializedObject == DependentRoute.ParentRoute.ResponseSerializer.SerializedObject {
         let cancellableTasks = CancellableUrlSessionTasks()
 
         let parentTask = request { parentResult in
