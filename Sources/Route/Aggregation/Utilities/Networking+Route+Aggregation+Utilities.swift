@@ -9,10 +9,6 @@ import Foundation
 
 internal class NetworkingRouteOperation<Route: NetworkingRoute>: AsyncOperation {
 
-    deinit {
-        print("heellllllo!!!!")
-    }
-
     struct RouteOperationError: Error {
         let route: Route
         let failureReason: String
