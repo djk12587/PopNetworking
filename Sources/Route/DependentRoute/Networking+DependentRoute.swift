@@ -27,9 +27,10 @@ extension NetworkingRoute {
             switch parentResult {
                 case .success(let parentResponseModel):
                     do {
-                        let dependentRoute = try dependentRouteType.init(parentResponseModel: parentResponseModel, with: dependentRouteRequiredParams)
-                        let dependentTask = dependentRoute.request(completion: completion)
-                        cancellableTasks.append(urlSessionTask: dependentTask)
+//                        let dependentRoute = try dependentRouteType.init(parentResponseModel: parentResponseModel, with: dependentRouteRequiredParams)
+//                        let dependentTask = dependentRoute.request(completion: completion)
+//                        cancellableTasks.append(urlSessionTask: dependentTask)
+                        completion(.failure(NSError(domain: "test error", code: 1, userInfo: nil)))
                     }
                     catch {
                         completion(.failure(error))
