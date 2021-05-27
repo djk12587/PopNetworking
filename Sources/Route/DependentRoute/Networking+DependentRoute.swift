@@ -19,7 +19,8 @@ extension NetworkingRoute {
     @discardableResult
     public func andThen<DependentRoute: DependentNetworkingRoute>(run dependentRouteType: DependentRoute.Type,
                                                                   initializeWith dependentRouteRequiredParams: DependentRoute.RequiredParams? = nil,
-                                                                  completion: @escaping (Result<DependentRoute.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
+                                                                  completion: @escaping (Result<(Self.ResponseSerializer.SerializedObject,
+                                                                                                 DependentRoute.ResponseSerializer.SerializedObject), Error>) -> Void) -> Cancellable
                                                                   where Self.ResponseSerializer.SerializedObject == DependentRoute.ParentRoute.ResponseSerializer.SerializedObject {
         let cancellableTasks = CancellableTasks()
 
@@ -28,7 +29,10 @@ extension NetworkingRoute {
                 case .success(let parentResponseModel):
                     do {
                         let dependentRoute = try dependentRouteType.init(parentResponseModel: parentResponseModel, with: dependentRouteRequiredParams)
-                        let dependentTask = dependentRoute.request(completion: completion)
+                        let dependentTask = dependentRoute.request { result in
+                            let aggregatedResult = result.map { (parentResponseModel, $0) }
+                            completion(aggregatedResult)
+                        }
                         cancellableTasks.append(cancellablesTask: dependentTask)
                     }
                     catch {
