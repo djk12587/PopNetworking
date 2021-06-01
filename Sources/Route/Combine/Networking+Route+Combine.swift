@@ -40,10 +40,7 @@ public struct NetworkingRoutePublisher<Route: NetworkingRoute>: Publisher {
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
 private extension NetworkingRoutePublisher {
-    final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output,
-                                                                                       Downstream.Failure == NetworkingRoutePublisher.Failure{
-
-        typealias Failure = Downstream.Failure
+    final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output {
 
         private var downstream: Downstream?
         private let route: Route
@@ -95,9 +92,7 @@ public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute>: Publishe
 private extension NetworkingRouteFailablePublisher {
     final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRouteFailablePublisher.Output,
                                                                                        Downstream.Failure == NetworkingRouteFailablePublisher.Failure {
-
-        typealias Failure = Downstream.Failure
-
+        
         private var downstream: Downstream?
         private let route: Route
         private var routeCancellable: PopNetworking.Cancellable?
