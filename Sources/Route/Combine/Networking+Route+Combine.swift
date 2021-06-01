@@ -40,7 +40,8 @@ public struct NetworkingRoutePublisher<Route: NetworkingRoute>: Publisher {
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
 private extension NetworkingRoutePublisher {
-    final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output {
+    final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output,
+                                                                                       Downstream.Failure == NetworkingRoutePublisher.Failure{
 
         typealias Failure = Downstream.Failure
 
