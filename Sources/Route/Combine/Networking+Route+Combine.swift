@@ -42,6 +42,8 @@ public struct NetworkingRoutePublisher<Route: NetworkingRoute>: Publisher {
 private extension NetworkingRoutePublisher {
     final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output {
 
+        typealias Failure = Downstream.Failure
+
         private var downstream: Downstream?
         private let route: Route
         private var routeCancellable: PopNetworking.Cancellable?
@@ -92,6 +94,8 @@ public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute>: Publishe
 private extension NetworkingRouteFailablePublisher {
     final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRouteFailablePublisher.Output,
                                                                                        Downstream.Failure == NetworkingRouteFailablePublisher.Failure {
+
+        typealias Failure = Downstream.Failure
 
         private var downstream: Downstream?
         private let route: Route
