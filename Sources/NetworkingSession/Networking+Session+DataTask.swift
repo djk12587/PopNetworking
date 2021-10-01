@@ -47,11 +47,11 @@ public class NetworkingSessionDataTask: Cancellable {
     }
 
     @discardableResult
-    public func serializeResponse<ResponseSerializer: NetworkingResponseSerializer>(with responseSerializationMode: NetworkingResponseSerializationMode<ResponseSerializer>,
+    public func serializeResponse<ResponseSerializer: NetworkingResponseSerializer>(with responseSerializer: ResponseSerializer,
                                                                                     runCompletionHandlerOn queue: DispatchQueue = .main,
                                                                                     completionHandler: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Self {
 
-        queueResponseSerialization(serialize: responseSerializationMode.serialize,
+        queueResponseSerialization(serialize: responseSerializer.serialize,
                                    runUrlRequestCompletionHandlerOn: queue,
                                    urlRequestCompletionHandler: completionHandler)
         return self
