@@ -9,8 +9,9 @@
 import Foundation
 
 public extension NetworkingRoute {
+    var session: NetworkingSession { .shared }
     var headers: NetworkingRouteHttpHeaders? { nil }
-    var session: NetworkingSession { NetworkingSession.shared }
+    var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 }
 
 extension NetworkingRoute {
@@ -39,12 +40,17 @@ extension NetworkingRoute {
         return mutableRequest
     }
 
-    /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> URLSessionTask?`
+    /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable`
     @discardableResult
     public func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
+        if let mockResponse = mockResponse {
+            completion(mockResponse)
+            return MockedCancellable()
+        }
+
         return session
             .createDataTask(from: self)
-            .serializeResponse(with: responseSerializationMode, runCompletionHandlerOn: .main, completionHandler: completion)
+            .serializeResponse(with: responseSerializer, runCompletionHandlerOn: .main, completionHandler: completion)
             .execute()
             .cancellableTask
     }
