@@ -34,8 +34,8 @@ public class NetworkingSession {
     }
 
     public func execute<Route: NetworkingRoute>(route: Route,
-                                                        runCompletionHandlerOn queue: DispatchQueue = .main,
-                                                        completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
+                                                runCompletionHandlerOn queue: DispatchQueue = .main,
+                                                completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
         if let mockResponse = route.mockResponse {
             queue.async { completionHandler(mockResponse) }
             return MockedCancellable()
