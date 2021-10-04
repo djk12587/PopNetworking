@@ -8,12 +8,8 @@
 
 import Foundation
 
-public protocol URLRequestConvertible {
-    func asUrlRequest() throws -> URLRequest
-}
-
 /// A `NetworkingRoute` encapsulates everything required to build a `URLRequest` and serialize the `URLRequest`'s response into a `Result<ResponseSerializer.SerializedObject, Error>`
-public protocol NetworkingRoute: URLRequestConvertible {
+public protocol NetworkingRoute {
 
     typealias NetworkingRouteHttpHeaders = [String : String]
 
@@ -24,6 +20,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
     var headers: NetworkingRouteHttpHeaders? { get }
     var parameterEncoding: NetworkingRequestParameterEncoding { get }
     var session: NetworkingSession { get }
+    func asUrlRequest() throws -> URLRequest
 
     //--Response Handling--//
     associatedtype ResponseSerializer: NetworkingResponseSerializer
@@ -31,7 +28,7 @@ public protocol NetworkingRoute: URLRequestConvertible {
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
     ///Responsible for turning a NetworkingRoute object into a Result<ResponseSerializer.SerializedObject, Error>
-    func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
+    func request(runCompletionHandlerOn queue: DispatchQueue, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
 }
 
 /// `NetworkingRequestParameterEncoding` declares how your requests parameters should be added to a `URLRequest`
