@@ -31,44 +31,42 @@ public protocol NetworkingRoute {
     func request(runCompletionHandlerOn queue: DispatchQueue, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
 }
 
-/// `NetworkingRequestParameterEncoding` declares how your requests parameters should be added to a `URLRequest`
-public enum NetworkingRequestParameterEncoding {
-    case json(params: [String: Any]?)
-    case jsonData(encodedParams: Data?)
-    case url(params: [String: Any]?)
-}
+extension NetworkingRoute {
 
-public enum NetworkingRouteHttpMethod: String {
-    case get
-    case post
-    case delete
-    case put
-    case patch
-}
+    public var session: NetworkingSession { .shared }
+    public var headers: NetworkingRouteHttpHeaders? { nil }
+    public var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 
-/// Potential errors that can be returned when attempting to create a `URLRequest` from a `NetworkingRoute`
-public enum NetworkingRouteError: Error {
-    case invalidUrl
-    case jsonParameterEncodingFailed(reason: Error)
+    /// This is a default implementation. If you require a custom implementation, you can implement your own `func asUrlRequest() throws -> URLRequest`
+    public func asUrlRequest() throws -> URLRequest {
 
-    public enum AggregatedRoutes: Error {
-        case routeNeverFinished
-        case multiFailure([Error])
+        guard let url = URL(string: baseUrl.appending(path)) else { throw NetworkingRouteError.invalidUrl }
+
+        var mutableRequest = URLRequest(url: url)
+        mutableRequest.httpMethod = method.rawValue
+
+        switch parameterEncoding {
+            case .url(let params):
+                try URLEncoding.default.encode(&mutableRequest, with: params)
+
+            case .json(let params):
+                try JSONEncoding.default.encode(&mutableRequest, with: params)
+
+            case .jsonData(let encodedParams):
+                JSONEncoding.default.encode(&mutableRequest, with: encodedParams)
+        }
+
+        headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
+
+        return mutableRequest
     }
-}
 
-public protocol Cancellable {
-    ///Cancels a `NetworkingRoute`
-    func cancel()
-}
-
-public struct NetworkingRawResponse {
-    public let urlRequest: URLRequest?
-    public let urlResponse: HTTPURLResponse?
-    public let data: Data?
-    public let error: Error?
-}
-
-public struct MockedCancellable: Cancellable {
-    public func cancel() {}
+    /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable`
+    @discardableResult
+    public func request(runCompletionHandlerOn queue: DispatchQueue = .main,
+                        completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
+        return session.execute(route: self,
+                               runCompletionHandlerOn: queue,
+                               completionHandler: completion)
+    }
 }
