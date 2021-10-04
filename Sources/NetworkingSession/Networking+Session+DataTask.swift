@@ -8,13 +8,15 @@
 import Foundation
 
 internal protocol NetworkingSessionDataTaskDelegate: AnyObject {
-    func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask)
+    func retry<Route: NetworkingRoute>(networkingSessionDataTask: NetworkingSessionDataTask<Route>,
+                                       runCompletionHandlerOn queue: DispatchQueue,
+                                       completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void)
 }
 
-public class NetworkingSessionDataTask: Cancellable {
+public class NetworkingSessionDataTask<Route: NetworkingRoute>: Cancellable {
 
-    private let requestConvertible: URLRequestConvertible
-    private var request: URLRequest?
+    private let route: Route
+    private var currentRequest: URLRequest?
 
     internal var dataTask: URLSessionDataTask? = nil
     private(set) var wasCancelled = false
@@ -23,8 +25,6 @@ public class NetworkingSessionDataTask: Cancellable {
     private weak var requestAdapter: NetworkingRequestAdapter?
     private weak var requestRetrier: NetworkingRequestRetrier?
     private weak var delegate: NetworkingSessionDataTaskDelegate?
-
-    private var queuedResponseSerializers: [(NetworkingRawResponse) -> Void] = []
 
     public var cancellableTask: Cancellable {
         return self
@@ -35,94 +35,55 @@ public class NetworkingSessionDataTask: Cancellable {
         dataTask?.cancel()
     }
 
-    internal init(requestConvertible: URLRequestConvertible,
+    internal init(route: Route,
                   requestAdapter: NetworkingRequestAdapter?,
                   requestRetrier: NetworkingRequestRetrier?,
                   delegate: NetworkingSessionDataTaskDelegate) {
-
-        self.requestConvertible = requestConvertible
+        self.route = route
         self.delegate = delegate
         self.requestAdapter = requestAdapter
         self.requestRetrier = requestRetrier
     }
 
-    @discardableResult
-    public func serializeResponse<ResponseSerializer: NetworkingResponseSerializer>(with responseSerializer: ResponseSerializer,
-                                                                                    runCompletionHandlerOn queue: DispatchQueue = .main,
-                                                                                    completionHandler: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Self {
-
-        queueResponseSerialization(serialize: responseSerializer.serialize,
-                                   runUrlRequestCompletionHandlerOn: queue,
-                                   urlRequestCompletionHandler: completionHandler)
-        return self
+    internal func createUrlRequest() throws -> URLRequest {
+        let urlRequest = try currentRequest ?? route.asUrlRequest()
+        currentRequest = urlRequest
+        let adaptedUrlRequest = try requestAdapter?.adapt(urlRequest: urlRequest)
+        currentRequest = adaptedUrlRequest ?? urlRequest
+        return adaptedUrlRequest ?? urlRequest
     }
 
-    @discardableResult
-    public func execute() -> NetworkingSessionDataTask {
-
-        do {
-            let urlRequest = try request ?? requestConvertible.asUrlRequest()
-            request = urlRequest
-            let adaptedUrlRequest = try requestAdapter?.adapt(urlRequest: urlRequest)
-            request = adaptedUrlRequest
-            delegate?.networkingSessionDataTaskIsReadyToExecute(urlRequest: adaptedUrlRequest ?? urlRequest,
-                                                                accompaniedWith: self)
-        }
-        catch {
-            executeResponseSerializers(with: NetworkingRawResponse(urlRequest: request,
-                                                                   urlResponse: nil,
-                                                                   data: nil,
-                                                                   error: error))
+    internal func executeResponseSerializer(with rawResponse: NetworkingRawResponse,
+                                            runCompletionHandlerOn queue: DispatchQueue,
+                                            completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
+        let serializedResult = route.responseSerializer.serialize(response: rawResponse)
+        //Check if the response contains an error, if not, trigger the completionHandler.
+        guard
+            let error = rawResponse.error ?? serializedResult.error,
+            let retrier = self.requestRetrier,
+            let urlRequest = rawResponse.urlRequest ?? currentRequest
+        else {
+            queue.async { completionHandler(serializedResult) }
+            return
         }
 
-        return self
-    }
+        //If there is an error, we now ask the retrier if the failed request should be restarted or not
+        retrier.retry(urlRequest: urlRequest,
+                      dueTo: error,
+                      urlResponse: rawResponse.urlResponse ?? HTTPURLResponse(),
+                      retryCount: self.retryCount) { retrierResult in
 
-    @discardableResult
-    internal func executeResponseSerializers(with rawResponse: NetworkingRawResponse) -> Self {
-        queuedResponseSerializers.forEach { $0(rawResponse) }
-        return self
-    }
-}
+            switch retrierResult {
+                case .doNotRetry:
+                    queue.async { completionHandler(serializedResult) }
 
-extension NetworkingSessionDataTask {
-
-    private func queueResponseSerialization<ResponseModel>(serialize: @escaping (NetworkingRawResponse) -> Result<ResponseModel, Error>,
-                                                           runUrlRequestCompletionHandlerOn queue: DispatchQueue,
-                                                           urlRequestCompletionHandler: @escaping (Result<ResponseModel, Error>) -> Void) {
-
-        let responseSerialization = { [weak self] (rawResponse: NetworkingRawResponse) in
-            guard let self = self else { return }
-
-            let serializedResult = serialize(rawResponse)
-            //Check if the response contains an error, if not, trigger the completionHandler.
-            guard
-                let error = rawResponse.error ?? serializedResult.error,
-                let retrier = self.requestRetrier,
-                let urlRequest = rawResponse.urlRequest
-            else {
-                queue.async { urlRequestCompletionHandler(serializedResult) }
-                return
-            }
-
-            //If there is an error, we now ask the retrier if the failed request should be restarted or not
-            retrier.retry(urlRequest: urlRequest,
-                          dueTo: error,
-                          urlResponse: rawResponse.urlResponse ?? HTTPURLResponse(),
-                          retryCount: self.retryCount) { retrierResult in
-
-                switch retrierResult {
-                    case .doNotRetry:
-                        queue.async { urlRequestCompletionHandler(serializedResult) }
-
-                    case .retry:
-                        self.retryCount += 1
-                        self.execute()
-                }
+                case .retry:
+                    self.retryCount += 1
+                    self.delegate?.retry(networkingSessionDataTask: self,
+                                         runCompletionHandlerOn: queue,
+                                         completionHandler: completionHandler)
             }
         }
-
-        queuedResponseSerializers.append(responseSerialization)
     }
 }
 

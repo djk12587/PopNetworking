@@ -42,16 +42,10 @@ extension NetworkingRoute {
 
     /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable`
     @discardableResult
-    public func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
-        if let mockResponse = mockResponse {
-            completion(mockResponse)
-            return MockedCancellable()
-        }
-
-        return session
-            .createDataTask(from: self)
-            .serializeResponse(with: responseSerializer, runCompletionHandlerOn: .main, completionHandler: completion)
-            .execute()
-            .cancellableTask
+    public func request(runCompletionHandlerOn queue: DispatchQueue = .main,
+                        completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
+        return session.execute(route: self,
+                               runCompletionHandlerOn: queue,
+                               completionHandler: completion)
     }
 }

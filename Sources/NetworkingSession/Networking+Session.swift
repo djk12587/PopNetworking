@@ -28,39 +28,60 @@ public class NetworkingSession {
     public init(session: URLSession = URLSession(configuration: .default),
                 requestAdapter: NetworkingRequestAdapter? = nil,
                 requestRetrier: NetworkingRequestRetrier? = nil) {
-
         self.session = session
         self.requestAdapter = requestAdapter
         self.requestRetrier = requestRetrier
     }
 
-    public func createDataTask(from requestConvertible: URLRequestConvertible) -> NetworkingSessionDataTask {
-        return NetworkingSessionDataTask(requestConvertible: requestConvertible,
-                                         requestAdapter: requestAdapter,
-                                         requestRetrier: requestRetrier,
-                                         delegate: self)
+    public func execute<Route: NetworkingRoute>(route: Route,
+                                                runCompletionHandlerOn queue: DispatchQueue = .main,
+                                                completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
+        if let mockResponse = route.mockResponse {
+            queue.async { completionHandler(mockResponse) }
+            return MockedCancellable()
+        }
+        else {
+            let dataTask = NetworkingSessionDataTask(route: route,
+                                                     requestAdapter: requestAdapter,
+                                                     requestRetrier: requestRetrier,
+                                                     delegate: self)
+            execute(dataTask, runCompletionHandlerOn: queue, completionHandler: completionHandler)
+            return dataTask.cancellableTask
+        }
     }
 
-    private func execute(_ urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
+    private func execute<Route: NetworkingRoute>(_ dataTask: NetworkingSessionDataTask<Route>,
+                                                 runCompletionHandlerOn queue: DispatchQueue,
+                                                 completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
+        do {
+            let urlRequest = try dataTask.createUrlRequest()
+            let urlSessionTask = session.dataTask(with: urlRequest) { (responseData, response, error) in
+                dataTask.executeResponseSerializer(with: NetworkingRawResponse(urlRequest: urlRequest,
+                                                                               urlResponse: response as? HTTPURLResponse,
+                                                                               data: responseData,
+                                                                               error: error),
+                                                   runCompletionHandlerOn: queue,
+                                                   completionHandler: completionHandler)
+            }
 
-        let dataTask = session.dataTask(with: urlRequest) { (responseData, response, error) in
-            networkingSessionDataTask.executeResponseSerializers(with: NetworkingRawResponse(urlRequest: urlRequest,
-                                                                                             urlResponse: response as? HTTPURLResponse,
-                                                                                             data: responseData,
-                                                                                             error: error))
-        }
+            dataTask.dataTask = urlSessionTask
+            urlSessionTask.resume()
 
-        networkingSessionDataTask.dataTask = dataTask
-        dataTask.resume()
-
-        if networkingSessionDataTask.wasCancelled {
-            dataTask.cancel()
+            if dataTask.wasCancelled {
+                dataTask.cancel()
+            }
+        } catch {
+            dataTask.executeResponseSerializer(with: NetworkingRawResponse(urlRequest: nil, urlResponse: nil, data: nil, error: error),
+                                               runCompletionHandlerOn: queue,
+                                               completionHandler: completionHandler)
         }
     }
 }
 
 extension NetworkingSession: NetworkingSessionDataTaskDelegate {
-    internal func networkingSessionDataTaskIsReadyToExecute(urlRequest: URLRequest, accompaniedWith networkingSessionDataTask: NetworkingSessionDataTask) {
-        execute(urlRequest, accompaniedWith: networkingSessionDataTask)
+    internal func retry<Route: NetworkingRoute>(networkingSessionDataTask: NetworkingSessionDataTask<Route>,
+                                                runCompletionHandlerOn queue: DispatchQueue,
+                                                completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
+        execute(networkingSessionDataTask, runCompletionHandlerOn: queue, completionHandler: completionHandler)
     }
 }
