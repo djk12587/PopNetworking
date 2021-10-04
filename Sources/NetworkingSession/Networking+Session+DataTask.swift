@@ -47,6 +47,7 @@ public class NetworkingSessionDataTask<Route: NetworkingRoute>: Cancellable {
 
     internal func createUrlRequest() throws -> URLRequest {
         let urlRequest = try currentRequest ?? route.asUrlRequest()
+        currentRequest = urlRequest
         let adaptedUrlRequest = try requestAdapter?.adapt(urlRequest: urlRequest)
         currentRequest = adaptedUrlRequest ?? urlRequest
         return adaptedUrlRequest ?? urlRequest
@@ -60,7 +61,7 @@ public class NetworkingSessionDataTask<Route: NetworkingRoute>: Cancellable {
         guard
             let error = rawResponse.error ?? serializedResult.error,
             let retrier = self.requestRetrier,
-            let urlRequest = rawResponse.urlRequest
+            let urlRequest = rawResponse.urlRequest ?? currentRequest
         else {
             queue.async { completionHandler(serializedResult) }
             return
