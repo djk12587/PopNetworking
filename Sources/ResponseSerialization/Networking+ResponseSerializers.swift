@@ -25,7 +25,7 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error> {
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
             return Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
@@ -53,7 +53,7 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
@@ -87,7 +87,7 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let response = response.urlResponse else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
@@ -104,7 +104,7 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error> {
+        public func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error> {
 
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
