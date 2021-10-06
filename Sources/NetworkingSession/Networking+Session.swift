@@ -56,19 +56,19 @@ public class NetworkingSession {
         do {
             let urlRequest = try routeDataTask.urlRequest
             let urlSessionDataTask = session.dataTask(with: urlRequest) { (responseData, response, error) in
-                routeDataTask.executeResponseSerializer(with: NetworkingRawResponse(urlRequest: urlRequest,
-                                                                                    urlResponse: response as? HTTPURLResponse,
-                                                                                    data: responseData,
-                                                                                    error: error))
+                routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: urlRequest,
+                                                                                             urlResponse: response as? HTTPURLResponse,
+                                                                                             data: responseData,
+                                                                                             error: error))
             }
 
             routeDataTask.urlSessionDataTask = urlSessionDataTask
             urlSessionDataTask.resume()
         } catch {
-            routeDataTask.executeResponseSerializer(with: NetworkingRawResponse(urlRequest: nil,
-                                                                                urlResponse: nil,
-                                                                                data: nil,
-                                                                                error: error))
+            routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
+                                                                                         urlResponse: nil,
+                                                                                         data: nil,
+                                                                                         error: error))
         }
     }
 }

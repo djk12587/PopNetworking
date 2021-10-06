@@ -17,5 +17,5 @@ public protocol NetworkingResponseSerializer {
     ///
     /// - Parameter response: `response` is tuple of type `NetworkingRawResponse` that contains `(urlRequest: URLRequest?, urlResponse: HTTPURLResponse?, data: Data?, error: Error?)`
     /// - Returns: A `Result` that contains a `SerializedObject` or an `Error`
-    func serialize(response: NetworkingRawResponse) -> Result<SerializedObject, Error>
+    func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error>
 }
