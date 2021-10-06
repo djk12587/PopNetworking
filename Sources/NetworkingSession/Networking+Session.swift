@@ -41,47 +41,40 @@ public class NetworkingSession {
             return MockedCancellable()
         }
         else {
-            let dataTask = RouteDataTask(route: route,
-                                         requestAdapter: requestAdapter,
-                                         requestRetrier: requestRetrier,
-                                         delegate: self)
-            execute(dataTask, runCompletionHandlerOn: queue, completionHandler: completionHandler)
-            return dataTask.cancellableTask
+            let routeDataTask = RouteDataTask(route: route,
+                                              requestAdapter: requestAdapter,
+                                              requestRetrier: requestRetrier,
+                                              routeDataTaskDelegate: self,
+                                              completionHandlerQueue: queue,
+                                              routeCompletionHandler: completionHandler)
+            execute(routeDataTask)
+            return routeDataTask
         }
     }
 
-    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>,
-                                                 runCompletionHandlerOn queue: DispatchQueue,
-                                                 completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
+    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) {
         do {
             let urlRequest = try routeDataTask.urlRequest
             let urlSessionDataTask = session.dataTask(with: urlRequest) { (responseData, response, error) in
                 routeDataTask.executeResponseSerializer(with: NetworkingRawResponse(urlRequest: urlRequest,
                                                                                     urlResponse: response as? HTTPURLResponse,
                                                                                     data: responseData,
-                                                                                    error: error),
-                                                        runCompletionHandlerOn: queue,
-                                                        completionHandler: completionHandler)
+                                                                                    error: error))
             }
 
             routeDataTask.urlSessionDataTask = urlSessionDataTask
             urlSessionDataTask.resume()
-
-            if routeDataTask.wasCancelled {
-                routeDataTask.cancel()
-            }
         } catch {
-            routeDataTask.executeResponseSerializer(with: NetworkingRawResponse(urlRequest: nil, urlResponse: nil, data: nil, error: error),
-                                                    runCompletionHandlerOn: queue,
-                                                    completionHandler: completionHandler)
+            routeDataTask.executeResponseSerializer(with: NetworkingRawResponse(urlRequest: nil,
+                                                                                urlResponse: nil,
+                                                                                data: nil,
+                                                                                error: error))
         }
     }
 }
 
 extension NetworkingSession: NetworkingRouteDataTaskDelegate {
-    internal func retry<Route: NetworkingRoute>(networkingSessionDataTask: RouteDataTask<Route>,
-                                                runCompletionHandlerOn queue: DispatchQueue,
-                                                completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
-        execute(networkingSessionDataTask, runCompletionHandlerOn: queue, completionHandler: completionHandler)
+    internal func retry<Route: NetworkingRoute>(networkingSessionDataTask: RouteDataTask<Route>) {
+        execute(networkingSessionDataTask)
     }
 }
