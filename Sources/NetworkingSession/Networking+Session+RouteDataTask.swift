@@ -14,10 +14,6 @@ internal protocol NetworkingRouteDataTaskDelegate: AnyObject {
 extension NetworkingSession {
     public class RouteDataTask<Route: NetworkingRoute>: Cancellable {
 
-        deinit {
-            print("DEINIT!!!!@#")
-        }
-
         private let route: Route
         private let completionHandlerQueue: DispatchQueue
         private let routeCompletionHandler: (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void
@@ -62,7 +58,7 @@ extension NetworkingSession {
             //Check if the response contains an error, if not, trigger the completionHandler.
             guard
                 let error = rawResponse.error ?? serializedResult.error,
-                let retrier = self.requestRetrier,
+                let retrier = requestRetrier,
                 let urlRequest = rawResponse.urlRequest ?? currentRequest
             else {
                 completionHandlerQueue.async { self.routeCompletionHandler(serializedResult) }
@@ -73,7 +69,7 @@ extension NetworkingSession {
             retrier.retry(urlRequest: urlRequest,
                           dueTo: error,
                           urlResponse: rawResponse.urlResponse ?? HTTPURLResponse(),
-                          retryCount: self.retryCount) { retrierResult in
+                          retryCount: retryCount) { retrierResult in
 
                 switch retrierResult {
                     case .doNotRetry:
