@@ -42,8 +42,8 @@ public struct MockedCancellable: Cancellable {
     public func cancel() {}
 }
 
-extension URLSessionDataTask {
-    public struct RawResponse {
+public extension URLSessionDataTask {
+    struct RawResponse {
         public let urlRequest: URLRequest?
         public let urlResponse: HTTPURLResponse?
         public let data: Data?
