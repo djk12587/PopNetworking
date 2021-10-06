@@ -8,7 +8,7 @@
 import Foundation
 
 internal protocol NetworkingRouteDataTaskDelegate: AnyObject {
-    func retry<Route: NetworkingRoute>(networkingSessionDataTask: NetworkingSession.RouteDataTask<Route>)
+    func retry<Route: NetworkingRoute>(routeDataTask: NetworkingSession.RouteDataTask<Route>)
 }
 
 public extension NetworkingSession {
@@ -77,7 +77,7 @@ public extension NetworkingSession {
 
                     case .retry:
                         self.retryCount += 1
-                        self.delegate?.retry(networkingSessionDataTask: self)
+                        self.delegate?.retry(routeDataTask: self)
                 }
             }
         }
