@@ -8,42 +8,43 @@
 import Foundation
 
 internal protocol NetworkingRouteDataTaskDelegate: AnyObject {
-    func retry<Route: NetworkingRoute>(networkingSessionDataTask: NetworkingSession.RouteDataTask<Route>,
-                                       runCompletionHandlerOn queue: DispatchQueue,
-                                       completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void)
+    func retry<Route: NetworkingRoute>(networkingSessionDataTask: NetworkingSession.RouteDataTask<Route>)
 }
 
 extension NetworkingSession {
     public class RouteDataTask<Route: NetworkingRoute>: Cancellable {
 
+        deinit {
+            print("DEINIT!!!!@#")
+        }
+
         private let route: Route
+        private let completionHandlerQueue: DispatchQueue
+        private let routeCompletionHandler: (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void
+
         private var currentRequest: URLRequest?
-
         internal var urlSessionDataTask: URLSessionDataTask? = nil
-        private(set) var wasCancelled = false
-
-        private(set) var retryCount = 0
+        private var retryCount = 0
         private weak var requestAdapter: NetworkingRequestAdapter?
         private weak var requestRetrier: NetworkingRequestRetrier?
         private weak var delegate: NetworkingRouteDataTaskDelegate?
 
-        public var cancellableTask: Cancellable {
-            return self
-        }
-
         public func cancel() {
-            wasCancelled = true
             urlSessionDataTask?.cancel()
         }
 
         internal init(route: Route,
                       requestAdapter: NetworkingRequestAdapter?,
                       requestRetrier: NetworkingRequestRetrier?,
-                      delegate: NetworkingRouteDataTaskDelegate) {
+                      routeDataTaskDelegate: NetworkingRouteDataTaskDelegate,
+                      completionHandlerQueue: DispatchQueue,
+                      routeCompletionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
             self.route = route
-            self.delegate = delegate
+            self.delegate = routeDataTaskDelegate
             self.requestAdapter = requestAdapter
             self.requestRetrier = requestRetrier
+            self.completionHandlerQueue = completionHandlerQueue
+            self.routeCompletionHandler = routeCompletionHandler
         }
 
         internal var urlRequest: URLRequest {
@@ -56,9 +57,7 @@ extension NetworkingSession {
             }
         }
 
-        internal func executeResponseSerializer(with rawResponse: NetworkingRawResponse,
-                                                runCompletionHandlerOn queue: DispatchQueue,
-                                                completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
+        internal func executeResponseSerializer(with rawResponse: NetworkingRawResponse) {
             let serializedResult = route.responseSerializer.serialize(response: rawResponse)
             //Check if the response contains an error, if not, trigger the completionHandler.
             guard
@@ -66,7 +65,7 @@ extension NetworkingSession {
                 let retrier = self.requestRetrier,
                 let urlRequest = rawResponse.urlRequest ?? currentRequest
             else {
-                queue.async { completionHandler(serializedResult) }
+                completionHandlerQueue.async { self.routeCompletionHandler(serializedResult) }
                 return
             }
 
@@ -78,13 +77,11 @@ extension NetworkingSession {
 
                 switch retrierResult {
                     case .doNotRetry:
-                        queue.async { completionHandler(serializedResult) }
+                        self.completionHandlerQueue.async { self.routeCompletionHandler(serializedResult) }
 
                     case .retry:
                         self.retryCount += 1
-                        self.delegate?.retry(networkingSessionDataTask: self,
-                                             runCompletionHandlerOn: queue,
-                                             completionHandler: completionHandler)
+                        self.delegate?.retry(networkingSessionDataTask: self)
                 }
             }
         }
