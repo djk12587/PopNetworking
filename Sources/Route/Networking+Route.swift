@@ -31,14 +31,14 @@ public protocol NetworkingRoute {
     func request(runCompletionHandlerOn queue: DispatchQueue, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
 }
 
-extension NetworkingRoute {
+public extension NetworkingRoute {
 
-    public var session: NetworkingSession { .shared }
-    public var headers: NetworkingRouteHttpHeaders? { nil }
-    public var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
+    var session: NetworkingSession { .shared }
+    var headers: NetworkingRouteHttpHeaders? { nil }
+    var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 
     /// This is a default implementation. If you require a custom implementation, you can implement your own `func asUrlRequest() throws -> URLRequest`
-    public func asUrlRequest() throws -> URLRequest {
+    func asUrlRequest() throws -> URLRequest {
 
         guard let url = URL(string: baseUrl.appending(path)) else { throw NetworkingRouteError.invalidUrl }
 
@@ -63,7 +63,7 @@ extension NetworkingRoute {
 
     /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable`
     @discardableResult
-    public func request(runCompletionHandlerOn queue: DispatchQueue = .main,
+    func request(runCompletionHandlerOn queue: DispatchQueue = .main,
                         completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
         return session.execute(route: self,
                                runCompletionHandlerOn: queue,
