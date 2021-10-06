@@ -74,7 +74,7 @@ public class NetworkingSession {
 }
 
 extension NetworkingSession: NetworkingRouteDataTaskDelegate {
-    internal func retry<Route: NetworkingRoute>(networkingSessionDataTask: RouteDataTask<Route>) {
-        execute(networkingSessionDataTask)
+    internal func retry<Route: NetworkingRoute>(routeDataTask: RouteDataTask<Route>) {
+        execute(routeDataTask)
     }
 }
