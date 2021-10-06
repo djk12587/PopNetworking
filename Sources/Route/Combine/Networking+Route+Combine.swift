@@ -11,13 +11,13 @@ import Foundation
 import Combine
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
-extension NetworkingRoute {
+public extension NetworkingRoute {
 
     /// Returns a Combine Publisher for a `NetworkingRoute`. This publisher will `Never` fail and the output is `Result<Route.ResponseSerializer.SerializedObject, Error>`
-    public var future: NetworkingRoutePublisher<Self> { NetworkingRoutePublisher(route: self) }
+    var future: NetworkingRoutePublisher<Self> { NetworkingRoutePublisher(route: self) }
 
     /// Returns a Combine Publisher for a `NetworkingRoute`. This publisher can fail, and the failure is whatever error comes back from running the `NetworkingRoute`. The successful `Output` is the `NetworkingRoute`'s `SerializedObject`
-    public var failableFuture: NetworkingRouteFailablePublisher<Self> { NetworkingRouteFailablePublisher(route: self) }
+    var failableFuture: NetworkingRouteFailablePublisher<Self> { NetworkingRouteFailablePublisher(route: self) }
 }
 
 /// A Combine Publisher for a `NetworkingRoute`. This publisher will `Never` fail and the output is `Result<Route.ResponseSerializer.SerializedObject, Error>`

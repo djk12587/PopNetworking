@@ -11,8 +11,8 @@ internal protocol NetworkingRouteDataTaskDelegate: AnyObject {
     func retry<Route: NetworkingRoute>(networkingSessionDataTask: NetworkingSession.RouteDataTask<Route>)
 }
 
-extension NetworkingSession {
-    public class RouteDataTask<Route: NetworkingRoute>: Cancellable {
+public extension NetworkingSession {
+    class RouteDataTask<Route: NetworkingRoute>: Cancellable {
 
         private let route: Route
         private let completionHandlerQueue: DispatchQueue
