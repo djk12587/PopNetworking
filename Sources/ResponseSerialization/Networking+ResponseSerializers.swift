@@ -10,17 +10,16 @@ import Foundation
 
 public enum NetworkingResponseSerializers {
 
-    ///Attempts to parse response `Data` into a decodable object of type `ResponseType` This class does not parse errors. To parse errors use `DecodableResponseSerializer`
+    /// Attempts to parse response `Data` into a decodable object of type ``DecodableResponseSerializer/SerializedObject`` This class does not handle your API's errors. To handle custom API errors use ``DecodableResponseWithErrorSerializer``
     public struct DecodableResponseSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
 
         public typealias SerializedObject = ResponseType
 
         private let jsonDecoder: JSONDecoder
 
-        /// Use used to convert response `Data` into a `Decodable` `SerializedObject`
+        /// Use used to convert response `Data` into a `Decodable` ``SerializedObject``
         /// - Parameters:
-        ///   - jsonDecoder: `jsonDecoder` will be used to decode the response `Data`.
-        ///   - mockedResult: For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
+        ///   - jsonDecoder: The `JSONDecoder` that will be used to decode the `URLSessionDataTask.RawResponse` into the specified ``SerializedObject``
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
         }
@@ -36,7 +35,7 @@ public enum NetworkingResponseSerializers {
         }
     }
 
-    ///Attempts to parse response `Data` into a decodable object of type `ResponseType` or a decodable error of type `ResponseErrorType`
+    /// Attempts to parse response `Data` into a decodable object of type ``DecodableResponseWithErrorSerializer/SerializedObject`` If the ``DecodableResponseWithErrorSerializer/SerializedObject`` fails parsing, then the ``DecodableResponseWithErrorSerializer/SerializedErrorObject`` will attempt to be parsed.
     public struct DecodableResponseWithErrorSerializer<ResponseType: Decodable,
                                                        ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
 
@@ -45,10 +44,9 @@ public enum NetworkingResponseSerializers {
 
         private let jsonDecoder: JSONDecoder
 
-        /// Use used to convert response `Data` into a `Decodable` `SerializedObject` or a `SerializedErrorObject`
+        /// Use used to convert response `Data` into a `Decodable` ``SerializedObject`` or ``SerializedErrorObject``
         /// - Parameters:
-        ///   - jsonDecoder: `jsonDecoder` will be used to decode the response `Data`.
-        ///   - mockedResult: For testing purposes only. If you pass in a `mockedResult`. That `mockedResult` will always be returned by `func serialize(request: URLRequest?, response: HTTPURLResponse?, data: Data?, error: Error?)`.
+        ///   - jsonDecoder: The `JSONDecoder` that will be used to decode the `URLSessionDataTask.RawResponse` into the specified ``SerializedObject`` or ``SerializedErrorObject``
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
         }
@@ -82,13 +80,13 @@ public enum NetworkingResponseSerializers {
         }
     }
 
+    /// Returns the `HTTPURLResponse`'s `statusCode`.
     public struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Int
 
         public init() {}
 
         public func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error> {
-
             if let error = response.error { return .failure(error) }
             guard let response = response.urlResponse else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
             return .success(response.statusCode)
@@ -99,13 +97,13 @@ public enum NetworkingResponseSerializers {
         }
     }
 
+    /// Returns the `Data` from the HTTP request
     public struct DataResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Data
 
         public init() {}
 
         public func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error> {
-
             if let error = response.error { return .failure(error) }
             guard let data = response.data else { return .failure(ResponseSerializerError.noData) }
             return .success(data)

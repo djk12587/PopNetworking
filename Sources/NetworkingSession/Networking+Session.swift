@@ -11,20 +11,25 @@ import Foundation
 // MARK: - NetworkingSession
 
 public extension NetworkingSession {
-    /// The shared singleton `NetworkingSession` object.
+    /// A singleton ``NetworkingSession`` object.
     ///
-    /// For basic requests, the `NetworkingSession` class provides a shared singleton session object that gives you a reasonable default behavior for creating tasks.
-    ///
-    /// Unlike the other session types, you don’t create the shared session; you merely access it by using this property directly. As a result, you don’t provide a `URLSession` object, `NetworkingRequestAdapter`, or `NetworkingRequestRetrier`.
+    /// For basic requests, the ``NetworkingSession`` class provides a shared singleton session object that gives you a reasonable default behavior for creating tasks. Note: the ``NetworkingSession/shared`` instance does not utilize a ``NetworkingRequestAdapter`` or ``NetworkingRequestRetrier``
     static let shared = NetworkingSession()
 }
 
+
+/// Is  a wrapper class for `URLSession`.  This class takes a ``NetworkingRoute`` and performs an HTTP request.
 public class NetworkingSession {
 
     private let session: URLSession
     private let requestAdapter: NetworkingRequestAdapter?
     private let requestRetrier: NetworkingRequestRetrier?
 
+    /// Creates an instance of a ``NetworkingSession``
+    /// - Parameters:
+    ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
+    ///   - requestAdapter: Responsible to modifying a `URLRequest` before being executed
+    ///   - requestRetrier: Responsible for retrying a failed `URLRequest`
     public init(session: URLSession = URLSession(configuration: .default),
                 requestAdapter: NetworkingRequestAdapter? = nil,
                 requestRetrier: NetworkingRequestRetrier? = nil) {
@@ -33,6 +38,12 @@ public class NetworkingSession {
         self.requestRetrier = requestRetrier
     }
 
+    /// Performs an HTTP request for  a ``NetworkingRoute``
+    /// - Parameters:
+    ///     - route: The ``NetworkingRoute`` you want to execute.
+    ///     - queue: The `DispatchQueue` that your `completionHandler` will be executed on. By default, `DispatchQueue.main` is used.
+    ///     - completionHandler:  Once the ``NetworkingRoute`` is completed, the `completionHandler` will be executed with the specified ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
+    /// - Returns: A ``Cancellable`` which can be used to cancel a request that is waiting for a result.
     public func execute<Route: NetworkingRoute>(route: Route,
                                                 runCompletionHandlerOn queue: DispatchQueue = .main,
                                                 completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
