@@ -8,14 +8,14 @@
 
 import Foundation
 
-/// The type to which all data response serializers must conform in order to serialize a response.
+/// ``NetworkingResponseSerializer`` is responsible for parsing the `URLSessionDataTask.RawResponse` into  whatever type``NetworkingResponseSerializer/SerializedObject`` is set to.
 public protocol NetworkingResponseSerializer {
-    /// The type of serialized object to be created.
+    /// The expected response type of a ``NetworkingRoute``
     associatedtype SerializedObject
 
-    /// Serializes the `NetworkingRawResponse` into the associatedtype type `SerializedObject`.
+    /// Serializes the `URLSessionDataTask.RawResponse` whatever type  ``SerializedObject`` is set to.
     ///
-    /// - Parameter response: `response` is tuple of type `NetworkingRawResponse` that contains `(urlRequest: URLRequest?, urlResponse: HTTPURLResponse?, data: Data?, error: Error?)`
-    /// - Returns: A `Result` that contains a `SerializedObject` or an `Error`
+    /// - Parameter response: The raw response of a HTTP request, which includes the original `URLRequest`, the `HTTPURLResponse`, response `Data`, and response `Error`
+    /// - Returns: A `Result` type that contains a ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
     func serialize(response: URLSessionDataTask.RawResponse) -> Result<SerializedObject, Error>
 }

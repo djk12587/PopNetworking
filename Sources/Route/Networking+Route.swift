@@ -8,26 +8,38 @@
 
 import Foundation
 
-/// A `NetworkingRoute` encapsulates everything required to build a `URLRequest` and serialize the `URLRequest`'s response into a `Result<ResponseSerializer.SerializedObject, Error>`
+/// A ``NetworkingRoute`` encapsulates everything required to build a `URLRequest` and serialize the `URLRequest`'s response with the specified ``NetworkingResponseSerializer``
 public protocol NetworkingRoute {
 
     typealias NetworkingRouteHttpHeaders = [String : String]
-
-    //--Request Building--//
-    var baseUrl: String { get }
-    var path: String { get }
-    var method: NetworkingRouteHttpMethod { get }
-    var headers: NetworkingRouteHttpHeaders? { get }
-    var parameterEncoding: NetworkingRequestParameterEncoding { get }
+    /// The ``NetworkingSession`` used to execute the HTTP request
     var session: NetworkingSession { get }
-    func asUrlRequest() throws -> URLRequest
+
+    /// HTTP base URL represented as a `String`
+    var baseUrl: String { get }
+    /// HTTP url path
+    var path: String { get }
+    /// HTTP method
+    var method: NetworkingRouteHttpMethod { get }
+    /// HTTP headers
+    var headers: NetworkingRouteHttpHeaders? { get }
+    /// HTTP parameters
+    var parameterEncoding: NetworkingRequestParameterEncoding { get }
+
+    /// Turns a ``NetworkingRoute`` into  a `URLRequest`
+    var urlRequest: URLRequest { get throws }
 
     //--Response Handling--//
     associatedtype ResponseSerializer: NetworkingResponseSerializer
+    /// Responsible for turning the raw response of an HTTP request into a desired response like a Model object
     var responseSerializer: ResponseSerializer { get }
+
+    /// Use ``mockResponse-2yjpw`` for testing purposes.
+    /// If ``mockResponse-2yjpw`` is not nil, the ``mockResponse-2yjpw`` is what will be returned when ``request(runCompletionHandlerOn:completion:)-9tv4l`` is called.
+    /// By default this property is nil.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
-    ///Responsible for turning a NetworkingRoute object into a Result<ResponseSerializer.SerializedObject, Error>
+    /// Responsible for turning the ``NetworkingRoute``  into a `Result<ResponseSerializer.SerializedObject, Error>`. By default, this function will execute your HTTP request.
     func request(runCompletionHandlerOn queue: DispatchQueue, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
 }
 
@@ -37,31 +49,19 @@ public extension NetworkingRoute {
     var headers: NetworkingRouteHttpHeaders? { nil }
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 
-    /// This is a default implementation. If you require a custom implementation, you can implement your own `func asUrlRequest() throws -> URLRequest`
-    func asUrlRequest() throws -> URLRequest {
-
-        guard let url = URL(string: baseUrl.appending(path)) else { throw NetworkingRouteError.invalidUrl }
-
-        var mutableRequest = URLRequest(url: url)
-        mutableRequest.httpMethod = method.rawValue
-
-        switch parameterEncoding {
-            case .url(let params):
-                try URLEncoding.default.encode(&mutableRequest, with: params)
-
-            case .json(let params):
-                try JSONEncoding.default.encode(&mutableRequest, with: params)
-
-            case .jsonData(let encodedParams):
-                JSONEncoding.default.encode(&mutableRequest, with: encodedParams)
+    /// Default implementation. Feel free to implement your own version if needed.
+    var urlRequest: URLRequest {
+        get throws {
+            guard let url = URL(string: baseUrl.appending(path)) else { throw NetworkingRouteError.invalidUrl }
+            var mutableRequest = URLRequest(url: url)
+            mutableRequest.httpMethod = method.rawValue
+            try parameterEncoding.encodeParams(into: &mutableRequest)
+            headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
+            return mutableRequest
         }
-
-        headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
-
-        return mutableRequest
     }
 
-    /// This is a default implementation. If you require a custom implementation, you can implement your own `func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable`
+    /// Default implementation. Feel free to implement your own version if needed.
     @discardableResult
     func request(runCompletionHandlerOn queue: DispatchQueue = .main,
                         completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
