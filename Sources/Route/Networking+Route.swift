@@ -31,12 +31,14 @@ public protocol NetworkingRoute {
 
     //--Response Handling--//
     associatedtype ResponseSerializer: NetworkingResponseSerializer
-    /// Responsible for turning the raw response of an HTTP request into a desired response like a Model object
+    /// Responsible for turning the raw response of an HTTP request into a desired response like a Model object. This property must adhere to ``NetworkingResponseSerializer``
+    ///
+    /// Prebuilt responseSerializers can be found within the ``NetworkingResponseSerializers`` enum.
     var responseSerializer: ResponseSerializer { get }
 
-    /// Use ``mockResponse-2yjpw`` for testing purposes.
-    /// If ``mockResponse-2yjpw`` is not nil, the ``mockResponse-2yjpw`` is what will be returned when ``request(runCompletionHandlerOn:completion:)-9tv4l`` is called.
-    /// By default this property is nil.
+    /// Allows you to mock a response. Mainly used for testing purposes.
+    ///
+    /// If ``mockResponse-2yjpw`` is nil, the HTTP request will be sent. If ``mockResponse-2yjpw`` is not nil, then the `Result` returned within ``mockResponse-2yjpw``  is what will be returned on the completion handler when ``request(runCompletionHandlerOn:completion:)-9tv4l`` is called. By default this property is nil.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
     /// Responsible for turning the ``NetworkingRoute``  into a `Result<ResponseSerializer.SerializedObject, Error>`. By default, this function will execute your HTTP request.
