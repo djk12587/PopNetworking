@@ -64,7 +64,7 @@ public extension NetworkingRoute {
     /// Default implementation. Feel free to implement your own version if needed.
     @discardableResult
     func request(runCompletionHandlerOn queue: DispatchQueue = .main,
-                        completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
+                 completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
         return session.execute(route: self,
                                runCompletionHandlerOn: queue,
                                completionHandler: completion)
