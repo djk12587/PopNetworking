@@ -13,6 +13,7 @@ public enum NetworkingResponseSerializers {
     /// Attempts to parse response `Data` into a decodable object of type ``DecodableResponseSerializer/SerializedObject`` This class does not handle your API's errors. To handle custom API errors use ``DecodableResponseWithErrorSerializer``
     public struct DecodableResponseSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
 
+        /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
         public typealias SerializedObject = ResponseType
 
         private let jsonDecoder: JSONDecoder
@@ -35,16 +36,18 @@ public enum NetworkingResponseSerializers {
         }
     }
 
-    /// Attempts to parse response `Data` into a decodable object of type ``DecodableResponseWithErrorSerializer/SerializedObject`` If the ``DecodableResponseWithErrorSerializer/SerializedObject`` fails parsing, then the ``DecodableResponseWithErrorSerializer/SerializedErrorObject`` will attempt to be parsed.
+    /// Attempts to parse response `Data` into a decodable object of type ``SerializedObject``. If parsing fails, then the ``SerializedErrorObject`` type will attempt to be parsed.
     public struct DecodableResponseWithErrorSerializer<ResponseType: Decodable,
                                                        ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
 
+        /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
         public typealias SerializedObject = ResponseType
+        /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable` & `Error`
         public typealias SerializedErrorObject = ResponseErrorType
 
         private let jsonDecoder: JSONDecoder
 
-        /// Use used to convert response `Data` into a `Decodable` ``SerializedObject`` or ``SerializedErrorObject``
+        /// Use used to convert response `Data` into a `Decodable` type of ``SerializedObject`` or ``SerializedErrorObject``
         /// - Parameters:
         ///   - jsonDecoder: The `JSONDecoder` that will be used to decode the `URLSessionDataTask.RawResponse` into the specified ``SerializedObject`` or ``SerializedErrorObject``
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {

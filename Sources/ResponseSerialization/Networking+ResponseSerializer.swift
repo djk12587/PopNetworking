@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// ``NetworkingResponseSerializer`` is responsible for parsing the `URLSessionDataTask.RawResponse` into  whatever type``NetworkingResponseSerializer/SerializedObject`` is set to.
+/// ``NetworkingResponseSerializer`` is responsible for parsing the `URLSessionDataTask.RawResponse` into  whatever type ``NetworkingResponseSerializer/SerializedObject`` is set to.
 public protocol NetworkingResponseSerializer {
     /// The expected response type of a ``NetworkingRoute``
     associatedtype SerializedObject
