@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol AccessTokenVerification {
+public protocol AccessTokenVerification: AnyObject {
     associatedtype ReauthenticationRoute: NetworkingRoute
     var reauthenticationRoute: ReauthenticationRoute { get }
 
@@ -19,7 +19,8 @@ public protocol AccessTokenVerification {
     func extractAuthorizationHeaderValue(from urlRequest: URLRequest) -> String?
 
     func shouldRetry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) -> Bool
-    mutating func reauthentication(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>)
+    func reauthenticationCompleted(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>,
+                                   finishedUpdatingLocalAuthorization: @escaping () -> Void)
 }
 
 public extension AccessTokenVerification {
@@ -28,5 +29,10 @@ public extension AccessTokenVerification {
     func extractAuthorizationHeaderValue(from urlRequest: URLRequest) -> String? {
         guard let authorizationHeaderKey = extractAuthorizationHeaderKey(from: urlRequest) else { return nil }
         return urlRequest.allHTTPHeaderFields?[authorizationHeaderKey]
+    }
+
+    func reauthenticationCompleted(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>,
+                                   finishedUpdatingLocalAuthorization: @escaping () -> Void) {
+        finishedUpdatingLocalAuthorization()
     }
 }

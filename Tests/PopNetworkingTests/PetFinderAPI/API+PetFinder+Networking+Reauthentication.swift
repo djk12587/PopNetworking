@@ -10,7 +10,7 @@ import Foundation
 import UIKit
 
 extension API.PetFinder {
-    struct PetFinderAccessTokenVerifier: AccessTokenVerification {
+    class PetFinderAccessTokenVerifier: AccessTokenVerification {
 
         var reauthenticationRoute = API.PetFinder.Routes.Authenticate()
         var authToken: Models.PetFinder.ApiAccess { API.PetFinder.StoredApiAccess.apiAccess }
@@ -26,13 +26,16 @@ extension API.PetFinder {
             return requestIsUnauthorized && retryCount < 3
         }
 
-        mutating func reauthentication(result: Result<Models.PetFinder.ApiAccess, Error>) {
+        func reauthenticationCompleted(result: Result<Models.PetFinder.ApiAccess, Error>,
+                                       finishedUpdatingLocalAuthorization: @escaping () -> Void) {
             switch result {
                 case .success(let authorizationModel):
                     API.PetFinder.StoredApiAccess.apiAccess = authorizationModel
                 case .failure(let error):
                     print("reauthentication failure reason: \(error)")
             }
+
+            finishedUpdatingLocalAuthorization()
         }
     }
 }

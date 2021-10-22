@@ -84,16 +84,14 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
         isRefreshingToken = true
 
         _ = accessTokenVerifier.reauthenticationRoute.request { [weak self] authenticationResult in
-
-            self?.isRefreshingToken = false
-            self?.accessTokenVerifier.reauthentication(result: authenticationResult)
-
-            switch authenticationResult {
-                case .success:
-                    completion(true)
-
-                case .failure:
-                    completion(false)
+            self?.accessTokenVerifier.reauthenticationCompleted(result: authenticationResult) {
+                self?.isRefreshingToken = false
+                switch authenticationResult {
+                    case .success:
+                        completion(true)
+                    case .failure:
+                        completion(false)
+                }
             }
         }
     }
