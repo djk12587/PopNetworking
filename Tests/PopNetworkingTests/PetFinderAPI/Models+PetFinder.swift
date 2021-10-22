@@ -14,12 +14,12 @@ enum Models {
 extension Models.PetFinder {
     struct ApiAccess: Codable {
         let tokenType: String
-        let expiresIn: Date
+        let expiration: Date
         let accessToken: String
 
         private enum CodingKeys: String, CodingKey {
             case tokenType = "token_type"
-            case expiresIn = "expires_in"
+            case expiration = "expires_in"
             case accessToken = "access_token"
         }
     }

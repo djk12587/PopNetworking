@@ -15,7 +15,7 @@ extension API.PetFinder {
         private(set) var reauthenticationRoute = API.PetFinder.Routes.Authenticate()
         private var authToken: Models.PetFinder.ApiAccess { API.PetFinder.StoredApiAccess.apiAccess }
         var accessToken: String { authToken.accessToken }
-        var tokenIsExpired: Bool { authToken.expiresIn.compare(Date()) == .orderedAscending }
+        var tokenIsExpired: Bool { authToken.expiration.compare(Date()) == .orderedAscending }
 
         func extractAuthorizationHeaderKey(from urlRequest: URLRequest) -> String? {
             return "Authorization"

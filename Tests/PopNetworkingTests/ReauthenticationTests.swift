@@ -12,7 +12,7 @@ final class ReauthenticationTests: XCTestCase {
     func testReauthentication() throws {
 
         API.PetFinder.StoredApiAccess.apiAccess = Models.PetFinder.ApiAccess(tokenType: "Bearer",
-                                                                             expiresIn: Date(timeIntervalSinceNow: -10),
+                                                                             expiration: Date(timeIntervalSinceNow: -10),
                                                                              accessToken: "Unauthorized")
 
         let endpointWillfinished = expectation(description: "first")
