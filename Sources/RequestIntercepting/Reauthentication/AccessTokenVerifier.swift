@@ -23,6 +23,8 @@ public protocol AccessTokenVerification {
 }
 
 public extension AccessTokenVerification {
+    var tokenType: String { "Bearer" }
+
     func extractAuthorizationHeaderValue(from urlRequest: URLRequest) -> String? {
         guard let authorizationHeaderKey = extractAuthorizationHeaderKey(from: urlRequest) else { return nil }
         return urlRequest.allHTTPHeaderFields?[authorizationHeaderKey]
