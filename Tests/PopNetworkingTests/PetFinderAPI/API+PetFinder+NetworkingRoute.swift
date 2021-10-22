@@ -26,7 +26,7 @@ extension PetFinderRoute {
 
     var session: NetworkingSession {
         if requiresAuthentication {
-            return API.PetFinder.Session.authenticationSession
+            return API.PetFinder.Session.authenticatedSession
         }
         else {
             return NetworkingSession.shared
