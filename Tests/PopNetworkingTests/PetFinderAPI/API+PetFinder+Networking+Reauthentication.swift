@@ -12,8 +12,8 @@ import UIKit
 extension API.PetFinder {
     class PetFinderAccessTokenVerifier: AccessTokenVerification {
 
-        var reauthenticationRoute = API.PetFinder.Routes.Authenticate()
-        var authToken: Models.PetFinder.ApiAccess { API.PetFinder.StoredApiAccess.apiAccess }
+        private(set) var reauthenticationRoute = API.PetFinder.Routes.Authenticate()
+        private var authToken: Models.PetFinder.ApiAccess { API.PetFinder.StoredApiAccess.apiAccess }
         var accessToken: String { authToken.accessToken }
         var tokenIsExpired: Bool { authToken.expiresIn.compare(Date()) == .orderedAscending }
 

@@ -68,11 +68,11 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
             guard let self = self else { return }
 
             //this retry() function can be recursive. So, we want to make a copy of requestsWaitingForReauthentication, then call removeAll() on requestsWaitingForReauthentication.
-            let temporaryCopy = self.queuedRequests
+            let copyOfPendingRequests = self.queuedRequests
             self.queuedRequests.removeAll()
 
             //trigger the cached completion blocks. This informs the request if it needs to be retried or not.
-            temporaryCopy.forEach { $0(succeeded ? .retry : .doNotRetry) }
+            copyOfPendingRequests.forEach { $0(succeeded ? .retry : .doNotRetry) }
         }
     }
 
