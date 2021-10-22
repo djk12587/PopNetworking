@@ -38,6 +38,13 @@ public class NetworkingSession {
         self.requestRetrier = requestRetrier
     }
 
+    public init<AccessTokenVerifier: AccessTokenVerification>(session: URLSession = URLSession(configuration: .default), accessTokenVerifier: AccessTokenVerifier) {
+        self.session = session
+        let requestInterceptor = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
+        self.requestAdapter = requestInterceptor
+        self.requestRetrier = requestInterceptor
+    }
+
     /// Performs an HTTP request for  a ``NetworkingRoute``
     /// - Parameters:
     ///     - route: The ``NetworkingRoute`` you want to execute.

@@ -15,6 +15,10 @@ let package = Package(
         .target(
             name: "PopNetworking",
             path: "Sources"
+        ),
+        .testTarget(
+            name: "PopNetworkingTests",
+            dependencies: ["PopNetworking"]
         )
     ]
 )
