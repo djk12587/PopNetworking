@@ -15,8 +15,8 @@ public protocol AccessTokenVerification: AnyObject {
     var tokenIsExpired: Bool { get }
     var tokenType: String { get }
 
-    func extractAuthorizationHeaderKey(from urlRequest: URLRequest) -> String?
-    func extractAuthorizationHeaderValue(from urlRequest: URLRequest) -> String?
+    func extractAuthorizationKey(from urlRequest: URLRequest) -> String?
+    func extractAuthorizationValue(from urlRequest: URLRequest) -> String?
 
     func shouldRetry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) -> Bool
     func reauthenticationCompleted(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>,
@@ -26,8 +26,8 @@ public protocol AccessTokenVerification: AnyObject {
 public extension AccessTokenVerification {
     var tokenType: String { "Bearer" }
 
-    func extractAuthorizationHeaderValue(from urlRequest: URLRequest) -> String? {
-        guard let authorizationHeaderKey = extractAuthorizationHeaderKey(from: urlRequest) else { return nil }
+    func extractAuthorizationValue(from urlRequest: URLRequest) -> String? {
+        guard let authorizationHeaderKey = extractAuthorizationKey(from: urlRequest) else { return nil }
         return urlRequest.allHTTPHeaderFields?[authorizationHeaderKey]
     }
 

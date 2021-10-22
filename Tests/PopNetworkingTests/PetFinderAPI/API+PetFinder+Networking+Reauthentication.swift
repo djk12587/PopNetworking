@@ -17,7 +17,7 @@ extension API.PetFinder {
         var accessToken: String { authToken.accessToken }
         var tokenIsExpired: Bool { authToken.expiration.compare(Date()) == .orderedAscending }
 
-        func extractAuthorizationHeaderKey(from urlRequest: URLRequest) -> String? {
+        func extractAuthorizationKey(from urlRequest: URLRequest) -> String? {
             return "Authorization"
         }
 
