@@ -28,18 +28,16 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
 
         let cachedAuthHeaderValue = "\(accessTokenVerifier.tokenType) \(accessTokenVerifier.accessToken)"
 
-        guard let requestsAuthHeaderValue = accessTokenVerifier.extractAuthorizationHeaderValue(from: urlRequest) else {
-            //urlRequest doesnt have the Authorization header, so there is no need to modify it
+        guard let requestsAuthHeaderValue = accessTokenVerifier.extractAuthorizationValue(from: urlRequest) else {
             return urlRequest
         }
 
-        guard !accessTokenVerifier.tokenIsExpired else {
-            //We know the access token is unauthorized, so throw an error. This triggers retry() to be called
+        if accessTokenVerifier.tokenIsExpired {
             throw ReauthenticationHandlerError.tokenIsInvalid
         }
 
         if requestsAuthHeaderValue != cachedAuthHeaderValue,
-           let requestsAuthHeaderKey = accessTokenVerifier.extractAuthorizationHeaderKey(from: urlRequest) {
+           let requestsAuthHeaderKey = accessTokenVerifier.extractAuthorizationKey(from: urlRequest) {
             var authorizedRequest = urlRequest
             authorizedRequest.allHTTPHeaderFields?[requestsAuthHeaderKey] = cachedAuthHeaderValue
             return authorizedRequest
@@ -84,7 +82,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
         isRefreshingToken = true
 
         _ = accessTokenVerifier.reauthenticationRoute.request { [weak self] authenticationResult in
-            self?.accessTokenVerifier.reauthenticationCompleted(result: authenticationResult) {
+            self?.accessTokenVerifier.reauthenticationCompleted(result: authenticationResult, finishedUpdatingLocalAuthorization: {
                 self?.isRefreshingToken = false
                 switch authenticationResult {
                     case .success:
@@ -92,7 +90,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
                     case .failure:
                         completion(false)
                 }
-            }
+            })
         }
     }
 }
