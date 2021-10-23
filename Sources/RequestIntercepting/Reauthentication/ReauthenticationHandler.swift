@@ -15,7 +15,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
 
     private var isRefreshingToken = false
     private var queuedRequests: [(NetworkingRequestRetrierResult) -> Void] = []
-    private var accessTokenVerifier: AccessTokenVerifier
+    private let accessTokenVerifier: AccessTokenVerifier
 
     public init(accessTokenVerifier: AccessTokenVerifier) {
         self.accessTokenVerifier = accessTokenVerifier
