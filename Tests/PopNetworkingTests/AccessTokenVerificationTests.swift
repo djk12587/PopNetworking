@@ -21,6 +21,7 @@ final class ReauthenticationTests: XCTestCase {
         }
         waitForExpectations(timeout: 5)
 
+        XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
         XCTAssertFalse(mockTokenVerifier.tokenIsExpired)
     }
 
@@ -42,6 +43,7 @@ final class ReauthenticationTests: XCTestCase {
         }
         waitForExpectations(timeout: 5)
 
+        XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isFailure == true)
         XCTAssertTrue(mockTokenVerifier.tokenIsExpired)
     }
 
@@ -60,6 +62,30 @@ final class ReauthenticationTests: XCTestCase {
         }
         waitForExpectations(timeout: 5)
         XCTAssertEqual(mockTokenVerifier.retryCount, 3)
+        print(mockTokenVerifier.reauthorizationCount)
+    }
+
+    func testMultipleUnauthorizedRoutesPerformsReauthenticationOnlyOnce() throws {
+
+        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
+        XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 0)
+        XCTAssertTrue(mockTokenVerifier.tokenIsExpired)
+
+        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
+        let firstUnauthenticatedRoute = expectation(description: "firstUnauthenticatedRoute")
+        _ = session.execute(route: UnauthenticatedRoute()) { result in
+            firstUnauthenticatedRoute.fulfill()
+        }
+
+        let secondUnauthenticatedRoute = expectation(description: "secondUnauthenticatedRoute")
+        _ = session.execute(route: UnauthenticatedRoute()) { result in
+            secondUnauthenticatedRoute.fulfill()
+        }
+
+        waitForExpectations(timeout: 5)
+        XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 1)
+        XCTAssertFalse(mockTokenVerifier.tokenIsExpired)
+        print(mockTokenVerifier.reauthorizationCount)
     }
 }
 
@@ -85,15 +111,17 @@ private extension ReauthenticationTests {
 
     class MockTokenVerifier: AccessTokenVerification {
         let reauthenticationRoute: ReauthenticationTests.MockAuthRoute
-        var accessToken: String = ""
+        private(set) var accessToken: String = ""
         var tokenIsExpired: Bool { accessToken.isEmpty }
 
         private let numberOfRetries: Int
         private(set) var retryCount = 0
+        private(set) var reauthorizationResult: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>?
+        private(set) var reauthorizationCount = 0
 
-        init (route: ReauthenticationTests.MockAuthRoute, numberOfRetries: Int = 1) {
+        init(route: ReauthenticationTests.MockAuthRoute, numberOfRetries: Int = 1) {
             reauthenticationRoute = route
-            self.numberOfRetries = numberOfRetries
+            self.numberOfRetries = numberOfRetries - 1
         }
 
         func extractAuthorizationKey(from urlRequest: URLRequest) -> String? {
@@ -102,12 +130,32 @@ private extension ReauthenticationTests {
 
         func shouldRetry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) -> Bool {
             self.retryCount = retryCount
-            return retryCount < numberOfRetries
+            return retryCount <= numberOfRetries
         }
 
         func reauthenticationCompleted(result: Result<Int, Error>, finishedUpdatingLocalAuthorization: @escaping () -> Void) {
-            accessToken = (try? result.get()) == 200 ? "newToken" : ""
+            reauthorizationResult = result
+            reauthorizationCount += 1
+            switch result {
+                case .success:
+                    let randomMockToken = String(Int.random(in: 0...Int.max))
+                    accessToken = randomMockToken
+                case .failure:
+                    accessToken = ""
+            }
             finishedUpdatingLocalAuthorization()
         }
+    }
+}
+
+private extension Result {
+    var isSuccess: Bool {
+        guard case .success = self else { return false }
+        return true
+    }
+
+    var isFailure: Bool {
+        guard case .failure = self else { return false }
+        return true
     }
 }
