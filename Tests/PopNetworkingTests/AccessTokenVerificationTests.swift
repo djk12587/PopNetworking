@@ -12,7 +12,7 @@ final class ReauthenticationTests: XCTestCase {
     func testReauthenticationSuccess() throws {
 
         let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
-        XCTAssertTrue(mockTokenVerifier.tokenIsExpired)
+        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
         let unauthenticatedRouteWillFinish = expectation(description: "unauthenticatedRouteWillFinish")
@@ -22,13 +22,13 @@ final class ReauthenticationTests: XCTestCase {
         waitForExpectations(timeout: 5)
 
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
-        XCTAssertFalse(mockTokenVerifier.tokenIsExpired)
+        XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
     }
 
     func testReauthenticationFailure() throws {
 
         let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .failure(NSError(domain: "force authorization failure", code: 0))))
-        XCTAssertTrue(mockTokenVerifier.tokenIsExpired)
+        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
         let unauthenticatedRouteWillFinish = expectation(description: "unauthenticatedRouteWillFinish")
@@ -37,14 +37,14 @@ final class ReauthenticationTests: XCTestCase {
                 case .success:
                     XCTFail("This request is supposed to fail")
                 case .failure(let error):
-                    XCTAssertEqual(error as? ReauthenticationHandlerError, ReauthenticationHandlerError.tokenIsInvalid)
+                    XCTAssertEqual(error as? MockTokenVerifier.AccessTokenError, .tokenIsInvalid)
             }
             unauthenticatedRouteWillFinish.fulfill()
         }
         waitForExpectations(timeout: 5)
 
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isFailure == true)
-        XCTAssertTrue(mockTokenVerifier.tokenIsExpired)
+        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
     }
 
     func testReauthenticationRetryMultipleTimes() throws {
@@ -69,7 +69,7 @@ final class ReauthenticationTests: XCTestCase {
 
         let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 0)
-        XCTAssertTrue(mockTokenVerifier.tokenIsExpired)
+        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
         let firstUnauthenticatedRoute = expectation(description: "firstUnauthenticatedRoute")
@@ -84,7 +84,7 @@ final class ReauthenticationTests: XCTestCase {
 
         waitForExpectations(timeout: 5)
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 1)
-        XCTAssertFalse(mockTokenVerifier.tokenIsExpired)
+        XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
         print(mockTokenVerifier.reauthorizationCount)
     }
 }
@@ -110,30 +110,49 @@ private extension ReauthenticationTests {
     }
 
     class MockTokenVerifier: AccessTokenVerification {
-        let reauthenticationRoute: ReauthenticationTests.MockAuthRoute
-        private(set) var accessToken: String = ""
-        var tokenIsExpired: Bool { accessToken.isEmpty }
 
-        private let numberOfRetries: Int
+        enum AccessTokenError: Error {
+            case tokenIsInvalid
+        }
+
+        private(set) var accessToken: String = ""
+        private let maxNumberOfRetries: Int
         private(set) var retryCount = 0
         private(set) var reauthorizationResult: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>?
         private(set) var reauthorizationCount = 0
 
+        let reauthenticationRoute: ReauthenticationTests.MockAuthRoute
+        var accessTokenIsValid: Bool { !accessToken.isEmpty }
+
         init(route: ReauthenticationTests.MockAuthRoute, numberOfRetries: Int = 1) {
             reauthenticationRoute = route
-            self.numberOfRetries = numberOfRetries - 1
+            self.maxNumberOfRetries = numberOfRetries - 1
         }
 
-        func extractAuthorizationKey(from urlRequest: URLRequest) -> String? {
-            return "Authorization"
+        func isAuthorizationRequired(for urlRequest: URLRequest) -> Bool {
+            return true
         }
 
-        func shouldRetry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) -> Bool {
-            self.retryCount = retryCount
-            return retryCount <= numberOfRetries
+        func validateAccessToken() throws {
+            guard accessToken.isEmpty else { return }
+            throw AccessTokenError.tokenIsInvalid
         }
 
-        func reauthenticationCompleted(result: Result<Int, Error>, finishedUpdatingLocalAuthorization: @escaping () -> Void) {
+        func isAuthorizationValid(for urlRequest: URLRequest) -> Bool {
+            urlRequest.allHTTPHeaderFields?["Authorization"] == "Bearer \(accessToken)"
+        }
+
+        func setAuthorization(for urlRequest: inout URLRequest) throws {
+            urlRequest.allHTTPHeaderFields?["Authorization"] = accessToken
+        }
+
+        func shouldReauthenticate(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) -> Bool {
+            guard retryCount <= maxNumberOfRetries else { return false }
+            self.retryCount += 1
+            return true
+        }
+
+        func reauthenticationCompleted(result: Result<Int, Error>, finishedProcessingResult: @escaping () -> Void) {
             reauthorizationResult = result
             reauthorizationCount += 1
             switch result {
@@ -143,7 +162,7 @@ private extension ReauthenticationTests {
                 case .failure:
                     accessToken = ""
             }
-            finishedUpdatingLocalAuthorization()
+            finishedProcessingResult()
         }
     }
 }

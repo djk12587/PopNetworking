@@ -7,10 +7,6 @@
 
 import Foundation
 
-public enum ReauthenticationHandlerError: Error {
-    case tokenIsInvalid
-}
-
 internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
 
     private var isRefreshingToken = false
@@ -23,26 +19,17 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
 
     // MARK: - RequestAdapter
 
-    ///This gives you a chance to modify the `urlRequest` before it gets sent over the wire. This is the spot where you update the authorization for the `urlRequest`. Or, if you know the access token is expired, then throw an error. That error will get sent to the retry() function allowing you to refresh
     public func adapt(urlRequest: URLRequest) throws -> URLRequest {
+        guard accessTokenVerifier.isAuthorizationRequired(for: urlRequest) else { return urlRequest }
 
-        let cachedAuthHeaderValue = "\(accessTokenVerifier.tokenType) \(accessTokenVerifier.accessToken)"
+        try accessTokenVerifier.validateAccessToken()
 
-        guard let requestsAuthHeaderValue = accessTokenVerifier.extractAuthorizationValue(from: urlRequest) else {
+        if accessTokenVerifier.isAuthorizationValid(for: urlRequest) {
             return urlRequest
         }
 
-        if accessTokenVerifier.tokenIsExpired {
-            throw ReauthenticationHandlerError.tokenIsInvalid
-        }
-
-        if requestsAuthHeaderValue != cachedAuthHeaderValue,
-           let requestsAuthHeaderKey = accessTokenVerifier.extractAuthorizationKey(from: urlRequest) {
-            var authorizedRequest = urlRequest
-            authorizedRequest.allHTTPHeaderFields?[requestsAuthHeaderKey] = cachedAuthHeaderValue
-            return authorizedRequest
-        }
-
+        var urlRequest = urlRequest
+        try accessTokenVerifier.setAuthorization(for: &urlRequest)
         return urlRequest
     }
 
@@ -51,7 +38,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
     ///If your request fails due to 401 error, then reauthenticate with the API & return `.retry` to retry the `urlRequest`
     public func retry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int, completion: @escaping (NetworkingRequestRetrierResult) -> Void) {
         //Check if the error is due to unauthorized access
-        guard accessTokenVerifier.shouldRetry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount) else {
+        guard accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount) else {
             completion(.doNotRetry)
             return
         }
@@ -82,7 +69,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
         isRefreshingToken = true
 
         _ = accessTokenVerifier.reauthenticationRoute.request { [weak self] authenticationResult in
-            self?.accessTokenVerifier.reauthenticationCompleted(result: authenticationResult, finishedUpdatingLocalAuthorization: {
+            self?.accessTokenVerifier.reauthenticationCompleted(result: authenticationResult, finishedProcessingResult: {
                 self?.isRefreshingToken = false
                 switch authenticationResult {
                     case .success:
