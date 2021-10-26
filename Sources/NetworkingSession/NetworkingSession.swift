@@ -28,8 +28,8 @@ public class NetworkingSession {
     /// Creates an instance of a ``NetworkingSession``
     /// - Parameters:
     ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
-    ///   - requestAdapter: Responsible to modifying a `URLRequest` before being executed
-    ///   - requestRetrier: Responsible for retrying a failed `URLRequest`
+    ///   - requestAdapter: Responsible to modifying a `URLRequest` before being executed. See ``NetworkingRequestAdapter``
+    ///   - requestRetrier: Responsible for retrying a failed `URLRequest`. See ``NetworkingRequestRetrier``
     public init(session: URLSession = URLSession(configuration: .default),
                 requestAdapter: NetworkingRequestAdapter? = nil,
                 requestRetrier: NetworkingRequestRetrier? = nil) {
@@ -38,6 +38,12 @@ public class NetworkingSession {
         self.requestRetrier = requestRetrier
     }
 
+    /// Creates an instance of a ``NetworkingSession`` with an instance of ``AccessTokenVerification``
+    /// - Parameters:
+    ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
+    ///   - accessTokenVerifier: See ``AccessTokenVerification``
+    ///
+    /// All `URLRequest`'s will be passed through the supplied instance of ``AccessTokenVerification``
     public init<AccessTokenVerifier: AccessTokenVerification>(session: URLSession = URLSession(configuration: .default), accessTokenVerifier: AccessTokenVerifier) {
         self.session = session
         let requestInterceptor = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
