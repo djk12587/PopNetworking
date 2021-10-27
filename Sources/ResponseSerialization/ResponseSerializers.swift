@@ -10,17 +10,19 @@ import Foundation
 
 public enum NetworkingResponseSerializers {
 
-    /// Attempts to parse response `Data` into a decodable object of type ``DecodableResponseSerializer/SerializedObject`` This class does not handle your API's errors. To handle custom API errors use ``DecodableResponseWithErrorSerializer``
-    public struct DecodableResponseSerializer<ResponseType: Decodable>: NetworkingResponseSerializer {
+    /// The `DecodableResponseSerializer` will attempt to parse response `Data` into a the generic `SuccessType`. `SuccessType` must adhere to `Decodable`.
+    ///
+    /// - Note: `DecodableResponseSerializer` cannot handle API's errors. To handle custom API errors see ``DecodableResponseWithErrorSerializer``
+    public struct DecodableResponseSerializer<SuccessType: Decodable>: NetworkingResponseSerializer {
 
         /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
-        public typealias SerializedObject = ResponseType
+        public typealias SerializedObject = SuccessType
 
         private let jsonDecoder: JSONDecoder
 
-        /// Use used to convert response `Data` into a `Decodable` ``SerializedObject``
+        /// Initializes an instance of `DecodableResponseSerializer`
         /// - Parameters:
-        ///   - jsonDecoder: The `JSONDecoder` that will be used to decode the `URLSessionDataTask.RawResponse` into the specified ``SerializedObject``
+        ///   - jsonDecoder: The `JSONDecoder` that will be used to parse json data
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
         }
@@ -36,20 +38,25 @@ public enum NetworkingResponseSerializers {
         }
     }
 
-    /// Attempts to parse response `Data` into a decodable object of type ``SerializedObject``. If parsing fails, then the ``SerializedErrorObject`` type will attempt to be parsed.
-    public struct DecodableResponseWithErrorSerializer<ResponseType: Decodable,
-                                                       ResponseErrorType: Decodable & Error>: NetworkingResponseSerializer {
+    /// The `DecodableResponseWithErrorSerializer` will attempt to parse response `Data` into a the generic `SuccessType`.  If your networking request failed, the `DecodableResponseWithErrorSerializer` will also attempt to parse response `Data` into the generic `FailureType`. `FailureType` & `SuccessType` must adhere to  `Decodable`. In addition, `FailureType` must aslo adhere to `Error`.
+    public struct DecodableResponseWithErrorSerializer<SuccessType: Decodable,
+                                                       FailureType: Decodable & Error>: NetworkingResponseSerializer {
 
-        /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
-        public typealias SerializedObject = ResponseType
-        /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable` & `Error`
-        public typealias SerializedErrorObject = ResponseErrorType
+        /// The ``SerializedObject`` must adhere to `Decodeable`.
+        ///
+        /// - Note: Typically this would be one of your existing Model objects. That existing model must already adhere to `Decodable`
+        public typealias SerializedObject = SuccessType
+
+        /// The ``SerializedErrorObject`` must adhere to `Decodeable` & `Error`.
+        ///
+        /// - Note: Typically this would be one of your existing API Error models. That existing error model must already adheres to `Decodable` & `Codable`
+        public typealias SerializedErrorObject = FailureType
 
         private let jsonDecoder: JSONDecoder
 
-        /// Use used to convert response `Data` into a `Decodable` type of ``SerializedObject`` or ``SerializedErrorObject``
+        /// Initializes an instance of `DecodableResponseWithErrorSerializer`
         /// - Parameters:
-        ///   - jsonDecoder: The `JSONDecoder` that will be used to decode the `URLSessionDataTask.RawResponse` into the specified ``SerializedObject`` or ``SerializedErrorObject``
+        ///   - jsonDecoder: The `JSONDecoder` that will be used to parse json data
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
             self.jsonDecoder = jsonDecoder
         }
@@ -83,7 +90,7 @@ public enum NetworkingResponseSerializers {
         }
     }
 
-    /// Returns the `HTTPURLResponse`'s `statusCode`.
+    /// The `HttpStatusCodeResponseSerializer` returns the `HTTPURLResponse.statusCode`.
     public struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Int
 
@@ -100,7 +107,7 @@ public enum NetworkingResponseSerializers {
         }
     }
 
-    /// Returns the `Data` from the HTTP request
+    /// The `DataResponseSerializer` returns the raw networking `Data` from an HTTP response
     public struct DataResponseSerializer: NetworkingResponseSerializer {
         public typealias SerializedObject = Data
 

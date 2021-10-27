@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// A common use case for a `NetworkingRequestInterceptor` is to reauthenticate an expired access token.
+/// Allows you the ability to mutate a request before it gets sent, and retry `URLRequest`'s that failed.
 public protocol NetworkingRequestInterceptor: NetworkingRequestAdapter & NetworkingRequestRetrier {}
 
 /// Allows you to adapt, or modify, the `URLRequest` before it gets executed as an HTTP request.

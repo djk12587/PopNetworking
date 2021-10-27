@@ -13,14 +13,14 @@ import Combine
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
 public extension NetworkingRoute {
 
-    /// Returns a Combine Publisher for a `NetworkingRoute`. This publisher will `Never` fail and the output is `Result<Route.ResponseSerializer.SerializedObject, Error>`
+    /// Returns a Combine Publisher for a ``NetworkingRoute``. This publisher will `Never` fail and the `Output` is `Result<NetworkingRoute.ResponseSerializer.SerializedObject, Error>`
     var future: NetworkingRoutePublisher<Self> { NetworkingRoutePublisher(route: self) }
 
-    /// Returns a Combine Publisher for a `NetworkingRoute`. This publisher can fail, and the failure is whatever error comes back from running the `NetworkingRoute`. The successful `Output` is the `NetworkingRoute`'s `SerializedObject`
+    /// Returns a Combine Publisher for a ``NetworkingRoute``. This publisher can fail, and the failure is whatever error comes back from running the ``NetworkingRoute``. The successful `Output` is the `NetworkingRoute.ResponseSerializer.SerializedObject`
     var failableFuture: NetworkingRouteFailablePublisher<Self> { NetworkingRouteFailablePublisher(route: self) }
 }
 
-/// A Combine Publisher for a `NetworkingRoute`. This publisher will `Never` fail and the output is `Result<Route.ResponseSerializer.SerializedObject, Error>`
+/// A Combine Publisher for a ``NetworkingRoute``. This publisher will `Never` fail and the output is `Result<Route.ResponseSerializer.SerializedObject, Error>`
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
 public struct NetworkingRoutePublisher<Route: NetworkingRoute>: Publisher {
 
@@ -70,7 +70,7 @@ private extension NetworkingRoutePublisher {
     }
 }
 
-/// A Combine Publisher for a `NetworkingRoute`. This publisher can fail, and the failure is whatever error comes back from running the `NetworkingRoute`. The successful `Output` is the `NetworkingRoute`'s `SerializedObject`
+/// A Combine Publisher for a ``NetworkingRoute``. This publisher can fail, and the failure is whatever error comes back from running the ``NetworkingRoute``. The successful `Output` is the `NetworkingRoute.ResponseSerializer.SerializedObject`
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
 public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute>: Publisher {
 

@@ -12,7 +12,7 @@ internal protocol NetworkingRouteDataTaskDelegate: AnyObject {
 }
 
 public extension NetworkingSession {
-    /// Is  a wrapper class for `URLSessionDataTask`. In addition,  A ``RouteDataTask`` will utilize a ``NetworkingRequestAdapter`` or ``NetworkingRequestRetrier``, and automatically serialize the `URLSessionDataTask.RawResponse` into the ``NetworkingRoute``'s  specified ``NetworkingResponseSerializer/SerializedObject``
+    /// `RouteDataTask`  a wrapper class for `URLSessionDataTask`. In addition, a `RouteDataTask` will automatically serialize the `URLSessionDataTask.RawResponse` into the `NetworkingRoute.ResponseSerializer.SerializedObject`. Further, a `RouteDataTask` can also utilize a ``NetworkingRequestAdapter`` or ``NetworkingRequestRetrier``.
     class RouteDataTask<Route: NetworkingRoute>: Cancellable {
 
         private let route: Route

@@ -13,8 +13,10 @@ import Foundation
 public enum NetworkingRequestParameterEncoding {
     /// Uses `JSONSerialization` to create a JSON representation of the parameters object, which is set as the body of the request. The Content-Type HTTP header field of an encoded request is set to application/json.
     case json(params: [String: Any]?)
+
     /// Sets the `URLRequest`'s httpBody to the associated value `encodedParams`.  The Content-Type HTTP header field of an encoded request is set to application/json.
     case jsonData(encodedParams: Data?)
+
     /// Creates a url-encoded query string to be set as or appended to any existing URL query string or set as the HTTP body of the URL request. Whether the query string is set or appended to any existing URL query string or set as the HTTP body depends on the destination of the encoding.
     case url(params: [String: Any]?)
 
@@ -42,7 +44,7 @@ public enum NetworkingRouteHttpMethod: String {
     case patch
 }
 
-/// Potential errors that can be returned when attempting to create a `URLRequest` from a ``NetworkingRoute``
+/// Potential system errors that can occur when executing a ``NetworkingRoute``
 public enum NetworkingRouteError: Error {
     case invalidUrl
     case jsonParameterEncodingFailed(reason: Error)

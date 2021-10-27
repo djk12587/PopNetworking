@@ -8,40 +8,44 @@
 
 import Foundation
 
-/// A ``NetworkingRoute`` encapsulates everything required to build a `URLRequest` and serialize the `URLRequest`'s response with the specified ``NetworkingResponseSerializer``
+/// ``NetworkingRoute`` is a protocol that is responsible for declaring everything needed to create `URLRequest`s and parse the response into any desired custom type.
 public protocol NetworkingRoute {
 
     typealias NetworkingRouteHttpHeaders = [String : String]
+
     /// The ``NetworkingSession`` used to execute the HTTP request
     var session: NetworkingSession { get }
 
     /// HTTP base URL represented as a `String`
     var baseUrl: String { get }
-    /// HTTP url path
+    /// HTTP url path as a `String`
     var path: String { get }
     /// HTTP method
     var method: NetworkingRouteHttpMethod { get }
     /// HTTP headers
     var headers: NetworkingRouteHttpHeaders? { get }
-    /// HTTP parameters
+
+    /// ``parameterEncoding`` is responsible for encoding all of your network request's parameters.
     var parameterEncoding: NetworkingRequestParameterEncoding { get }
 
-    /// Turns a ``NetworkingRoute`` into  a `URLRequest`
+    /// ``urlRequest-793sf`` is responsible for converting `self` into a `URLRequest`
     var urlRequest: URLRequest { get throws }
 
     //--Response Handling--//
-    associatedtype ResponseSerializer: NetworkingResponseSerializer
-    /// Responsible for turning the raw response of an HTTP request into a desired response like a Model object. This property must adhere to ``NetworkingResponseSerializer``
+
+    /// `ResponseSerializer` allows for plug and play networking response serialization.
     ///
-    /// Prebuilt responseSerializers can be found within the ``NetworkingResponseSerializers`` enum.
+    /// For examples of prebuilt `NetworkingResponseSerializer`'s see ``NetworkingResponseSerializers``
+    associatedtype ResponseSerializer: NetworkingResponseSerializer
+    /// A `ResponseSerializer` is responsible for parsing the raw response of an HTTP request into a more usable object, like a Model object. The `ResponseSerializer` must adhere to ``NetworkingResponseSerializer``
+    ///
+    /// Prebuilt `ResponseSerializer`s can be found here: ``NetworkingResponseSerializers``.
     var responseSerializer: ResponseSerializer { get }
 
     /// Allows you to mock a response. Mainly used for testing purposes.
-    ///
-    /// If ``mockResponse-2yjpw`` is nil, the HTTP request will be sent. If ``mockResponse-2yjpw`` is not nil, then the `Result` returned within ``mockResponse-2yjpw``  is what will be returned on the completion handler when ``request(runCompletionHandlerOn:completion:)-9tv4l`` is called. By default this property is nil.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
-    /// Responsible for turning the ``NetworkingRoute``  into a `Result<ResponseSerializer.SerializedObject, Error>`. By default, this function will execute your HTTP request.
+    /// Responsible for executing the HTTP request, and parses the networking response into whatever type `ResponseSerializer.SerializedObject` is set to
     func request(runCompletionHandlerOn queue: DispatchQueue, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
 }
 
