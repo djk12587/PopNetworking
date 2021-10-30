@@ -37,6 +37,12 @@ public protocol NetworkingRequestRetrier: AnyObject {
                urlResponse: HTTPURLResponse,
                retryCount: Int,
                completion: @escaping (NetworkingRequestRetrierResult) -> Void)
+
+    @available(macOS 10.15.0, *)
+    func retry2(urlRequest: URLRequest,
+                dueTo error: Error,
+                urlResponse: HTTPURLResponse,
+                retryCount: Int) async -> NetworkingRequestRetrierResult
 }
 
 public enum NetworkingRequestRetrierResult {

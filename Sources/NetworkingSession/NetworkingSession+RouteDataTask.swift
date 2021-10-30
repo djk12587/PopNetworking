@@ -55,6 +55,8 @@ public extension NetworkingSession {
             }
         }
 
+        
+
         internal func executeResponseSerializer(with rawResponse: URLSessionDataTask.RawResponse) {
             let serializedResult = route.responseSerializer.serialize(response: rawResponse)
             //Check if the response contains an error, if not, trigger the completionHandler.

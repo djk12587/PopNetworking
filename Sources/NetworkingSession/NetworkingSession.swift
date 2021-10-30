@@ -76,6 +76,44 @@ public class NetworkingSession {
         }
     }
 
+    @available(macOS 10.15, *)
+    public func execute2<Route: NetworkingRoute>(route: Route) -> Task<Route.ResponseSerializer.SerializedObject, Error> {
+        if let mockResponse = route.mockResponse {
+            return Task<Route.ResponseSerializer.SerializedObject, Error> {
+                try await withCheckedThrowingContinuation { continuation in
+                    continuation.resume(with: mockResponse)
+                }
+            }
+        }
+        else {
+            let routeDataTask = RouteDataTask(route: route,
+                                              requestAdapter: requestAdapter,
+                                              requestRetrier: requestRetrier,
+                                              routeDataTaskDelegate: self,
+                                              completionHandlerQueue: queue,
+                                              routeCompletionHandler: completionHandler)
+            execute(routeDataTask)
+            return routeDataTask
+        }
+    }
+
+    @available(macOS 12.0, *)
+    private func execute2<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws {
+        do {
+            let urlRequest = try routeDataTask.urlRequest
+            let (responseData, response) = try await session.data(for: urlRequest)
+            routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: urlRequest,
+                                                                                         urlResponse: response as? HTTPURLResponse,
+                                                                                         data: responseData,
+                                                                                         error: nil))
+        } catch {
+            routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
+                                                                                         urlResponse: nil,
+                                                                                         data: nil,
+                                                                                         error: error))
+        }
+    }
+
     private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) {
         do {
             let urlRequest = try routeDataTask.urlRequest
