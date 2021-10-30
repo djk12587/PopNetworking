@@ -7,10 +7,16 @@
 
 import Foundation
 
+@available(macOS 10.15, *)
 internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
+
+    enum ReauthenticationHandlerError: Error {
+        case
+    }
 
     private var isRefreshingToken = false
     private var queuedRequests: [(NetworkingRequestRetrierResult) -> Void] = []
+    private var queuedRequests2: [CheckedContinuation<NetworkingRequestRetrierResult, Never>] = []
     private let accessTokenVerifier: AccessTokenVerifier
 
     public init(accessTokenVerifier: AccessTokenVerifier) {
@@ -34,6 +40,42 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
     }
 
     // MARK: - RequestRetrier
+
+    @available(macOS 10.15.0, *)
+    func retry2(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) async -> NetworkingRequestRetrierResult {
+
+        return await withCheckedContinuation { continuation in
+
+            guard accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount) else {
+                return continuation.resume(returning: .doNotRetry)
+            }
+
+            withTaskGroup(of: <#T##ChildTaskResult.Type#>, body: <#T##(inout TaskGroup<ChildTaskResult>) async -> GroupResult#>)
+
+            queuedRequests2.append(continuation)
+
+//            guard !isRefreshingToken else { return }
+
+            let reauthSuccess = await performReauthentication2()
+//            let copyOfQueuedRequests = self.queuedRequests2
+//            queuedRequests2.removeAll()
+//            copyOfQueuedRequests.forEach { $0.resume(with: .success(reauthSuccess ? .retry : .doNotRetry)) }
+
+        }
+
+
+
+        _ = await withCheckedContinuation { continuation in
+            queuedRequests2.append(continuation)
+        }
+
+        guard !isRefreshingToken else { return continuedResult }
+
+        let reauthSuccess = await performReauthentication2()
+        let copyOfQueuedRequests = self.queuedRequests2
+        queuedRequests2.removeAll()
+        copyOfQueuedRequests.forEach { $0.resume(with: .success(reauthSuccess ? .retry : .doNotRetry)) }
+    }
 
     public func retry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int, completion: @escaping (NetworkingRequestRetrierResult) -> Void) {
 
@@ -71,6 +113,23 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
                         completion(false)
                 }
             })
+        }
+    }
+
+    @available(macOS 10.15.0, *)
+    private func performReauthentication2() async -> Bool {
+//        guard !isRefreshingToken else { return }
+        isRefreshingToken = true
+
+        let reauthenticationResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
+        await accessTokenVerifier.reauthenticationCompleted2(result: reauthenticationResult)
+        isRefreshingToken = false
+
+        switch reauthenticationResult {
+            case .success:
+                return true
+            case .failure:
+                return false
         }
     }
 }
