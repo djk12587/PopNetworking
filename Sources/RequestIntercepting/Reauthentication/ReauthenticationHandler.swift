@@ -7,7 +7,6 @@
 
 import Foundation
 
-@available(macOS 10.15, *)
 internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
 
     private var reauthenticationTask: Task<NetworkingRequestRetrierResult, Never>?
@@ -35,7 +34,6 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
 
     // MARK: - RequestRetrier
 
-    @available(macOS 10.15.0, *)
     func retry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) async -> NetworkingRequestRetrierResult {
 
         guard accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount) else {
@@ -45,7 +43,6 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
         return await reauthenticate()
     }
 
-    @available(macOS 10.15.0, *)
     private func reauthenticate() async -> NetworkingRequestRetrierResult {
 
         if let reauthTask = reauthenticationTask {
@@ -55,8 +52,8 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
             let reauthTask = Task<NetworkingRequestRetrierResult, Never> {
                 defer { reauthenticationTask = nil }
 
-                let reauthResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
-                await accessTokenVerifier.reauthenticationCompleted2(result: reauthResult)
+                let reauthResult = await accessTokenVerifier.reauthenticationRoute.request.result
+                await accessTokenVerifier.reauthenticationCompleted(result: reauthResult)
                 switch reauthResult {
                     case .success:
                         return .retry

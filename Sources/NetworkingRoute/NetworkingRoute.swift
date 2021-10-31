@@ -46,7 +46,8 @@ public protocol NetworkingRoute {
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
     /// Responsible for executing the HTTP request, and parses the networking response into whatever type `ResponseSerializer.SerializedObject` is set to
-    func request(runCompletionHandlerOn queue: DispatchQueue, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable
+    var request: Task<ResponseSerializer.SerializedObject, Error> { get }
+
 }
 
 public extension NetworkingRoute {
@@ -68,11 +69,7 @@ public extension NetworkingRoute {
     }
 
     /// Default implementation. Feel free to implement your own version if needed.
-    @discardableResult
-    func request(runCompletionHandlerOn queue: DispatchQueue = .main,
-                 completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
-        return session.execute(route: self,
-                               runCompletionHandlerOn: queue,
-                               completionHandler: completion)
+    var request: Task<ResponseSerializer.SerializedObject, Error> {
+        return session.execute(route: self)
     }
 }

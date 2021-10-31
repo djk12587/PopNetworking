@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CoreVideo
 
 // MARK: - NetworkingSession
 
@@ -57,86 +58,64 @@ public class NetworkingSession {
     ///     - queue: The `DispatchQueue` that your `completionHandler` will be executed on. By default, `DispatchQueue.main` is used.
     ///     - completionHandler:  Once the ``NetworkingRoute`` is completed, the `completionHandler` will be executed with the specified ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
     /// - Returns: A ``Cancellable`` which can be used to cancel a request that is running.
-    public func execute<Route: NetworkingRoute>(route: Route,
-                                                runCompletionHandlerOn queue: DispatchQueue = .main,
-                                                completionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
-        if let mockResponse = route.mockResponse {
-            queue.async { completionHandler(mockResponse) }
-            return MockedCancellable()
-        }
-        else {
-            let routeDataTask = RouteDataTask(route: route,
-                                              requestAdapter: requestAdapter,
-                                              requestRetrier: requestRetrier,
-                                              routeDataTaskDelegate: self,
-                                              completionHandlerQueue: queue,
-                                              routeCompletionHandler: completionHandler)
-            execute(routeDataTask)
-            return routeDataTask
-        }
-    }
-
-    @available(macOS 10.15, *)
-    public func execute2<Route: NetworkingRoute>(route: Route) -> Task<Route.ResponseSerializer.SerializedObject, Error> {
-        if let mockResponse = route.mockResponse {
-            return Task<Route.ResponseSerializer.SerializedObject, Error> {
-                try await withCheckedThrowingContinuation { continuation in
-                    continuation.resume(with: mockResponse)
-                }
+    public func execute<Route: NetworkingRoute>(route: Route) -> Task<Route.ResponseSerializer.SerializedObject, Error> {
+        Task {
+            if let mockResponse = route.mockResponse {
+                return try mockResponse.get()
+            }
+            else {
+                return try await execute(RouteDataTask(route: route,
+                                                       requestAdapter: requestAdapter,
+                                                       requestRetrier: requestRetrier,
+                                                       routeDataTaskDelegate: self)).get()
             }
         }
-        else {
-            let routeDataTask = RouteDataTask(route: route,
-                                              requestAdapter: requestAdapter,
-                                              requestRetrier: requestRetrier,
-                                              routeDataTaskDelegate: self,
-                                              completionHandlerQueue: queue,
-                                              routeCompletionHandler: completionHandler)
-            execute(routeDataTask)
-            return routeDataTask
-        }
     }
 
-    @available(macOS 12.0, *)
-    private func execute2<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws {
+    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
         do {
             let urlRequest = try routeDataTask.urlRequest
-            let (responseData, response) = try await session.data(for: urlRequest)
-            routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: urlRequest,
-                                                                                         urlResponse: response as? HTTPURLResponse,
-                                                                                         data: responseData,
-                                                                                         error: nil))
-        } catch {
-            routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
-                                                                                         urlResponse: nil,
-                                                                                         data: nil,
-                                                                                         error: error))
-        }
-    }
+            let responseTask = session.createAsyncTask(for: urlRequest)
 
-    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) {
-        do {
-            let urlRequest = try routeDataTask.urlRequest
-            let urlSessionDataTask = session.dataTask(with: urlRequest) { (responseData, response, error) in
-                routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: urlRequest,
-                                                                                             urlResponse: response as? HTTPURLResponse,
-                                                                                             data: responseData,
-                                                                                             error: error))
+            do { try Task.checkCancellation() }
+            catch {
+                responseTask.cancel()
             }
 
-            routeDataTask.urlSessionDataTask = urlSessionDataTask
-            urlSessionDataTask.resume()
+            let (responseData, response, responseError) = await responseTask.value
+            return await routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: urlRequest,
+                                                                                                      urlResponse: response as? HTTPURLResponse,
+                                                                                                      data: responseData,
+                                                                                                      error: responseError))
         } catch {
-            routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
-                                                                                         urlResponse: nil,
-                                                                                         data: nil,
-                                                                                         error: error))
+            return await routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
+                                                                                                      urlResponse: nil,
+                                                                                                      data: nil,
+                                                                                                      error: error))
         }
     }
 }
 
 extension NetworkingSession: NetworkingRouteDataTaskDelegate {
-    internal func retry<Route: NetworkingRoute>(routeDataTask: RouteDataTask<Route>) {
-        execute(routeDataTask)
+    internal func retry<Route: NetworkingRoute>(routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        await execute(routeDataTask)
+    }
+}
+
+private extension URLSession {
+    func createAsyncTask(for urlRequest: URLRequest) -> Task<(Data?, URLResponse?, Error?), Never> {
+        return Task {
+            await withCheckedContinuation { continuation in
+                let urlSessionDataTask = dataTask(with: urlRequest) { (responseData, response, error) in
+                    continuation.resume(returning: (responseData, response, error))
+                }
+                urlSessionDataTask.resume()
+
+                do { try Task.checkCancellation() }
+                catch {
+                    urlSessionDataTask.cancel()
+                }
+            }
+        }
     }
 }
