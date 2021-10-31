@@ -31,18 +31,13 @@ public protocol NetworkingRequestRetrier: AnyObject {
     ///   - error: The reason the `URLRequest` failed.
     ///   - urlResponse: The failed `URLRequest`'s response.
     ///   - retryCount: The number of times this `URLRequest` has been retried.
-    ///   - completion: Pass in a ``NetworkingRequestRetrierResult`` to the completion block. ``NetworkingRequestRetrierResult`` determines if the `urlRequest` will be retried or not.
+    ///
+    ///   - Returns: An instance of ``NetworkingRequestRetrierResult`` which indicates if the request should be retried or not
+    @available(macOS 10.15.0, *)
     func retry(urlRequest: URLRequest,
                dueTo error: Error,
                urlResponse: HTTPURLResponse,
-               retryCount: Int,
-               completion: @escaping (NetworkingRequestRetrierResult) -> Void)
-
-    @available(macOS 10.15.0, *)
-    func retry2(urlRequest: URLRequest,
-                dueTo error: Error,
-                urlResponse: HTTPURLResponse,
-                retryCount: Int) async -> NetworkingRequestRetrierResult
+               retryCount: Int) async -> NetworkingRequestRetrierResult
 }
 
 public enum NetworkingRequestRetrierResult {
