@@ -72,12 +72,7 @@ public protocol AccessTokenVerification: AnyObject {
     ///
     /// - Parameters:
     ///     - result: The result of ``reauthenticationRoute-swift.property``
-    ///     - finishedProcessingResult: This closure must be executed when your are done processing the `result` param. If this closure is not executed then your requests will never be retried.
     ///
-    /// - Attention: It is best practice to save your newly aquired authorization data, then execute the `finishedProcessingResult` closure
-    func reauthenticationCompleted(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>,
-                                   finishedProcessingResult: @escaping () -> Void)
-
-    @available(macOS 10.15.0, *)
-    func reauthenticationCompleted2(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>) async
+    /// - Attention: It is best practice to save your newly aquired authorization data
+    func reauthenticationCompleted(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>) async
 }

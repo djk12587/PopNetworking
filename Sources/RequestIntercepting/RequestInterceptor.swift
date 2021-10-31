@@ -33,7 +33,6 @@ public protocol NetworkingRequestRetrier: AnyObject {
     ///   - retryCount: The number of times this `URLRequest` has been retried.
     ///
     ///   - Returns: An instance of ``NetworkingRequestRetrierResult`` which indicates if the request should be retried or not
-    @available(macOS 10.15.0, *)
     func retry(urlRequest: URLRequest,
                dueTo error: Error,
                urlResponse: HTTPURLResponse,

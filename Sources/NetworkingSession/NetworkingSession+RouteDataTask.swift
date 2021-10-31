@@ -8,41 +8,36 @@
 import Foundation
 
 internal protocol NetworkingRouteDataTaskDelegate: AnyObject {
-    func retry<Route: NetworkingRoute>(routeDataTask: NetworkingSession.RouteDataTask<Route>)
+    func retry<Route: NetworkingRoute>(routeDataTask: NetworkingSession.RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error>
 }
 
 public extension NetworkingSession {
     /// `RouteDataTask`  a wrapper class for `URLSessionDataTask`. In addition, a `RouteDataTask` will automatically serialize the `URLSessionDataTask.RawResponse` into the `NetworkingRoute.ResponseSerializer.SerializedObject`. Further, a `RouteDataTask` can also utilize a ``NetworkingRequestAdapter`` or ``NetworkingRequestRetrier``.
-    class RouteDataTask<Route: NetworkingRoute>: Cancellable {
+    class RouteDataTask<Route: NetworkingRoute> {
 
         private let route: Route
-        private let completionHandlerQueue: DispatchQueue
-        private let routeCompletionHandler: (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void
+        private var retryTask: Task<Result<Route.ResponseSerializer.SerializedObject, Error>, Never>?
 
         private var currentRequest: URLRequest?
-        internal var urlSessionDataTask: URLSessionDataTask? = nil
+//        internal var urlSessionDataTask: URLSessionDataTask? = nil
         private var retryCount = 0
         private weak var requestAdapter: NetworkingRequestAdapter?
         private weak var requestRetrier: NetworkingRequestRetrier?
         private weak var delegate: NetworkingRouteDataTaskDelegate?
 
-        /// Cancels the HTTPRequest
-        public func cancel() {
-            urlSessionDataTask?.cancel()
-        }
+//        /// Cancels the HTTPRequest
+//        public func cancel() {
+//            urlSessionDataTask?.cancel()
+//        }
 
         internal init(route: Route,
                       requestAdapter: NetworkingRequestAdapter?,
                       requestRetrier: NetworkingRequestRetrier?,
-                      routeDataTaskDelegate: NetworkingRouteDataTaskDelegate,
-                      completionHandlerQueue: DispatchQueue,
-                      routeCompletionHandler: @escaping (Result<Route.ResponseSerializer.SerializedObject, Error>) -> Void) {
+                      routeDataTaskDelegate: NetworkingRouteDataTaskDelegate) {
             self.route = route
             self.delegate = routeDataTaskDelegate
             self.requestAdapter = requestAdapter
             self.requestRetrier = requestRetrier
-            self.completionHandlerQueue = completionHandlerQueue
-            self.routeCompletionHandler = routeCompletionHandler
         }
 
         internal var urlRequest: URLRequest {
@@ -55,34 +50,42 @@ public extension NetworkingSession {
             }
         }
 
-        
-
-        internal func executeResponseSerializer(with rawResponse: URLSessionDataTask.RawResponse) {
+        internal func executeResponseSerializer(with rawResponse: URLSessionDataTask.RawResponse) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             let serializedResult = route.responseSerializer.serialize(response: rawResponse)
             //Check if the response contains an error, if not, trigger the completionHandler.
             guard
                 let error = rawResponse.error ?? serializedResult.error,
                 let retrier = requestRetrier,
-                let urlRequest = rawResponse.urlRequest ?? currentRequest
+                let urlRequest = rawResponse.urlRequest ?? currentRequest,
+                let delegate = delegate
             else {
-                completionHandlerQueue.async { self.routeCompletionHandler(serializedResult) }
-                return
+                return serializedResult
             }
 
-            //If there is an error, we now ask the retrier if the failed request should be restarted or not
-            retrier.retry(urlRequest: urlRequest,
-                          dueTo: error,
-                          urlResponse: rawResponse.urlResponse ?? HTTPURLResponse(),
-                          retryCount: retryCount) { retrierResult in
+            if let retryTask = retryTask {
+                return await retryTask.value
+            }
+            else {
+                let retryTask = Task<Result<Route.ResponseSerializer.SerializedObject, Error>, Never> {
+                    defer { self.retryTask = nil }
+                    //If there is an error, we now ask the retrier if the failed request should be restarted or not
+                    let retryResult = await retrier.retry(urlRequest: urlRequest,
+                                                          dueTo: error,
+                                                          urlResponse: rawResponse.urlResponse ?? HTTPURLResponse(),
+                                                          retryCount: retryCount)
 
-                switch retrierResult {
-                    case .doNotRetry:
-                        self.completionHandlerQueue.async { self.routeCompletionHandler(serializedResult) }
+                    switch retryResult {
+                        case .doNotRetry:
 
-                    case .retry:
-                        self.retryCount += 1
-                        self.delegate?.retry(routeDataTask: self)
+                            return serializedResult
+
+                        case .retry:
+                            self.retryCount += 1
+                            return await delegate.retry(routeDataTask: self)
+                    }
                 }
+                self.retryTask = retryTask
+                return await retryTask.value
             }
         }
     }

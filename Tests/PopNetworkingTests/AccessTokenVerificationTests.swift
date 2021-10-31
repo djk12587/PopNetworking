@@ -1,4 +1,4 @@
-//
+    //
 //  File.swift
 //  
 //
@@ -9,83 +9,91 @@ import XCTest
 @testable import PopNetworking
 
 final class ReauthenticationTests: XCTestCase {
-    func testReauthenticationSuccess() throws {
+//    func testReauthenticationSuccess() async throws  {
+//
+////        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
+////        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
+//
+//        let session = NetworkingSession()
+//        let task = session.execute(route: UnauthenticatedRoute())
+//        task.cancel()
+//        let result = await task.result
+//        print(result)
+//        print(task)
+//        print("Asdasd")
+////        XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
+////        XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
+//    }
+
+    func testReauthenticationSuccess2() async throws {
 
         let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        let unauthenticatedRouteWillFinish = expectation(description: "unauthenticatedRouteWillFinish")
-        _ = session.execute(route: UnauthenticatedRoute()) { _ in
-            unauthenticatedRouteWillFinish.fulfill()
-        }
-        waitForExpectations(timeout: 5)
+        _ = await session.execute(route: UnauthenticatedRoute()).result
 
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
         XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
     }
 
-    func testReauthenticationFailure() throws {
-
-        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .failure(NSError(domain: "force authorization failure", code: 0))))
-        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
-
-        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        let unauthenticatedRouteWillFinish = expectation(description: "unauthenticatedRouteWillFinish")
-        _ = session.execute(route: UnauthenticatedRoute()) { result in
-            switch result {
-                case .success:
-                    XCTFail("This request is supposed to fail")
-                case .failure(let error):
-                    XCTAssertEqual(error as? MockTokenVerifier.AccessTokenError, .tokenIsInvalid)
-            }
-            unauthenticatedRouteWillFinish.fulfill()
-        }
-        waitForExpectations(timeout: 5)
-
-        XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isFailure == true)
-        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
-    }
-
-    func testReauthenticationRetryMultipleTimes() throws {
-
-        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)), numberOfRetries: 3)
-        XCTAssertEqual(mockTokenVerifier.retryCount, 0)
-
-        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        let unauthenticatedRouteWillFinish = expectation(description: "unauthenticatedRouteWillFinish")
-        _ = session.execute(route: UnauthenticatedRoute()) { result in
-            if case .success = result {
-                XCTFail("This request is supposed to fail")
-            }
-            unauthenticatedRouteWillFinish.fulfill()
-        }
-        waitForExpectations(timeout: 5)
-        XCTAssertEqual(mockTokenVerifier.retryCount, 3)
-        print(mockTokenVerifier.reauthorizationCount)
-    }
-
-    func testMultipleUnauthorizedRoutesPerformsReauthenticationOnlyOnce() throws {
+//    func testReauthenticationFailure() throws {
+//
+//        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .failure(NSError(domain: "force authorization failure", code: 0))))
+//        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
+//
+//        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
+//        let unauthenticatedRouteWillFinish = expectation(description: "unauthenticatedRouteWillFinish")
+//        _ = session.execute(route: UnauthenticatedRoute()) { result in
+//            switch result {
+//                case .success:
+//                    XCTFail("This request is supposed to fail")
+//                case .failure(let error):
+//                    XCTAssertEqual(error as? MockTokenVerifier.AccessTokenError, .tokenIsInvalid)
+//            }
+//            unauthenticatedRouteWillFinish.fulfill()
+//        }
+//        waitForExpectations(timeout: 5)
+//
+//        XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isFailure == true)
+//        XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
+//    }
+//
+//    func testReauthenticationRetryMultipleTimes() throws {
+//
+//        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)), numberOfRetries: 3)
+//        XCTAssertEqual(mockTokenVerifier.retryCount, 0)
+//
+//        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
+//        let unauthenticatedRouteWillFinish = expectation(description: "unauthenticatedRouteWillFinish")
+//        _ = session.execute(route: UnauthenticatedRoute()) { result in
+//            if case .success = result {
+//                XCTFail("This request is supposed to fail")
+//            }
+//            unauthenticatedRouteWillFinish.fulfill()
+//        }
+//        waitForExpectations(timeout: 5)
+//        XCTAssertEqual(mockTokenVerifier.retryCount, 3)
+//        print(mockTokenVerifier.reauthorizationCount)
+//    }
+//
+    func testMultipleUnauthorizedRoutesPerformsReauthenticationOnlyOnce() async throws {
 
         let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 0)
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        let firstUnauthenticatedRoute = expectation(description: "firstUnauthenticatedRoute")
-        _ = session.execute(route: UnauthenticatedRoute()) { result in
-            firstUnauthenticatedRoute.fulfill()
-        }
+        let firstResult = await session.execute(route: UnauthenticatedRoute()).result
+        let secondResult = await session.execute(route: UnauthenticatedRoute()).result
 
-        let secondUnauthenticatedRoute = expectation(description: "secondUnauthenticatedRoute")
-        _ = session.execute(route: UnauthenticatedRoute()) { result in
-            secondUnauthenticatedRoute.fulfill()
-        }
-
-        waitForExpectations(timeout: 5)
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 1)
         XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
         print(mockTokenVerifier.reauthorizationCount)
+
+        print(firstResult)
+        print(secondResult)
+        print("sadad")
     }
 }
 
@@ -101,8 +109,8 @@ private extension ReauthenticationTests {
     }
 
     struct UnauthenticatedRoute: NetworkingRoute {
-        let baseUrl: String = "https://mockBaseurl.com"
-        let path: String = "/mockPath"
+        let baseUrl: String = "https://google.com"
+        let path: String = ""
         let method: NetworkingRouteHttpMethod = .post
         let parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil)
         let headers: NetworkingRouteHttpHeaders? = ["Authorization" : ""]
@@ -152,7 +160,7 @@ private extension ReauthenticationTests {
             return true
         }
 
-        func reauthenticationCompleted(result: Result<Int, Error>, finishedProcessingResult: @escaping () -> Void) {
+        func reauthenticationCompleted(result: Result<Int, Error>) async {
             reauthorizationResult = result
             reauthorizationCount += 1
             switch result {
@@ -162,7 +170,6 @@ private extension ReauthenticationTests {
                 case .failure:
                     accessToken = ""
             }
-            finishedProcessingResult()
         }
     }
 }
