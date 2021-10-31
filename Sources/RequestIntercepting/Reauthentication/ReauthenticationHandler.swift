@@ -52,7 +52,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
             let reauthTask = Task<NetworkingRequestRetrierResult, Never> {
                 defer { reauthenticationTask = nil }
 
-                let reauthResult = await accessTokenVerifier.reauthenticationRoute.request.result
+                let reauthResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
                 await accessTokenVerifier.reauthenticationCompleted(result: reauthResult)
                 switch reauthResult {
                     case .success:
