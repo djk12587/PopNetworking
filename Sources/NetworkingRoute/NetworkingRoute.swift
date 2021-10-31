@@ -46,8 +46,7 @@ public protocol NetworkingRoute {
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
     /// Responsible for executing the HTTP request, and parses the networking response into whatever type `ResponseSerializer.SerializedObject` is set to
-    var request: Task<ResponseSerializer.SerializedObject, Error> { get }
-
+    var asyncTask: Task<ResponseSerializer.SerializedObject, Error> { get }
 }
 
 public extension NetworkingRoute {
@@ -69,7 +68,17 @@ public extension NetworkingRoute {
     }
 
     /// Default implementation. Feel free to implement your own version if needed.
-    var request: Task<ResponseSerializer.SerializedObject, Error> {
+    var asyncTask: Task<ResponseSerializer.SerializedObject, Error> {
         return session.execute(route: self)
     }
+
+    var asyncRequest: Result<ResponseSerializer.SerializedObject, Error> {
+        get async { await asyncTask.result }
+    }
+
+    func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
+        return Task { completion(await asyncTask.result) }
+    }
 }
+
+extension Task: Cancellable {}
