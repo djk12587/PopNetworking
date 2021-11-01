@@ -45,7 +45,7 @@ public protocol NetworkingRoute {
     /// Allows you to mock a response. Mainly used for testing purposes.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
-    /// Responsible for executing the HTTP request, and parses the networking response into whatever type `ResponseSerializer.SerializedObject` is set to
+    /// Task which executes the HTTP request, and parses the networking response into whatever type is set for `ResponseSerializer.SerializedObject`
     var asyncTask: Task<ResponseSerializer.SerializedObject, Error> { get }
 }
 
@@ -76,6 +76,7 @@ public extension NetworkingRoute {
         get async { await asyncTask.result }
     }
 
+    @discardableResult
     func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
         return Task { completion(await asyncTask.result) }
     }

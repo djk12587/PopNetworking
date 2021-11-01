@@ -7,25 +7,16 @@
 
 import Foundation
 
-//internal protocol NetworkingRouteDataTaskDelegate: AnyObject {
-//    func retry<Route: NetworkingRoute>(routeDataTask: NetworkingSession.RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error>
-//}
-
 public extension NetworkingSession {
-    /// `RouteDataTask`  a wrapper class for `URLSessionDataTask`. In addition, a `RouteDataTask` will automatically serialize the `URLSessionDataTask.RawResponse` into the `NetworkingRoute.ResponseSerializer.SerializedObject`. Further, a `RouteDataTask` can also utilize a ``NetworkingRequestAdapter`` or ``NetworkingRequestRetrier``.
-    class RouteDataTask<Route: NetworkingRoute> {
+    internal class RouteDataTask<Route: NetworkingRoute> {
 
         private let route: Route
         private var currentRequest: URLRequest?
+        private var dataTask: URLSessionDataTask?
         private weak var requestAdapter: NetworkingRequestAdapter?
         private(set) var retryCount = 0
 
-        internal init(route: Route, requestAdapter: NetworkingRequestAdapter?) {
-            self.route = route
-            self.requestAdapter = requestAdapter
-        }
-
-        internal var urlRequest: URLRequest {
+        private var urlRequest: URLRequest {
             get throws {
                 let urlRequest = try currentRequest ?? route.urlRequest
                 currentRequest = urlRequest
@@ -35,8 +26,31 @@ public extension NetworkingSession {
             }
         }
 
-        internal func executeResponseSerializer(with rawResponse: URLSessionDataTask.RawResponse) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-            return route.responseSerializer.serialize(response: rawResponse)
+        internal init(route: Route, requestAdapter: NetworkingRequestAdapter?) {
+            self.route = route
+            self.requestAdapter = requestAdapter
+        }
+
+        internal func response(urlSession: URLSession) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
+            await withCheckedContinuation { continuation in
+                do {
+                    let urlRequestToSend = try urlRequest
+                    dataTask = urlSession.dataTask(with: urlRequestToSend) { data, response, error in
+                        continuation.resume(returning: (urlRequestToSend,
+                                                        data,
+                                                        response as? HTTPURLResponse,
+                                                        error))
+                    }
+                    Task.isCancelled ? dataTask?.cancel() : dataTask?.resume()
+                }
+                catch {
+                    continuation.resume(returning: (nil, nil, nil, error))
+                }
+            }
+        }
+
+        internal func executeResponseSerializer(with response: (data: Data?, urlResponse: HTTPURLResponse?, error: Error?)) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+            return route.responseSerializer.serialize(response: response)
         }
 
         internal func incrementRetryCount() {

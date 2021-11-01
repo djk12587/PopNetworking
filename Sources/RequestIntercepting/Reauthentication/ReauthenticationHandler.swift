@@ -44,16 +44,13 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
     }
 
     private func reauthenticate() async -> NetworkingRequestRetrierResult {
-        guard let reauthTask = reauthenticationTask, !reauthTask.isCancelled else {
+        guard let existingReauthTask = reauthenticationTask, !existingReauthTask.isCancelled else {
             let reauthTask = createReauthenticationTask()
             reauthenticationTask = reauthTask
-            if Task.isCancelled {
-                reauthTask.cancel()
-            }
             return await reauthTask.value
         }
 
-        return await reauthTask.value
+        return await existingReauthTask.value
     }
 
     private func createReauthenticationTask() -> Task<NetworkingRequestRetrierResult, Never> {
@@ -62,7 +59,6 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
 
             let reauthResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
             await accessTokenVerifier.reauthenticationCompleted(result: reauthResult)
-
             switch reauthResult {
                 case .success:
                     return .retry

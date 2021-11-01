@@ -52,12 +52,10 @@ public class NetworkingSession {
         self.requestRetrier = requestInterceptor
     }
 
-    /// Performs an HTTP request and parses the HTTP response into a `Result<Route.ResponseSerializer.SerializedObject, Error>`
+    /// Performs an HTTP request and parses the HTTP response into a `Task<Route.ResponseSerializer.SerializedObject, Error>`
     /// - Parameters:
     ///     - route: The ``NetworkingRoute`` you want to execute.
-    ///     - queue: The `DispatchQueue` that your `completionHandler` will be executed on. By default, `DispatchQueue.main` is used.
-    ///     - completionHandler:  Once the ``NetworkingRoute`` is completed, the `completionHandler` will be executed with the specified ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
-    /// - Returns: A ``Cancellable`` which can be used to cancel a request that is running.
+    /// - Returns: A`Task` that will return the `Route.ResponseSerializer.SerializedObject` or an `Error`. A `Task` can be cancelled.
     public func execute<Route: NetworkingRoute>(route: Route) -> Task<Route.ResponseSerializer.SerializedObject, Error> {
         Task {
             if let mockResponse = route.mockResponse {
@@ -70,44 +68,20 @@ public class NetworkingSession {
     }
 
     private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        do {
-            let urlRequest = try routeDataTask.urlRequest
-            let (responseData, response, responseError) = await session.dataTask(for: urlRequest)
-            let rawResponse = URLSessionDataTask.RawResponse(urlRequest: urlRequest,
-                                                             urlResponse: response as? HTTPURLResponse,
-                                                             data: responseData,
-                                                             error: responseError)
-            let serializedResult = routeDataTask.executeResponseSerializer(with: rawResponse)
-            return await retry(routeDataTask: routeDataTask,
-                               urlRequest: urlRequest,
-                               rawResponse: rawResponse,
-                               serializedResult: serializedResult)
-        } catch {
-            let serializedResult = routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
-                                                                                                                urlResponse: nil,
-                                                                                                                data: nil,
-                                                                                                                error: error))
-            return await retry(routeDataTask: routeDataTask,
-                               urlRequest: nil,
-                               rawResponse: nil,
-                               serializedResult: serializedResult)
-        }
-    }
 
-    private func retry<Route: NetworkingRoute>(routeDataTask: RouteDataTask<Route>,
-                                               urlRequest: URLRequest?,
-                                               rawResponse: URLSessionDataTask.RawResponse?,
-                                               serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        let (request, responseData, response, error) = await routeDataTask.response(urlSession: session)
+        let serializedResult = routeDataTask.executeResponseSerializer(with: (responseData, response, error))
+
         guard
-            let error = rawResponse?.error ?? serializedResult.error,
-            let retrier = requestRetrier
+            let retrier = requestRetrier,
+            let error = error ?? serializedResult.error
         else {
             return serializedResult
         }
 
-        switch await retrier.retry(urlRequest: urlRequest,
+        switch await retrier.retry(urlRequest: request,
                                    dueTo: error,
-                                   urlResponse: rawResponse?.urlResponse,
+                                   urlResponse: response,
                                    retryCount: routeDataTask.retryCount) {
             case .retry:
                 routeDataTask.incrementRetryCount()
@@ -115,18 +89,6 @@ public class NetworkingSession {
             case .doNotRetry:
                 return serializedResult
         }
-    }
-}
-
-private extension URLSession {
-    func dataTask(for urlRequest: URLRequest) async -> (Data?, URLResponse?, Error?) {
-        let dataTaskResponse: (Data?, URLResponse?, Error?) = await withCheckedContinuation { continuation in
-            let dataTask = dataTask(with: urlRequest) { (responseData, response, error) in
-                continuation.resume(returning: (responseData, response, error))
-            }
-            dataTask.resume()
-        }
-        return dataTaskResponse
     }
 }
 
