@@ -31,7 +31,15 @@ final class ReauthenticationTests: XCTestCase {
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        _ = await session.execute(route: UnauthenticatedRoute()).result
+        let testTask = session.execute(route: UnauthenticatedRoute())
+        testTask.cancel()
+        switch await testTask.result {
+            case .success(let this):
+                print(this)
+            case .failure(let error):
+                print(error)
+        }
+        print(testTask)
 
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
         XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
@@ -154,7 +162,7 @@ private extension ReauthenticationTests {
             urlRequest.allHTTPHeaderFields?["Authorization"] = accessToken
         }
 
-        func shouldReauthenticate(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) -> Bool {
+        func shouldReauthenticate(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) -> Bool {
             guard retryCount <= maxNumberOfRetries else { return false }
             self.retryCount += 1
             return true
