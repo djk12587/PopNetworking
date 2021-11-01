@@ -58,16 +58,3 @@ public enum NetworkingRouteError: Error {
 public protocol Cancellable {
     func cancel()
 }
-
-public struct MockedCancellable: Cancellable {
-    public func cancel() {}
-}
-
-public extension URLSessionDataTask {
-    struct RawResponse {
-        public let urlRequest: URLRequest?
-        public let urlResponse: HTTPURLResponse?
-        public let data: Data?
-        public let error: Error?
-    }
-}
