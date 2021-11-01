@@ -33,9 +33,9 @@ public protocol NetworkingRequestRetrier: AnyObject {
     ///   - retryCount: The number of times this `URLRequest` has been retried.
     ///
     ///   - Returns: An instance of ``NetworkingRequestRetrierResult`` which indicates if the request should be retried or not
-    func retry(urlRequest: URLRequest,
+    func retry(urlRequest: URLRequest?,
                dueTo error: Error,
-               urlResponse: HTTPURLResponse,
+               urlResponse: HTTPURLResponse?,
                retryCount: Int) async -> NetworkingRequestRetrierResult
 }
 

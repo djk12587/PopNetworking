@@ -34,7 +34,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
 
     // MARK: - RequestRetrier
 
-    func retry(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) async -> NetworkingRequestRetrierResult {
+    func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) async -> NetworkingRequestRetrierResult {
 
         guard accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount) else {
             return .doNotRetry
@@ -44,25 +44,31 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
     }
 
     private func reauthenticate() async -> NetworkingRequestRetrierResult {
-
-        if let reauthTask = reauthenticationTask {
+        guard let reauthTask = reauthenticationTask, !reauthTask.isCancelled else {
+            let reauthTask = createReauthenticationTask()
+            reauthenticationTask = reauthTask
+            if Task.isCancelled {
+                reauthTask.cancel()
+            }
             return await reauthTask.value
         }
-        else {
-            let reauthTask = Task<NetworkingRequestRetrierResult, Never> {
-                defer { reauthenticationTask = nil }
 
-                let reauthResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
-                await accessTokenVerifier.reauthenticationCompleted(result: reauthResult)
-                switch reauthResult {
-                    case .success:
-                        return .retry
-                    case .failure:
-                        return .doNotRetry
-                }
+        return await reauthTask.value
+    }
+
+    private func createReauthenticationTask() -> Task<NetworkingRequestRetrierResult, Never> {
+        Task {
+            defer { reauthenticationTask = nil }
+
+            let reauthResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
+            await accessTokenVerifier.reauthenticationCompleted(result: reauthResult)
+
+            switch reauthResult {
+                case .success:
+                    return .retry
+                case .failure:
+                    return .doNotRetry
             }
-            reauthenticationTask = reauthTask
-            return await reauthTask.value
         }
     }
 }

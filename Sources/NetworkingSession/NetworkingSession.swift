@@ -64,10 +64,7 @@ public class NetworkingSession {
                 return try mockResponse.get()
             }
             else {
-                return try await execute(RouteDataTask(route: route,
-                                                       requestAdapter: requestAdapter,
-                                                       requestRetrier: requestRetrier,
-                                                       routeDataTaskDelegate: self)).get()
+                return try await execute(RouteDataTask(route: route, requestAdapter: requestAdapter)).get()
             }
         }
     }
@@ -75,47 +72,67 @@ public class NetworkingSession {
     private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
         do {
             let urlRequest = try routeDataTask.urlRequest
-            let responseTask = session.createAsyncTask(for: urlRequest)
-
-            do { try Task.checkCancellation() }
-            catch {
-                responseTask.cancel()
-            }
-
-            let (responseData, response, responseError) = await responseTask.value
-            return await routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: urlRequest,
-                                                                                                      urlResponse: response as? HTTPURLResponse,
-                                                                                                      data: responseData,
-                                                                                                      error: responseError))
+            let (responseData, response, responseError) = await session.dataTask(for: urlRequest)
+            let rawResponse = URLSessionDataTask.RawResponse(urlRequest: urlRequest,
+                                                             urlResponse: response as? HTTPURLResponse,
+                                                             data: responseData,
+                                                             error: responseError)
+            let serializedResult = routeDataTask.executeResponseSerializer(with: rawResponse)
+            return await retry(routeDataTask: routeDataTask,
+                               urlRequest: urlRequest,
+                               rawResponse: rawResponse,
+                               serializedResult: serializedResult)
         } catch {
-            return await routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
-                                                                                                      urlResponse: nil,
-                                                                                                      data: nil,
-                                                                                                      error: error))
+            let serializedResult = routeDataTask.executeResponseSerializer(with: URLSessionDataTask.RawResponse(urlRequest: nil,
+                                                                                                                urlResponse: nil,
+                                                                                                                data: nil,
+                                                                                                                error: error))
+            return await retry(routeDataTask: routeDataTask,
+                               urlRequest: nil,
+                               rawResponse: nil,
+                               serializedResult: serializedResult)
         }
     }
-}
 
-extension NetworkingSession: NetworkingRouteDataTaskDelegate {
-    internal func retry<Route: NetworkingRoute>(routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        await execute(routeDataTask)
+    private func retry<Route: NetworkingRoute>(routeDataTask: RouteDataTask<Route>,
+                                               urlRequest: URLRequest?,
+                                               rawResponse: URLSessionDataTask.RawResponse?,
+                                               serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        guard
+            let error = rawResponse?.error ?? serializedResult.error,
+            let retrier = requestRetrier
+        else {
+            return serializedResult
+        }
+
+        switch await retrier.retry(urlRequest: urlRequest,
+                                   dueTo: error,
+                                   urlResponse: rawResponse?.urlResponse,
+                                   retryCount: routeDataTask.retryCount) {
+            case .retry:
+                routeDataTask.incrementRetryCount()
+                return await execute(routeDataTask)
+            case .doNotRetry:
+                return serializedResult
+        }
     }
 }
 
 private extension URLSession {
-    func createAsyncTask(for urlRequest: URLRequest) -> Task<(Data?, URLResponse?, Error?), Never> {
-        return Task {
-            await withCheckedContinuation { continuation in
-                let urlSessionDataTask = dataTask(with: urlRequest) { (responseData, response, error) in
-                    continuation.resume(returning: (responseData, response, error))
-                }
-                urlSessionDataTask.resume()
-
-                do { try Task.checkCancellation() }
-                catch {
-                    urlSessionDataTask.cancel()
-                }
+    func dataTask(for urlRequest: URLRequest) async -> (Data?, URLResponse?, Error?) {
+        let dataTaskResponse: (Data?, URLResponse?, Error?) = await withCheckedContinuation { continuation in
+            let dataTask = dataTask(with: urlRequest) { (responseData, response, error) in
+                continuation.resume(returning: (responseData, response, error))
             }
+            dataTask.resume()
         }
+        return dataTaskResponse
+    }
+}
+
+private extension Result {
+    var error: Error? {
+        guard case let .failure(error) = self else { return nil }
+        return error
     }
 }

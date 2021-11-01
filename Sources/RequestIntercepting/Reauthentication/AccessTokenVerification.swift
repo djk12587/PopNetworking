@@ -66,7 +66,7 @@ public protocol AccessTokenVerification: AnyObject {
     /// - Returns: A `Bool` indicating if the request requires reauthentication. If `true` the ``reauthenticationRoute-swift.property`` will be executed. Once the ``reauthenticationRoute-swift.property`` successfully finishes, the `URLRequest` will be retried.
     ///
     /// - Attention: If you never return `false` there is chance your `URLRequest` will attempt to retry in an infinite loop.
-    func shouldReauthenticate(urlRequest: URLRequest, dueTo error: Error, urlResponse: HTTPURLResponse, retryCount: Int) -> Bool
+    func shouldReauthenticate(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) -> Bool
 
     /// Informs you of the result of ``reauthenticationRoute-swift.property``.
     ///
