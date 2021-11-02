@@ -7,8 +7,8 @@
 
 import Foundation
 
-internal extension NetworkingSession {
-    class RouteDataTask<Route: NetworkingRoute> {
+extension NetworkingSession {
+     internal class RouteDataTask<Route: NetworkingRoute> {
 
         private let route: Route
         private var currentRequest: URLRequest?

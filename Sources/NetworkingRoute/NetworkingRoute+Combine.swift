@@ -39,7 +39,7 @@ private extension NetworkingRoutePublisher {
 
         private var downstream: Downstream?
         private let route: Route
-        private var routeCancellable: PopNetworking.Cancellable?
+        private var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
 
         init(route: Route, downstream: Downstream) {
             self.route = route
@@ -52,14 +52,14 @@ private extension NetworkingRoutePublisher {
 
             self.downstream = nil
 
-            routeCancellable = route.request { result in
+            routeTask = route.request { result in
                 _ = downstream.receive(result)
                 downstream.receive(completion: .finished)
             }
         }
 
         func cancel() {
-            routeCancellable?.cancel()
+            routeTask?.cancel()
             downstream = nil
         }
     }
@@ -88,7 +88,7 @@ private extension NetworkingRouteFailablePublisher {
 
         private var downstream: Downstream?
         private let route: Route
-        private var routeCancellable: PopNetworking.Cancellable?
+        private var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
 
         init(route: Route, downstream: Downstream) {
             self.route = route
@@ -100,7 +100,7 @@ private extension NetworkingRouteFailablePublisher {
             guard let downstream = downstream else { return }
             self.downstream = nil
 
-            routeCancellable = route.request { result in
+            routeTask = route.request { result in
                 switch result {
                     case .success(let responseModel):
                         _ = downstream.receive(responseModel)
@@ -112,7 +112,7 @@ private extension NetworkingRouteFailablePublisher {
         }
 
         func cancel() {
-            routeCancellable?.cancel()
+            routeTask?.cancel()
             downstream = nil
         }
     }

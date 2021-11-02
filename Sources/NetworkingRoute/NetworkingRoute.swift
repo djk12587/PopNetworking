@@ -77,13 +77,9 @@ public extension NetworkingRoute {
     }
 
     @discardableResult
-    func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
-        Task {
-            let requestTask = asyncTask
-            if Task.isCancelled { requestTask.cancel() }
-            completion(await requestTask.result)
-        }
+    func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
+        let requestTask = asyncTask
+        Task { completion(await requestTask.result) }
+        return requestTask
     }
 }
-
-extension Task: Cancellable {}

@@ -8,6 +8,7 @@
 
 import Foundation
 
+/// Contains default implementations of ``NetworkingResponseSerializer``. Such as ``DecodableResponseSerializer``, etc.
 public enum NetworkingResponseSerializers {
 
     /// The `DecodableResponseSerializer` will attempt to parse response `Data` into a the generic `SuccessType`. `SuccessType` must adhere to `Decodable`.

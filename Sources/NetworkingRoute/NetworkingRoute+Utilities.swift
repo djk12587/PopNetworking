@@ -54,7 +54,3 @@ public enum NetworkingRouteError: Error {
         case multiFailure([Error])
     }
 }
-
-public protocol Cancellable {
-    func cancel()
-}
