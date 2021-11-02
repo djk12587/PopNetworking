@@ -68,11 +68,13 @@ public protocol AccessTokenVerification: AnyObject {
     /// - Attention: If you never return `false` there is chance your `URLRequest` will attempt to retry in an infinite loop.
     func shouldReauthenticate(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) -> Bool
 
-    /// Informs you of the result of ``reauthenticationRoute-swift.property``.
+    /// Informs you of the result of ``reauthenticationRoute-swift.property``. Use this function to save your updated authorization data.
     ///
     /// - Parameters:
     ///     - result: The result of ``reauthenticationRoute-swift.property``
     ///
+    /// - Returns: A `Bool` indicating if saving your authorization data was successful or not. If saving your authorization data failed return `false`, and the request will not be retried.
+    ///
     /// - Attention: It is best practice to save your newly aquired authorization data
-    func reauthenticationCompleted(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>) async
+    func saveReauthentication(result: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>) async -> Bool
 }
