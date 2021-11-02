@@ -19,5 +19,5 @@ public protocol NetworkingResponseSerializer {
     ///
     /// - Parameter response: A tuple that contains the raw response of an HTTP request. This tuple contains the raw response `Data`, the `HTTPURLResponse`, and a response `Error`
     /// - Returns: A `Result` type that contains the ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
-    func serialize(response: (data: Data?, urlResponse: HTTPURLResponse?, error: Error?)) -> Result<SerializedObject, Error>
+    func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error>
 }

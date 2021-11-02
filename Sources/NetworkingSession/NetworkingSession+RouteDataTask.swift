@@ -50,7 +50,7 @@ public extension NetworkingSession {
         }
 
         internal func executeResponseSerializer(with response: (data: Data?, urlResponse: HTTPURLResponse?, error: Error?)) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-            return route.responseSerializer.serialize(response: response)
+            return route.responseSerializer.serialize(responseData: response.data, urlResponse: response.urlResponse, responseError: response.error)
         }
 
         internal func incrementRetryCount() {
