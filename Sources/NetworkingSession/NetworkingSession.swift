@@ -55,7 +55,7 @@ public class NetworkingSession {
     /// Performs an HTTP request and parses the HTTP response into a `Task<Route.ResponseSerializer.SerializedObject, Error>`
     /// - Parameters:
     ///     - route: The ``NetworkingRoute`` you want to execute.
-    /// - Returns: A`Task` that will return the `Route.ResponseSerializer.SerializedObject` or an `Error`. A `Task` can be cancelled.
+    /// - Returns: A `Task` that will return the `Route.ResponseSerializer.SerializedObject` or an `Error`. A `Task` can be cancelled.
     public func execute<Route: NetworkingRoute>(route: Route) -> Task<Route.ResponseSerializer.SerializedObject, Error> {
         Task {
             if let mockResponse = route.mockResponse {

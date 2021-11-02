@@ -135,7 +135,7 @@ private extension ReauthenticationTests {
             return true
         }
 
-        func reauthenticationCompleted(result: Result<Int, Error>) async {
+        func saveReauthentication(result: Result<Int, Error>) async -> Bool {
             reauthorizationResult = result
             reauthorizationCount += 1
             switch result {
@@ -145,6 +145,7 @@ private extension ReauthenticationTests {
                 case .failure:
                     accessToken = ""
             }
+            return true
         }
     }
 }

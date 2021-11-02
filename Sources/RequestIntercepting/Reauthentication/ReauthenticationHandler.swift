@@ -58,11 +58,11 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
             defer { reauthenticationTask = nil }
 
             let reauthResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
-            await accessTokenVerifier.reauthenticationCompleted(result: reauthResult)
+            let saveWasSuccessful = await accessTokenVerifier.saveReauthentication(result: reauthResult)
             switch reauthResult {
-                case .success:
+                case .success where saveWasSuccessful:
                     return .retry
-                case .failure:
+                default:
                     return .doNotRetry
             }
         }
