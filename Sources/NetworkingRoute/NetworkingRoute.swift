@@ -72,7 +72,7 @@ public extension NetworkingRoute {
         session.execute(route: self)
     }
 
-    var asyncRequest: Result<ResponseSerializer.SerializedObject, Error> {
+    var asyncResult: Result<ResponseSerializer.SerializedObject, Error> {
         get async { await asyncTask.result }
     }
 
