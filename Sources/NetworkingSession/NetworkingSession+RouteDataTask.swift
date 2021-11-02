@@ -7,8 +7,8 @@
 
 import Foundation
 
-public extension NetworkingSession {
-    internal class RouteDataTask<Route: NetworkingRoute> {
+internal extension NetworkingSession {
+    class RouteDataTask<Route: NetworkingRoute> {
 
         private let route: Route
         private var currentRequest: URLRequest?
@@ -26,12 +26,12 @@ public extension NetworkingSession {
             }
         }
 
-        internal init(route: Route, requestAdapter: NetworkingRequestAdapter?) {
+        init(route: Route, requestAdapter: NetworkingRequestAdapter?) {
             self.route = route
             self.requestAdapter = requestAdapter
         }
 
-        internal func response(urlSession: URLSession) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
+        func response(urlSession: URLSession) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
             await withCheckedContinuation { continuation in
                 do {
                     let urlRequestToSend = try urlRequest
@@ -49,11 +49,11 @@ public extension NetworkingSession {
             }
         }
 
-        internal func executeResponseSerializer(with response: (data: Data?, urlResponse: HTTPURLResponse?, error: Error?)) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        func executeResponseSerializer(with response: (data: Data?, urlResponse: HTTPURLResponse?, error: Error?)) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             return route.responseSerializer.serialize(responseData: response.data, urlResponse: response.urlResponse, responseError: response.error)
         }
 
-        internal func incrementRetryCount() {
+        func incrementRetryCount() {
             retryCount += 1
         }
     }
