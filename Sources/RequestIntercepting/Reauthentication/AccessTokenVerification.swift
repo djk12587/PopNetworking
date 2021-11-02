@@ -17,7 +17,7 @@ public protocol AccessTokenVerification: AnyObject {
     associatedtype ReauthenticationRoute: NetworkingRoute
     /// The ``NetworkingRoute`` that will be used to refresh your authorization to your server. This ``NetworkingRoute`` should return an object that contains new authorization data for your server
     ///
-    /// If ``shouldReauthenticate(urlRequest:dueTo:urlResponse:retryCount:)`` returns `false`, ``reauthenticationRoute-swift.property`` will be executed, and ``reauthenticationCompleted(result:finishedProcessingResult:)`` will provide the result.
+    /// If ``shouldReauthenticate(urlRequest:dueTo:urlResponse:retryCount:)`` returns `false`, ``reauthenticationRoute-swift.property`` will be executed, and ``saveReauthentication(result:)`` will provide the result.
     var reauthenticationRoute: ReauthenticationRoute { get }
 
     /// Before a `URLRequest` is sent this function allows you to check the validity of your access token.

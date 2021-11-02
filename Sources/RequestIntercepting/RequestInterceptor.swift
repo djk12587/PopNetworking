@@ -39,6 +39,7 @@ public protocol NetworkingRequestRetrier: AnyObject {
                retryCount: Int) async -> NetworkingRequestRetrierResult
 }
 
+/// `NetworkingRequestRetrierResult`indicates if a request should be retried or not. `NetworkingRequestRetrierResult` is returned from ``NetworkingRequestRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
 public enum NetworkingRequestRetrierResult {
     case retry
     case doNotRetry
