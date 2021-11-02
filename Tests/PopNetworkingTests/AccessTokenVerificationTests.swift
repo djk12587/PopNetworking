@@ -40,7 +40,7 @@ final class ReauthenticationTests: XCTestCase {
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
     }
 
-    func testCancellingReauthenticationRequest() async {
+    func testCancelingReauthenticationRequest() async {
 
         let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
