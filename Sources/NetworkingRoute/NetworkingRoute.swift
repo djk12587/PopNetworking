@@ -69,7 +69,7 @@ public extension NetworkingRoute {
 
     /// Default implementation. Feel free to implement your own version if needed.
     var asyncTask: Task<ResponseSerializer.SerializedObject, Error> {
-        return session.execute(route: self)
+        session.execute(route: self)
     }
 
     var asyncRequest: Result<ResponseSerializer.SerializedObject, Error> {
@@ -78,7 +78,11 @@ public extension NetworkingRoute {
 
     @discardableResult
     func request(completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Cancellable {
-        return Task { completion(await asyncTask.result) }
+        Task {
+            let requestTask = asyncTask
+            if Task.isCancelled { requestTask.cancel() }
+            completion(await requestTask.result)
+        }
     }
 }
 
