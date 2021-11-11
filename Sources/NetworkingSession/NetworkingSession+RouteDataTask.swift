@@ -8,44 +8,40 @@
 import Foundation
 
 extension NetworkingSession {
-     internal class RouteDataTask<Route: NetworkingRoute> {
+    internal class RouteDataTask<Route: NetworkingRoute> {
 
         private let route: Route
         private var currentRequest: URLRequest?
         private var dataTask: URLSessionDataTask?
-        private weak var requestAdapter: NetworkingRequestAdapter?
         private(set) var retryCount = 0
 
-        private var urlRequest: URLRequest {
-            get throws {
-                let urlRequest = try currentRequest ?? route.urlRequest
-                currentRequest = urlRequest
-                let adaptedUrlRequest = try requestAdapter?.adapt(urlRequest: urlRequest)
-                currentRequest = adaptedUrlRequest ?? urlRequest
-                return adaptedUrlRequest ?? urlRequest
-            }
-        }
-
-        init(route: Route, requestAdapter: NetworkingRequestAdapter?) {
+        init(route: Route) {
             self.route = route
-            self.requestAdapter = requestAdapter
         }
 
-        func response(urlSession: URLSession) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
-            await withCheckedContinuation { continuation in
-                do {
-                    let urlRequestToSend = try urlRequest
-                    dataTask = urlSession.dataTask(with: urlRequestToSend) { data, response, error in
-                        continuation.resume(returning: (urlRequestToSend,
+        private func getUrlRequest(requestAdapter: NetworkingRequestAdapter?) async throws -> URLRequest {
+            let urlRequest = try currentRequest ?? route.urlRequest
+            currentRequest = urlRequest
+            let adaptedUrlRequest = try await requestAdapter?.adapt(urlRequest: urlRequest)
+            currentRequest = adaptedUrlRequest ?? urlRequest
+            return adaptedUrlRequest ?? urlRequest
+        }
+
+        func dataResponse(urlSession: URLSessionProtocol, requestAdapter: NetworkingRequestAdapter?) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
+            do {
+                let urlRequestToRun = try await getUrlRequest(requestAdapter: requestAdapter)
+                return await withCheckedContinuation { continuation in
+                    dataTask = urlSession.dataTask(with: urlRequestToRun) { data, response, error in
+                        continuation.resume(returning: (urlRequestToRun,
                                                         data,
                                                         response as? HTTPURLResponse,
                                                         error))
                     }
                     Task.isCancelled ? dataTask?.cancel() : dataTask?.resume()
                 }
-                catch {
-                    continuation.resume(returning: (nil, nil, nil, error))
-                }
+            }
+            catch {
+                return (nil, nil, nil, error)
             }
         }
 
