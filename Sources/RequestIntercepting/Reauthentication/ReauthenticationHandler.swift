@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
+public class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
 
     private var reauthenticationTask: Task<NetworkingRequestRetrierResult, Never>?
     private let accessTokenVerifier: AccessTokenVerifier
@@ -34,9 +34,16 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
 
     // MARK: - RequestRetrier
 
-    func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) async -> NetworkingRequestRetrierResult {
-
-        guard accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount) else {
+    public func retry(urlRequest: URLRequest?,
+                      dueTo error: Error,
+                      urlResponse: HTTPURLResponse?,
+                      retryCount: Int) async -> NetworkingRequestRetrierResult {
+        guard
+            accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest,
+                                                     dueTo: error,
+                                                     urlResponse: urlResponse,
+                                                     retryCount: retryCount)
+        else {
             return .doNotRetry
         }
 
@@ -44,7 +51,10 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
     }
 
     private func reauthenticate() async -> NetworkingRequestRetrierResult {
-        guard let existingReauthTask = reauthenticationTask, !existingReauthTask.isCancelled else {
+        guard
+            let existingReauthTask = reauthenticationTask,
+            !existingReauthTask.isCancelled
+        else {
             let reauthTask = createReauthenticationTask()
             reauthenticationTask = reauthTask
             return await reauthTask.value

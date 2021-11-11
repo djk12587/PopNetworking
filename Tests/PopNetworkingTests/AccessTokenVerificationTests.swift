@@ -12,11 +12,12 @@ final class ReauthenticationTests: XCTestCase {
 
     func testReauthenticationSuccess() async {
 
-        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
+        let mockTokenVerifier = MockTokenVerifier(route: MockRoute(responseSerializer: MockResponseSerializer(.success(()))))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
-        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        _ = await session.execute(route: UnauthenticatedRoute()).result
+        let session = NetworkingSession(session: MockUrlSession(),
+                                        reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier))
+        _ = await session.execute(route: MockRoute()).result
 
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
         XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
@@ -24,11 +25,12 @@ final class ReauthenticationTests: XCTestCase {
 
     func testReauthenticationFailure() async {
 
-        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .failure(NSError(domain: "force authorization failure", code: 0))))
+        let mockTokenVerifier = MockTokenVerifier(route: MockRoute(responseSerializer: MockResponseSerializer(.failure(NSError(domain: "force authorization failure", code: 0)))))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
-        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        let result = await session.execute(route: UnauthenticatedRoute()).result
+        let session = NetworkingSession(session: MockUrlSession(),
+                                        reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier))
+        let result = await session.execute(route: MockRoute()).result
         switch result {
             case .success:
                 XCTFail("This request is supposed to fail")
@@ -42,12 +44,13 @@ final class ReauthenticationTests: XCTestCase {
 
     func testCancelingReauthenticationRequest() async {
 
-        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
+        let mockTokenVerifier = MockTokenVerifier(route: MockRoute(responseSerializer: MockResponseSerializer(.success(()))))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
-        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        let reauthRequestTask = session.execute(route: UnauthenticatedRoute())
+        let session = NetworkingSession(reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier))
+        let reauthRequestTask = session.execute(route: MockRoute())
         reauthRequestTask.cancel()
+
         switch await reauthRequestTask.result {
             case .success:
                 XCTFail("this request is supposed to fail due to being cancelled")
@@ -58,13 +61,14 @@ final class ReauthenticationTests: XCTestCase {
 
     func testMultipleUnauthorizedRoutesPerformsReauthenticationOnlyOnce() async throws {
 
-        let mockTokenVerifier = MockTokenVerifier(route: MockAuthRoute(mockResponse: .success(200)))
+        let mockTokenVerifier = MockTokenVerifier(route: MockRoute(responseSerializer: MockResponseSerializer(.success(()))))
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 0)
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
-        let session = NetworkingSession(accessTokenVerifier: mockTokenVerifier)
-        _ = await session.execute(route: UnauthenticatedRoute()).result
-        _ = await session.execute(route: UnauthenticatedRoute()).result
+        let session = NetworkingSession(session: MockUrlSession(),
+                                        reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier))
+        _ = await session.execute(route: MockRoute()).result
+        _ = await session.execute(route: MockRoute()).result
 
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 1)
         XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
@@ -72,24 +76,6 @@ final class ReauthenticationTests: XCTestCase {
 }
 
 private extension ReauthenticationTests {
-
-    struct MockAuthRoute: NetworkingRoute {
-        let baseUrl: String = ""
-        let path: String = ""
-        let method: NetworkingRouteHttpMethod = .post
-        let parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil)
-        let responseSerializer = NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()
-        let mockResponse: Result<Int, Error>?
-    }
-
-    struct UnauthenticatedRoute: NetworkingRoute {
-        let baseUrl: String = "https://google.com"
-        let path: String = ""
-        let method: NetworkingRouteHttpMethod = .post
-        let parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil)
-        let headers: NetworkingRouteHttpHeaders? = ["Authorization" : ""]
-        let responseSerializer = NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()
-    }
 
     class MockTokenVerifier: AccessTokenVerification {
 
@@ -103,10 +89,10 @@ private extension ReauthenticationTests {
         private(set) var reauthorizationResult: Result<ReauthenticationRoute.ResponseSerializer.SerializedObject, Error>?
         private(set) var reauthorizationCount = 0
 
-        let reauthenticationRoute: ReauthenticationTests.MockAuthRoute
+        let reauthenticationRoute: MockRoute
         var accessTokenIsValid: Bool { !accessToken.isEmpty }
 
-        init(route: ReauthenticationTests.MockAuthRoute,
+        init(route: MockRoute,
              numberOfRetries: Int = 1) {
             reauthenticationRoute = route
             self.maxNumberOfRetries = numberOfRetries - 1
@@ -135,7 +121,7 @@ private extension ReauthenticationTests {
             return true
         }
 
-        func saveReauthentication(result: Result<Int, Error>) async -> Bool {
+        func saveReauthentication(result: Result<Void, Error>) async -> Bool {
             reauthorizationResult = result
             reauthorizationCount += 1
             switch result {

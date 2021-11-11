@@ -12,7 +12,7 @@ import Foundation
 
  - Attention: You are responsible for supplying and saving your own access token.
  */
-public protocol AccessTokenVerification: AnyObject {
+public protocol AccessTokenVerification {
     /// This type should be the route/endpoint your personal server exposes to reauthenticate an expired access token
     associatedtype ReauthenticationRoute: NetworkingRoute
     /// The ``NetworkingRoute`` that will be used to refresh your authorization to your server. This ``NetworkingRoute`` should return an object that contains new authorization data for your server
