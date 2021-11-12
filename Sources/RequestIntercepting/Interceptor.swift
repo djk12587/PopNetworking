@@ -10,7 +10,7 @@ import Foundation
 /// An `Interceptor` allows you to utilize multiple `NetworkingRequestInterceptor`'s for a request.
 ///
 /// - Attention: All ``NetworkingRequestAdapter``'s will run until one fails. ``NetworkingRequestRetrier``'s will run until a retry results in a successful response.
-public class Interceptor: NetworkingRequestInterceptor {
+public struct Interceptor: NetworkingRequestInterceptor {
 
     private let adapters: [NetworkingRequestAdapter]
     private let retriers: [NetworkingRequestRetrier]
