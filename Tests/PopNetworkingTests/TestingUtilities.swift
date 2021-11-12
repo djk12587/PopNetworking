@@ -41,9 +41,8 @@ struct MockRoute: NetworkingRoute {
 
 class MockResponseSerializer: NetworkingResponseSerializer {
 
-    let serializedResult: Result<Void, Error>?
-    let serializedResults: [Result<Void, Error>]
-    private var serializeCounter = 0
+    var serializedResult: Result<Void, Error>?
+    var serializedResults: [Result<Void, Error>]
 
     init(_ serializedResult: Result<Void, Error>) {
         self.serializedResult = serializedResult
@@ -56,13 +55,12 @@ class MockResponseSerializer: NetworkingResponseSerializer {
     }
 
     func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<Void, Error> {
-        defer { serializeCounter += 1 }
-
         if let serializedResult = serializedResult {
             return serializedResult
         }
-        else if serializeCounter < serializedResults.count {
-            return serializedResults[serializeCounter]
+        else if let serializedResult = serializedResults.first {
+            serializedResults.removeFirst()
+            return serializedResult
         }
         else {
             return .failure(responseError ?? NSError(domain: "Missing a mocked serialized response", code: 0))
