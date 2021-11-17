@@ -82,8 +82,8 @@ public class NetworkingSession {
         let serializedResult = routeDataTask.executeResponseSerializer(with: (responseData, response, error))
 
         guard
-            let retrier = requestRetrier,
-            let errorForRetrier = error ?? serializedResult.error
+            let errorForRetrier = error ?? serializedResult.error,
+            let retrier = requestRetrier
         else {
             return serializedResult
         }

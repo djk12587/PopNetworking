@@ -28,29 +28,42 @@ class MockUrlSession: URLSessionProtocol {
 
 struct MockRoute: NetworkingRoute {
 
-    init(responseSerializer: MockResponseSerializer = MockResponseSerializer()) {
-        self.responseSerializer = responseSerializer
-    }
+    var baseUrl: String
+    var path: String
+    var method: NetworkingRouteHttpMethod
+    var parameterEncoding: NetworkingRequestParameterEncoding
+    var responseSerializer: MockResponseSerializer = MockResponseSerializer()
+    var session: NetworkingSession
 
-    let baseUrl: String = "https://mockUrl.com"
-    let path: String = ""
-    let method: NetworkingRouteHttpMethod = .get
-    let parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil)
-    let responseSerializer: MockResponseSerializer
+    init(baseUrl: String = "https://mockUrl.com",
+         path: String = "",
+         method: NetworkingRouteHttpMethod = .get,
+         parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil),
+         responseSerializer: MockResponseSerializer = MockResponseSerializer(),
+         session: NetworkingSession = NetworkingSession(session: MockUrlSession(mockResponseData: nil,
+                                                                                mockUrlResponse: nil,
+                                                                                mockResponseError: nil))) {
+        self.baseUrl = baseUrl
+        self.path = path
+        self.method = method
+        self.parameterEncoding = parameterEncoding
+        self.responseSerializer = responseSerializer
+        self.session = session
+    }
 }
 
 class MockResponseSerializer: NetworkingResponseSerializer {
 
     var serializedResult: Result<Void, Error>?
-    var serializedResults: [Result<Void, Error>]
+    var sequentialResults: [Result<Void, Error>]
 
     init(_ serializedResult: Result<Void, Error>) {
         self.serializedResult = serializedResult
-        serializedResults = []
+        sequentialResults = []
     }
 
-    init(_ serializedResults: [Result<Void, Error>] = []) {
-        self.serializedResults = serializedResults
+    init(_ sequentialResults: [Result<Void, Error>] = []) {
+        self.sequentialResults = sequentialResults
         serializedResult = nil
     }
 
@@ -58,9 +71,9 @@ class MockResponseSerializer: NetworkingResponseSerializer {
         if let serializedResult = serializedResult {
             return serializedResult
         }
-        else if let serializedResult = serializedResults.first {
-            serializedResults.removeFirst()
-            return serializedResult
+        else if let sequentialResult = sequentialResults.first {
+            sequentialResults.removeFirst()
+            return sequentialResult
         }
         else {
             return .failure(responseError ?? NSError(domain: "Missing a mocked serialized response", code: 0))
