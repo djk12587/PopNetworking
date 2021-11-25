@@ -9,7 +9,7 @@ import Foundation
 
 public class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
 
-    private var reauthenticationTask: Task<NetworkingRequestRetrierResult, Never>?
+    private var activeReauthenticationTask: Task<NetworkingRequestRetrierResult, Never>?
     private let accessTokenVerifier: AccessTokenVerifier
 
     public init(accessTokenVerifier: AccessTokenVerifier) {
@@ -38,34 +38,29 @@ public class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificatio
                       dueTo error: Error,
                       urlResponse: HTTPURLResponse?,
                       retryCount: Int) async -> NetworkingRequestRetrierResult {
-        guard
-            accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest,
-                                                     dueTo: error,
-                                                     urlResponse: urlResponse,
-                                                     retryCount: retryCount)
-        else {
-            return .doNotRetry
-        }
 
-        return await reauthenticate()
+        let shouldReauthenticate = accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest,
+                                                                            dueTo: error,
+                                                                            urlResponse: urlResponse,
+                                                                            retryCount: retryCount)
+        return shouldReauthenticate ? await reauthenticate() : .doNotRetry
     }
 
     private func reauthenticate() async -> NetworkingRequestRetrierResult {
-        guard
-            let existingReauthTask = reauthenticationTask,
-            !existingReauthTask.isCancelled
+
+        if let activeReauthenticationTask = activeReauthenticationTask, !activeReauthenticationTask.isCancelled {
+            return await activeReauthenticationTask.value
+        }
         else {
             let reauthTask = createReauthenticationTask()
-            reauthenticationTask = reauthTask
+            activeReauthenticationTask = reauthTask
             return await reauthTask.value
         }
-
-        return await existingReauthTask.value
     }
 
     private func createReauthenticationTask() -> Task<NetworkingRequestRetrierResult, Never> {
         Task {
-            defer { reauthenticationTask = nil }
+            defer { activeReauthenticationTask = nil }
 
             let reauthResult = await accessTokenVerifier.reauthenticationRoute.asyncTask.result
             let saveWasSuccessful = await accessTokenVerifier.saveReauthentication(result: reauthResult)
