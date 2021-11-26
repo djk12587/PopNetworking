@@ -13,16 +13,16 @@ import XCTest
 class ResponseSerializerTests: XCTestCase {
 
     func testResponseSerializerSerializesSuccessResponse() async throws {
-        let mockRoute = MockRoute<Int>(responseSerializer: MockResponseSerializer(.success(24)))
-        let session = NetworkingSession(session: MockUrlSession())
+        let mockRoute = Mock.Route<Int>(responseSerializer: Mock.ResponseSerializer(.success(24)))
+        let session = NetworkingSession(session: Mock.UrlSession())
         let result = await session.execute(route: mockRoute).result
         XCTAssertEqual(try result.get(), 24)
     }
 
     func testResponseSerializerSerializesFailureResponse() async throws {
         let mockError = NSError(domain: "failed to serialize", code: 0)
-        let mockRoute = MockRoute<Int>(responseSerializer: MockResponseSerializer(.failure(mockError)))
-        let session = NetworkingSession(session: MockUrlSession())
+        let mockRoute = Mock.Route<Int>(responseSerializer: Mock.ResponseSerializer(.failure(mockError)))
+        let session = NetworkingSession(session: Mock.UrlSession())
         let result = await session.execute(route: mockRoute).result
 
         do {
