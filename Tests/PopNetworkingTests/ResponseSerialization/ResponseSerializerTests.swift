@@ -16,7 +16,7 @@ class ResponseSerializerTests: XCTestCase {
         let mockRoute = Mock.Route<Int>(responseSerializer: Mock.ResponseSerializer(.success(24)))
         let session = NetworkingSession(session: Mock.UrlSession())
         let result = await session.execute(route: mockRoute).result
-        XCTAssertEqual(try result.get(), 24)
+        XCTAssertNoThrow(try result.get())
     }
 
     func testResponseSerializerSerializesFailureResponse() async throws {
@@ -25,10 +25,7 @@ class ResponseSerializerTests: XCTestCase {
         let session = NetworkingSession(session: Mock.UrlSession())
         let result = await session.execute(route: mockRoute).result
 
-        do {
-            _ = try result.get()
-            XCTFail("this request should fail")
-        } catch {
+        XCTAssertThrowsError(try result.get()) { error in
             XCTAssertEqual(error as NSError, mockError)
         }
     }
