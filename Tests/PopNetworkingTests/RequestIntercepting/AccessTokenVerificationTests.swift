@@ -31,13 +31,10 @@ final class ReauthenticationTests: XCTestCase {
         let session = NetworkingSession(session: Mock.UrlSession(),
                                         reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier))
         let result = await session.execute(route: Mock.Route<Void>()).result
-        switch result {
-            case .success:
-                XCTFail("This request is supposed to fail")
-            case .failure(let error):
-                XCTAssertEqual(error as? Mock.TokenVerifier.AccessTokenError, .tokenIsInvalid)
-        }
 
+        XCTAssertThrowsError(try result.get()) { error in
+            XCTAssertEqual(error as? Mock.TokenVerifier.AccessTokenError, .tokenIsInvalid)
+        }
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isFailure == true)
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
     }
@@ -50,7 +47,7 @@ final class ReauthenticationTests: XCTestCase {
         let session = NetworkingSession(reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier))
         let reauthRequestTask = session.execute(route: Mock.Route<Void>())
         reauthRequestTask.cancel()
-        
+
         switch await reauthRequestTask.result {
             case .success:
                 XCTFail("this request is supposed to fail due to being cancelled")
