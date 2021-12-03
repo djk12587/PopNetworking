@@ -21,7 +21,7 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
 
     func testDecodingFailure() async throws {
 
-        let mockErrorModel = Mock.DecodableError(mockErrorProperty: "some error description")
+        let mockErrorModel = Mock.DecodableError(mockErrorCode: 123)
         let encoder = JSONEncoder()
         let encodedMockErrorModel = try encoder.encode(mockErrorModel)
         let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseData: encodedMockErrorModel)),
@@ -34,8 +34,8 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
 
     func testDoubleDecodingFailure() async throws {
 
-        let unexpectedData = try JSONEncoder().encode("unexpected data")
-        let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseData: unexpectedData)),
+        let unexpectedErrorData = try JSONEncoder().encode(["mockErrorMessage" : "some reason why an error occured"])
+        let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseData: unexpectedErrorData)),
                                               responseSerializer: NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<Mock.DecodableModel, Mock.DecodableError>()).asyncTask.result
         XCTAssertThrowsError(try responseResult.get()) { error in
 
@@ -45,26 +45,14 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
                 return
             }
 
-            guard
-                let mockDecodableModel = responseSerializerErrors.first,
-                let mockDecodableErrorModel = responseSerializerErrors.last
-            else {
-                XCTFail("responseSerializerErrors should have 2 errors returned")
-                return
-            }
-
-            switch mockDecodableModel {
-                case .serializingObjectFailure(let decodingDecodableModelError):
+            XCTAssertEqual(responseSerializerErrors.count, 2)
+            switch (responseSerializerErrors.first, responseSerializerErrors.last) {
+                case (.serializingObjectFailure(let decodingDecodableModelError),
+                      .serializingErrorObjectFailure(let decodingErrorModelError)):
                     XCTAssertTrue(decodingDecodableModelError is DecodingError)
-                case .noData, .serializingErrorObjectFailure, .multipleFailures:
-                    XCTFail("decodingDecodableModelError should be of type .serializingObjectFailure")
-            }
-
-            switch mockDecodableErrorModel {
-                case .serializingErrorObjectFailure(let decodingErrorModelError):
                     XCTAssertTrue(decodingErrorModelError is DecodingError)
-                case .noData, .serializingObjectFailure, .multipleFailures:
-                    XCTFail("decodingErrorModelError should be of type .serializingErrorObjectFailure")
+                default:
+                    XCTFail("decodingDecodableModelError should be of type .serializingObjectFailure")
             }
         }
     }
@@ -98,6 +86,10 @@ private extension Mock {
     }
 
     struct DecodableError: Codable, Equatable, Error {
-        let mockErrorProperty: String
+        let mockErrorCode: Int
+    }
+
+    struct UnexpectedError: Codable, Equatable, Error {
+        let mockErrorMessage: String
     }
 }
