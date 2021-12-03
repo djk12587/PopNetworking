@@ -41,7 +41,7 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
 
             let responseSerializerError = error as? NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<Mock.DecodableModel, Mock.DecodableError>.ResponseSerializerError
             guard case .multipleFailures(let responseSerializerErrors) = responseSerializerError else {
-                XCTFail("The error should be .multipleFailures")
+                XCTFail("responseSerializerErrors should be .multipleFailures")
                 return
             }
 
@@ -49,30 +49,22 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
                 let mockDecodableModel = responseSerializerErrors.first,
                 let mockDecodableErrorModel = responseSerializerErrors.last
             else {
-                XCTFail("we should have 2 errors returned")
+                XCTFail("responseSerializerErrors should have 2 errors returned")
                 return
             }
 
             switch mockDecodableModel {
-                case .noData:
-                    XCTFail("error should not be of type .noData")
                 case .serializingObjectFailure(let decodingDecodableModelError):
                     XCTAssertTrue(decodingDecodableModelError is DecodingError)
-                case .serializingErrorObjectFailure:
-                    XCTFail("error should not be of type .serializingErrorObjectFailure")
-                case .multipleFailures:
-                    XCTFail("error should not be of type .multipleFailures")
+                case .noData, .serializingErrorObjectFailure, .multipleFailures:
+                    XCTFail("decodingDecodableModelError should be of type .serializingObjectFailure")
             }
 
             switch mockDecodableErrorModel {
-                case .noData:
-                    XCTFail("error should not be of type .noData")
-                case .serializingObjectFailure:
-                    XCTFail("error should not be of type .serializingObjectFailure")
                 case .serializingErrorObjectFailure(let decodingErrorModelError):
                     XCTAssertTrue(decodingErrorModelError is DecodingError)
-                case .multipleFailures:
-                    XCTFail("error should not be of type .multipleFailures")
+                case .noData, .serializingObjectFailure, .multipleFailures:
+                    XCTFail("decodingErrorModelError should be of type .serializingErrorObjectFailure")
             }
         }
     }
