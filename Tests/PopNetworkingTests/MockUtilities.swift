@@ -10,6 +10,30 @@ import Foundation
 
 enum Mock {
 
+    struct Route<ResponseSerializer: NetworkingResponseSerializer>: NetworkingRoute {
+
+        var baseUrl: String
+        var path: String
+        var method: NetworkingRouteHttpMethod
+        var parameterEncoding: NetworkingRequestParameterEncoding
+        var session: NetworkingSession
+        var responseSerializer: ResponseSerializer
+
+        init(baseUrl: String = "https://mockUrl.com",
+             path: String = "",
+             method: NetworkingRouteHttpMethod = .get,
+             parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil),
+             session: NetworkingSession = NetworkingSession(urlSession: Mock.UrlSession()),
+             responseSerializer: ResponseSerializer) {
+            self.baseUrl = baseUrl
+            self.path = path
+            self.method = method
+            self.parameterEncoding = parameterEncoding
+            self.session = session
+            self.responseSerializer = responseSerializer
+        }
+    }
+
     class UrlSession: URLSessionProtocol {
 
         var mockResponseData: Data?
@@ -28,30 +52,6 @@ enum Mock {
             defer { lastRequest = request }
             completionHandler(mockResponseData, mockUrlResponse, mockResponseError)
             return URLSession(configuration: .default).dataTask(with: request) //This dataTask is useless, its only used because we have to return an instance of `URLSessionDataTask`
-        }
-    }
-
-    struct Route<ResponseSuccessType>: NetworkingRoute {
-
-        var baseUrl: String
-        var path: String
-        var method: NetworkingRouteHttpMethod
-        var parameterEncoding: NetworkingRequestParameterEncoding
-        var responseSerializer: ResponseSerializer = Mock.ResponseSerializer<ResponseSuccessType>()
-        var session: NetworkingSession
-
-        init(baseUrl: String = "https://mockUrl.com",
-             path: String = "",
-             method: NetworkingRouteHttpMethod = .get,
-             parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil),
-             responseSerializer: Mock.ResponseSerializer<ResponseSuccessType> = ResponseSerializer(),
-             session: NetworkingSession = NetworkingSession(session: UrlSession())) {
-            self.baseUrl = baseUrl
-            self.path = path
-            self.method = method
-            self.parameterEncoding = parameterEncoding
-            self.responseSerializer = responseSerializer
-            self.session = session
         }
     }
 

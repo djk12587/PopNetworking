@@ -36,7 +36,7 @@ class CombineTests: XCTestCase {
         var cancellables = Set<AnyCancellable>()
 
         let mockError = NSError(domain: "mockError", code: 1)
-        let mockRoute = Mock.Route<Void>(responseSerializer: Mock.ResponseSerializer(.failure(mockError)))
+        let mockRoute = Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.failure(mockError)))
         mockRoute.publisher.sink { completion in
             XCTAssertEqual(completion, .finished)
             expectation.fulfill()
@@ -74,7 +74,7 @@ class CombineTests: XCTestCase {
         var cancellables = Set<AnyCancellable>()
 
         let mockError = NSError(domain: "mockError", code: 1)
-        let mockRoute = Mock.Route<Void>(responseSerializer: Mock.ResponseSerializer(.failure(mockError)))
+        let mockRoute = Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.failure(mockError)))
         mockRoute.failablePublisher.sink { completion in
             switch completion {
                 case .failure(let error):
@@ -90,16 +90,36 @@ class CombineTests: XCTestCase {
         waitForExpectations(timeout: 5)
     }
 
-    func testCancellation() {
+    func testPublisherCancellation() {
         var cancellables = Set<AnyCancellable>()
         let expectation = expectation(description: "wait for response")
 
-        let mockRoute = Mock.Route<String>(session: NetworkingSession())
+        let mockRoute = Mock.Route(session: NetworkingSession(urlSession: URLSession(configuration: .default)),
+                                   responseSerializer: Mock.ResponseSerializer(.success("mock_response")))
         let cancellable = mockRoute.publisher
             .handleEvents(receiveCancel: {
                 expectation.fulfill()
             })
             .sink(receiveValue: { _ in })
+
+        cancellable.store(in: &cancellables)
+        cancellable.cancel()
+
+        waitForExpectations(timeout: 5)
+    }
+
+    func testFailablePublisherCancellation() {
+        var cancellables = Set<AnyCancellable>()
+        let expectation = expectation(description: "wait for response")
+
+        let mockRoute = Mock.Route(session: NetworkingSession(urlSession: URLSession(configuration: .default)),
+                                   responseSerializer: Mock.ResponseSerializer(.success("mock_response")))
+        let cancellable = mockRoute.failablePublisher
+            .handleEvents(receiveCancel: {
+                expectation.fulfill()
+            })
+            .sink(receiveCompletion: { _ in },
+                  receiveValue: { _ in })
 
         cancellable.store(in: &cancellables)
         cancellable.cancel()

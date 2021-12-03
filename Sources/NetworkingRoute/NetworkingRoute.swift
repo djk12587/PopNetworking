@@ -77,7 +77,8 @@ public extension NetworkingRoute {
     }
 
     @discardableResult
-    func request(completeOn queue: DispatchQueue = .main, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
+    func request(completeOn queue: DispatchQueue = .main,
+                 completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
         let requestTask = asyncTask
         Task {
             let result = await requestTask.result
