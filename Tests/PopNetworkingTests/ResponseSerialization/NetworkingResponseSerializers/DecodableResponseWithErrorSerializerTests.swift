@@ -45,12 +45,10 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
                 return
             }
 
-            guard let mockDecodableModel = responseSerializerErrors.first else {
-                XCTFail("we should have 2 errors returned")
-                return
-            }
-
-            guard let mockDecodableErrorModel = responseSerializerErrors.last else {
+            guard
+                let mockDecodableModel = responseSerializerErrors.first,
+                let mockDecodableErrorModel = responseSerializerErrors.last
+            else {
                 XCTFail("we should have 2 errors returned")
                 return
             }
