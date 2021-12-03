@@ -14,9 +14,8 @@ class RetrierTests: XCTestCase {
 
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .doNotRetry)
-        let session = NetworkingSession(session: Mock.UrlSession(), requestRetrier: mockRetrier)
-        let mockRoute = Mock.Route<Void>(responseSerializer: Mock.ResponseSerializer(.success(())))
-        _ = await session.execute(route: mockRoute).result
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
+                             responseSerializer: Mock.ResponseSerializer<Void>(.success(()))).asyncResult
 
         XCTAssertFalse(mockRetrier.retrierDidRun)
     }
@@ -25,9 +24,8 @@ class RetrierTests: XCTestCase {
 
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .doNotRetry)
-        let session = NetworkingSession(session: Mock.UrlSession(), requestRetrier: mockRetrier)
-        let mockRoute = Mock.Route<Void>(responseSerializer: Mock.ResponseSerializer(.failure(NSError())))
-        let result = await session.execute(route: mockRoute).result
+        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
+                                      responseSerializer: Mock.ResponseSerializer<Void>(.failure(NSError()))).asyncResult
 
         XCTAssertTrue(mockRetrier.retrierDidRun)
         XCTAssertThrowsError(try result.get())
@@ -37,9 +35,8 @@ class RetrierTests: XCTestCase {
 
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .retry)
-        let session = NetworkingSession(session: Mock.UrlSession(), requestRetrier: mockRetrier)
-        let mockRoute = Mock.Route<Void>(responseSerializer: Mock.ResponseSerializer([.failure(NSError()), .success(())]))
-        let result = await session.execute(route: mockRoute).result
+        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
+                                      responseSerializer: Mock.ResponseSerializer<Void>([.failure(NSError()), .success(())])).asyncResult
 
         XCTAssertTrue(mockRetrier.retrierDidRun)
         XCTAssertEqual(mockRetrier.retryCounter, 1)

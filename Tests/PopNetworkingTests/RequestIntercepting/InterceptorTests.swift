@@ -16,9 +16,9 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .doNotRetry)
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
-        let session = NetworkingSession(session: Mock.UrlSession(),
-                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2]))
-        _ = await session.execute(route: Mock.Route<Void>()).result
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
+                             responseSerializer: Mock.ResponseSerializer<Void>()).asyncResult
 
         XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
         XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
@@ -32,9 +32,9 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .doNotRetry)
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
-        let session = NetworkingSession(session: Mock.UrlSession(),
-                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2]))
-        _ = await session.execute(route: Mock.Route<Void>()).result
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
+                             responseSerializer: Mock.ResponseSerializer<Void>()).asyncResult
 
         XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
         XCTAssertFalse(mockRequestInterceptor2.adapterDidRun)
@@ -46,10 +46,9 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .retry)
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
-        let session = NetworkingSession(session: Mock.UrlSession(),
-                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2]))
-        _ = await session.execute(route: Mock.Route(responseSerializer: Mock.ResponseSerializer([.failure(NSError()),
-                                                                                                 .success(())]))).result
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
+                             responseSerializer: Mock.ResponseSerializer([.failure(NSError()), .success(())])).asyncResult
         XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
         XCTAssertFalse(mockRequestInterceptor2.retrierDidRun)
     }
