@@ -43,5 +43,6 @@ public protocol NetworkingRequestRetrier {
 /// `NetworkingRequestRetrierResult`indicates if a request should be retried or not. `NetworkingRequestRetrierResult` is returned from ``NetworkingRequestRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
 public enum NetworkingRequestRetrierResult {
     case retry
+    case retryWithDelay(TimeInterval)
     case doNotRetry
 }

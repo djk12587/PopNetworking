@@ -60,6 +60,9 @@ public struct Interceptor: NetworkingRequestInterceptor {
         switch retryResult {
             case .retry:
                 return retryResult
+            case .retryWithDelay(let delay):
+                try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                return retryResult
             case .doNotRetry:
                 return await retry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount, retriers: pendingRetriers)
         }

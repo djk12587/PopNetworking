@@ -10,6 +10,10 @@ import Foundation
 
 // MARK: - NetworkingSession
 
+internal protocol NetworkingSessionDelegate: AnyObject {
+    func retry<Route: NetworkingRoute>(_ routeDataTask: NetworkingSession.RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error>
+}
+
 public extension NetworkingSession {
     /// A singleton ``NetworkingSession`` object.
     ///
@@ -71,39 +75,35 @@ public class NetworkingSession {
                 return try mockResponse.get()
             }
             else {
-                return try await execute(RouteDataTask(route: route)).get()
+                let routeDataTask = RouteDataTask(route: route,
+                                                  networkingSessionDelegate: self)
+                return try await execute(routeDataTask).get()
             }
         }
     }
 
-    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        let (request, responseData, response, error) = await routeDataTask.executeRoute(urlSession: urlSession,
+                                                                                        requestAdapter: requestAdapter)
 
-        let (request, responseData, response, error) = await routeDataTask.dataResponse(urlSession: urlSession, requestAdapter: requestAdapter)
-        let serializedResult = routeDataTask.executeResponseSerializer(with: (responseData, response, error))
+        var serializedResult = routeDataTask.executeResponseSerializer(responseData: responseData,
+                                                                       response: response,
+                                                                       responseError: error)
 
-        guard
-            let errorForRetrier = error ?? serializedResult.error,
-            let retrier = requestRetrier
-        else {
-            return serializedResult
-        }
+        serializedResult = try await routeDataTask.executeSessionRetrier(retrier: requestRetrier,
+                                                                         serializedResult: serializedResult,
+                                                                         request: request,
+                                                                         response: response,
+                                                                         responseError: error)
 
-        switch await retrier.retry(urlRequest: request,
-                                   dueTo: errorForRetrier,
-                                   urlResponse: response,
-                                   retryCount: routeDataTask.retryCount) {
-            case .retry:
-                routeDataTask.incrementRetryCount()
-                return await execute(routeDataTask)
-            case .doNotRetry:
-                return serializedResult
-        }
+        serializedResult = try await routeDataTask.executeResponseRetrier(serializedResult: serializedResult,
+                                                                          response: response)
+        return serializedResult
     }
 }
 
-private extension Result {
-    var error: Error? {
-        guard case let .failure(error) = self else { return nil }
-        return error
+extension NetworkingSession: NetworkingSessionDelegate {
+    func retry<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        return try await execute(routeDataTask)
     }
 }
