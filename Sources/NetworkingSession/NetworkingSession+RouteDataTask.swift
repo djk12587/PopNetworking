@@ -89,23 +89,18 @@ extension NetworkingSession {
                 return serializedResult
             }
 
-            do {
-                switch try await routeResponseRetrier(serializedResult, response, responseRetryCount) {
-                    case .retryWithDelay(let delay):
-                        try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
-                        incrementResponseRetryCount()
-                        return try await networkingSessionDelegate.retry(self)
-                        
-                    case .retry:
-                        incrementResponseRetryCount()
-                        return try await networkingSessionDelegate.retry(self)
+            switch try await routeResponseRetrier(serializedResult, response, responseRetryCount) {
+                case .retryWithDelay(let delay):
+                    try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                    incrementResponseRetryCount()
+                    return try await networkingSessionDelegate.retry(self)
 
-                    case .doNotRetry:
-                        return serializedResult
-                }
-            }
-            catch {
-                throw error
+                case .retry:
+                    incrementResponseRetryCount()
+                    return try await networkingSessionDelegate.retry(self)
+
+                case .doNotRetry:
+                    return serializedResult
             }
         }
     }
