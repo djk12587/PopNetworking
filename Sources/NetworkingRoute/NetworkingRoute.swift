@@ -37,10 +37,14 @@ public protocol NetworkingRoute {
     ///
     /// For examples of prebuilt `NetworkingResponseSerializer`'s see ``NetworkingResponseSerializers``
     associatedtype ResponseSerializer: NetworkingResponseSerializer
+
     /// A `ResponseSerializer` is responsible for parsing the raw response of an HTTP request into a more usable object, like a Model object. The `ResponseSerializer` must adhere to ``NetworkingResponseSerializer``
     ///
     /// Prebuilt `ResponseSerializer`s can be found here: ``NetworkingResponseSerializers``.
     var responseSerializer: ResponseSerializer { get }
+
+    /// A `ResponseRetrier` allows you to retry the request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
+    var responseRetrier: ResponseRetrier? { get }
 
     /// Allows you to mock a response. Mainly used for testing purposes.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
@@ -53,6 +57,7 @@ public extension NetworkingRoute {
 
     var session: NetworkingSession { .shared }
     var headers: NetworkingRouteHttpHeaders? { nil }
+    var responseRetrier: ResponseRetrier? { nil }
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 
     /// Default implementation. Feel free to implement your own version if needed.
@@ -86,4 +91,10 @@ public extension NetworkingRoute {
         }
         return requestTask
     }
+}
+
+public extension NetworkingRoute {
+    typealias ResponseRetrier = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
+                                 _ response: HTTPURLResponse?,
+                                 _ retryCount: Int) async throws -> NetworkingRequestRetrierResult
 }
