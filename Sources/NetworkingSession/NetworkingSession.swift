@@ -41,15 +41,16 @@ public class NetworkingSession {
         self.requestRetrier = requestRetrier
     }
 
-    /// Creates an instance of a ``NetworkingSession`` with an instance of a ``ReauthenticationHandler``
+    /// Creates an instance of a ``NetworkingSession`` with an instance of an ``AccessTokenVerification``
     /// - Parameters:
     ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
     ///   - accessTokenVerifier: See ``AccessTokenVerification``
     ///
     /// - Note: Pass in an ``AccessTokenVerification`` if you want to automatically reauthenticate network requests when your access token is expired.
     public init<AccessTokenVerifier: AccessTokenVerification>(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                                                              reauthenticationHandler: ReauthenticationHandler<AccessTokenVerifier>) {
+                                                              accessTokenVerifier: AccessTokenVerifier) {
         self.urlSession = urlSession
+        let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
         self.requestAdapter = reauthenticationHandler
         self.requestRetrier = reauthenticationHandler
     }

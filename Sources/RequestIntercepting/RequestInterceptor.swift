@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import UIKit
 
 /// Allows you the ability to mutate a request before it gets sent, and retry `URLRequest`'s that failed.
 public protocol NetworkingRequestInterceptor: NetworkingRequestAdapter & NetworkingRequestRetrier {}

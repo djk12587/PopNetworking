@@ -16,7 +16,7 @@ final class ReauthenticationTests: XCTestCase {
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier)),
+                                                        accessTokenVerifier: mockTokenVerifier),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
@@ -29,7 +29,7 @@ final class ReauthenticationTests: XCTestCase {
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let reauthResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                                       reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier)),
+                                                                       accessTokenVerifier: mockTokenVerifier),
                                             responseSerializer: Mock.ResponseSerializer<Void>()).result
         XCTAssertThrowsError(try reauthResult.get()) { error in
             XCTAssertEqual(error as? Mock.TokenVerifier.AccessTokenError, .tokenIsInvalid)
@@ -43,7 +43,7 @@ final class ReauthenticationTests: XCTestCase {
         let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: Mock.ResponseSerializer(.success(()))))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
-        let reauthRequestTask = Mock.Route(session: NetworkingSession(reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier)),
+        let reauthRequestTask = Mock.Route(session: NetworkingSession(accessTokenVerifier: mockTokenVerifier),
                                            responseSerializer: Mock.ResponseSerializer<Void>()).task
         reauthRequestTask.cancel()
         let reauthResult = await reauthRequestTask.result
@@ -60,7 +60,7 @@ final class ReauthenticationTests: XCTestCase {
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(urlSession: Mock.UrlSession(),
-                                        reauthenticationHandler: ReauthenticationHandler(accessTokenVerifier: mockTokenVerifier))
+                                        accessTokenVerifier: mockTokenVerifier)
         _ = await Mock.Route(session: session, responseSerializer: Mock.ResponseSerializer<Void>()).result
         _ = await Mock.Route(session: session, responseSerializer: Mock.ResponseSerializer<Void>()).result
 
