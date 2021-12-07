@@ -17,7 +17,8 @@ class InterceptorTests: XCTestCase {
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
+                                                        interceptor: Interceptor(adapters: [mockRequestInterceptor1, mockRequestInterceptor2],
+                                                                                 retriers: [mockRequestInterceptor1, mockRequestInterceptor2])),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
@@ -44,6 +45,19 @@ class InterceptorTests: XCTestCase {
 
         let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .retry)
+        let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
+                                                              retrierResult: .doNotRetry)
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                        interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
+                             responseSerializer: Mock.ResponseSerializer([.failure(NSError()), .success(())])).result
+        XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
+        XCTAssertFalse(mockRequestInterceptor2.retrierDidRun)
+    }
+
+    func testStopRetryingAfterFirstSuccessfulRetryWithDelay() async throws {
+
+        let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
+                                                              retrierResult: .retryWithDelay(0))
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),

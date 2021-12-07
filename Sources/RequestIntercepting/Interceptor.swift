@@ -34,13 +34,8 @@ public struct Interceptor: NetworkingRequestInterceptor {
         var pendingAdapters = adapters
         guard let adapter = pendingAdapters.first else { return urlRequest }
         pendingAdapters.removeFirst()
-
-        do {
-            let adaptedRequest = try await adapter.adapt(urlRequest: urlRequest)
-            return try await adapt(urlRequest: adaptedRequest, with: pendingAdapters)
-        } catch {
-            throw error
-        }
+        let adaptedRequest = try await adapter.adapt(urlRequest: urlRequest)
+        return try await adapt(urlRequest: adaptedRequest, with: pendingAdapters)
     }
 
     public func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) async -> NetworkingRequestRetrierResult {

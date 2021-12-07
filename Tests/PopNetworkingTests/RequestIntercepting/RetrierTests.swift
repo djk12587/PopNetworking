@@ -34,7 +34,7 @@ class RetrierTests: XCTestCase {
     func testRetrierRunsMultipleTimesWhenRequestFailsAgain() async throws {
 
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                  retrierResult: .retry)
+                                                  retrierResult: .retryWithDelay(0))
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
                                       responseSerializer: Mock.ResponseSerializer<Void>([.failure(NSError()), .success(())])).result
 
