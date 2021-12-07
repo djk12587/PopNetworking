@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import UIKit
 
 /// Allows you the ability to mutate a request before it gets sent, and retry `URLRequest`'s that failed.
 public protocol NetworkingRequestInterceptor: NetworkingRequestAdapter & NetworkingRequestRetrier {}
@@ -43,5 +42,6 @@ public protocol NetworkingRequestRetrier {
 /// `NetworkingRequestRetrierResult`indicates if a request should be retried or not. `NetworkingRequestRetrierResult` is returned from ``NetworkingRequestRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
 public enum NetworkingRequestRetrierResult {
     case retry
+    case retryWithDelay(TimeInterval)
     case doNotRetry
 }

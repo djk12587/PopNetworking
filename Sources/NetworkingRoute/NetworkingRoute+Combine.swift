@@ -11,10 +11,10 @@ import Combine
 public extension NetworkingRoute {
 
     /// Returns a Combine Publisher for a ``NetworkingRoute``. This publisher will `Never` fail and the `Output` is `Result<NetworkingRoute.ResponseSerializer.SerializedObject, Error>`
-    var resultPublisher: NetworkingRoutePublisher<Self> { NetworkingRoutePublisher(route: self) }
+    var publisher: NetworkingRoutePublisher<Self> { NetworkingRoutePublisher(route: self) }
 
     /// Returns a Combine Publisher for a ``NetworkingRoute``. This publisher can fail, and the failure is whatever error comes back from running the ``NetworkingRoute``. The successful `Output` is the `NetworkingRoute.ResponseSerializer.SerializedObject`
-    var failableResultPublisher: NetworkingRouteFailablePublisher<Self> { NetworkingRouteFailablePublisher(route: self) }
+    var failablePublisher: NetworkingRouteFailablePublisher<Self> { NetworkingRouteFailablePublisher(route: self) }
 }
 
 /// A Combine Publisher for a ``NetworkingRoute``. This publisher will `Never` fail and the output is `Result<Route.ResponseSerializer.SerializedObject, Error>`
