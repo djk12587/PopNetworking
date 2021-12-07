@@ -18,19 +18,22 @@ enum Mock {
         var parameterEncoding: NetworkingRequestParameterEncoding
         var session: NetworkingSession
         var responseSerializer: ResponseSerializer
+        var retrier: Retrier?
 
         init(baseUrl: String = "https://mockUrl.com",
              path: String = "",
              method: NetworkingRouteHttpMethod = .get,
              parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil),
              session: NetworkingSession = NetworkingSession(urlSession: Mock.UrlSession()),
-             responseSerializer: ResponseSerializer) {
+             responseSerializer: ResponseSerializer,
+             retrier: Retrier? = nil) {
             self.baseUrl = baseUrl
             self.path = path
             self.method = method
             self.parameterEncoding = parameterEncoding
             self.session = session
             self.responseSerializer = responseSerializer
+            self.retrier = retrier
         }
     }
 
