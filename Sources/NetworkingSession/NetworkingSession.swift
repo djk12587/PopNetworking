@@ -10,6 +10,10 @@ import Foundation
 
 // MARK: - NetworkingSession
 
+internal protocol NetworkingSessionDelegate: AnyObject {
+    func retry<Route: NetworkingRoute>(_ routeDataTask: NetworkingSession.RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error>
+}
+
 public extension NetworkingSession {
     /// A singleton ``NetworkingSession`` object.
     ///
@@ -20,7 +24,7 @@ public extension NetworkingSession {
 /// Is  a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and kicks off the HTTP request.
 public class NetworkingSession {
 
-    private let session: URLSessionProtocol
+    private let urlSession: URLSessionProtocol
     private let requestAdapter: NetworkingRequestAdapter?
     private let requestRetrier: NetworkingRequestRetrier?
 
@@ -29,23 +33,24 @@ public class NetworkingSession {
     ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
     ///   - requestAdapter: Responsible to modifying a `URLRequest` before being executed. See ``NetworkingRequestAdapter``
     ///   - requestRetrier: Responsible for retrying a failed `URLRequest`. See ``NetworkingRequestRetrier``
-    public init(session: URLSessionProtocol = URLSession(configuration: .default),
+    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
                 requestAdapter: NetworkingRequestAdapter? = nil,
                 requestRetrier: NetworkingRequestRetrier? = nil) {
-        self.session = session
+        self.urlSession = urlSession
         self.requestAdapter = requestAdapter
         self.requestRetrier = requestRetrier
     }
 
-    /// Creates an instance of a ``NetworkingSession`` with an instance of a ``ReauthenticationHandler``
+    /// Creates an instance of a ``NetworkingSession`` with an instance of an ``AccessTokenVerification``
     /// - Parameters:
     ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
     ///   - accessTokenVerifier: See ``AccessTokenVerification``
     ///
     /// - Note: Pass in an ``AccessTokenVerification`` if you want to automatically reauthenticate network requests when your access token is expired.
-    public init<AccessTokenVerifier: AccessTokenVerification>(session: URLSessionProtocol = URLSession(configuration: .default),
-                                                              reauthenticationHandler: ReauthenticationHandler<AccessTokenVerifier>) {
-        self.session = session
+    public init<AccessTokenVerifier: AccessTokenVerification>(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+                                                              accessTokenVerifier: AccessTokenVerifier) {
+        self.urlSession = urlSession
+        let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
         self.requestAdapter = reauthenticationHandler
         self.requestRetrier = reauthenticationHandler
     }
@@ -54,9 +59,9 @@ public class NetworkingSession {
     /// - Parameters:
     ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
     ///   - interceptor: See ``Interceptor``
-    public init(session: URLSessionProtocol = URLSession(configuration: .default),
+    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
                 interceptor: Interceptor) {
-        self.session = session
+        self.urlSession = urlSession
         self.requestAdapter = interceptor
         self.requestRetrier = interceptor
     }
@@ -71,39 +76,35 @@ public class NetworkingSession {
                 return try mockResponse.get()
             }
             else {
-                return try await execute(RouteDataTask(route: route)).get()
+                let routeDataTask = RouteDataTask(route: route,
+                                                  networkingSessionDelegate: self)
+                return try await execute(routeDataTask).get()
             }
         }
     }
 
-    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+    private func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        let (request, responseData, response, error) = await routeDataTask.executeRoute(urlSession: urlSession,
+                                                                                        requestAdapter: requestAdapter)
 
-        let (request, responseData, response, error) = await routeDataTask.dataResponse(urlSession: session, requestAdapter: requestAdapter)
-        let serializedResult = routeDataTask.executeResponseSerializer(with: (responseData, response, error))
+        var result = routeDataTask.executeResponseSerializer(responseData: responseData,
+                                                             response: response,
+                                                             responseError: error)
 
-        guard
-            let errorForRetrier = error ?? serializedResult.error,
-            let retrier = requestRetrier
-        else {
-            return serializedResult
-        }
+        result = try await routeDataTask.executeSessionRetrier(retrier: requestRetrier,
+                                                               serializedResult: result,
+                                                               request: request,
+                                                               response: response,
+                                                               responseError: error)
 
-        switch await retrier.retry(urlRequest: request,
-                                   dueTo: errorForRetrier,
-                                   urlResponse: response,
-                                   retryCount: routeDataTask.retryCount) {
-            case .retry:
-                routeDataTask.incrementRetryCount()
-                return await execute(routeDataTask)
-            case .doNotRetry:
-                return serializedResult
-        }
+        result = try await routeDataTask.executeRouteRetrier(serializedResult: result,
+                                                             response: response)
+        return result
     }
 }
 
-private extension Result {
-    var error: Error? {
-        guard case let .failure(error) = self else { return nil }
-        return error
+extension NetworkingSession: NetworkingSessionDelegate {
+    func retry<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        return try await execute(routeDataTask)
     }
 }

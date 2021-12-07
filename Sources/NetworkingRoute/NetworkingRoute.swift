@@ -37,22 +37,27 @@ public protocol NetworkingRoute {
     ///
     /// For examples of prebuilt `NetworkingResponseSerializer`'s see ``NetworkingResponseSerializers``
     associatedtype ResponseSerializer: NetworkingResponseSerializer
+
     /// A `ResponseSerializer` is responsible for parsing the raw response of an HTTP request into a more usable object, like a Model object. The `ResponseSerializer` must adhere to ``NetworkingResponseSerializer``
     ///
     /// Prebuilt `ResponseSerializer`s can be found here: ``NetworkingResponseSerializers``.
     var responseSerializer: ResponseSerializer { get }
 
+    /// A `Retrier` allows you to retry the request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
+    var retrier: Retrier? { get }
+
     /// Allows you to mock a response. Mainly used for testing purposes.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
     /// Task which executes the HTTP request, and parses the networking response into whatever type is set for `ResponseSerializer.SerializedObject`
-    var asyncTask: Task<ResponseSerializer.SerializedObject, Error> { get }
+    var task: Task<ResponseSerializer.SerializedObject, Error> { get }
 }
 
 public extension NetworkingRoute {
 
     var session: NetworkingSession { .shared }
     var headers: NetworkingRouteHttpHeaders? { nil }
+    var retrier: Retrier? { nil }
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 
     /// Default implementation. Feel free to implement your own version if needed.
@@ -68,21 +73,28 @@ public extension NetworkingRoute {
     }
 
     /// Default implementation. Feel free to implement your own version if needed.
-    var asyncTask: Task<ResponseSerializer.SerializedObject, Error> {
+    var task: Task<ResponseSerializer.SerializedObject, Error> {
         session.execute(route: self)
     }
 
-    var asyncResult: Result<ResponseSerializer.SerializedObject, Error> {
-        get async { await asyncTask.result }
+    var result: Result<ResponseSerializer.SerializedObject, Error> {
+        get async { await task.result }
     }
 
     @discardableResult
-    func request(completeOn queue: DispatchQueue = .main, completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
-        let requestTask = asyncTask
+    func request(completeOn queue: DispatchQueue = .main,
+                 completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
+        let requestTask = task
         Task {
             let result = await requestTask.result
             queue.async { completion(result) }
         }
         return requestTask
     }
+}
+
+public extension NetworkingRoute {
+    typealias Retrier = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
+                         _ response: HTTPURLResponse?,
+                         _ retryCount: Int) async throws -> NetworkingRequestRetrierResult
 }

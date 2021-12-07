@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// An `Interceptor` allows you to utilize multiple `NetworkingRequestInterceptor`'s for a request.
+/// An `Interceptor` allows you to utilize multiple ``NetworkingRequestInterceptor``'s for a request.
 ///
 /// - Attention: All ``NetworkingRequestAdapter``'s will run until one fails. ``NetworkingRequestRetrier``'s will run until a retry results in a successful response.
 public struct Interceptor: NetworkingRequestInterceptor {
@@ -34,13 +34,8 @@ public struct Interceptor: NetworkingRequestInterceptor {
         var pendingAdapters = adapters
         guard let adapter = pendingAdapters.first else { return urlRequest }
         pendingAdapters.removeFirst()
-
-        do {
-            let adaptedRequest = try await adapter.adapt(urlRequest: urlRequest)
-            return try await adapt(urlRequest: adaptedRequest, with: pendingAdapters)
-        } catch {
-            throw error
-        }
+        let adaptedRequest = try await adapter.adapt(urlRequest: urlRequest)
+        return try await adapt(urlRequest: adaptedRequest, with: pendingAdapters)
     }
 
     public func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) async -> NetworkingRequestRetrierResult {
@@ -59,6 +54,9 @@ public struct Interceptor: NetworkingRequestInterceptor {
         let retryResult = await retrier.retry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount)
         switch retryResult {
             case .retry:
+                return retryResult
+            case .retryWithDelay(let delay):
+                try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                 return retryResult
             case .doNotRetry:
                 return await retry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount, retriers: pendingRetriers)
