@@ -83,13 +83,13 @@ extension NetworkingSession {
         func executeResponseRetrier(serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
                                     response: HTTPURLResponse?) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
-                let routeResponseRetrier = route.responseRetrier,
+                let routeRetrier = route.retrier,
                 let networkingSessionDelegate = networkingSessionDelegate
             else {
                 return serializedResult
             }
 
-            switch try await routeResponseRetrier(serializedResult, response, responseRetryCount) {
+            switch try await routeRetrier(serializedResult, response, responseRetryCount) {
                 case .retryWithDelay(let delay):
                     try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                     incrementResponseRetryCount()

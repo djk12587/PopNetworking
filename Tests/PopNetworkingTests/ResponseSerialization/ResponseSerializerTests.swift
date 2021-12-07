@@ -13,14 +13,14 @@ import XCTest
 class ResponseSerializerTests: XCTestCase {
 
     func testResponseSerializerSerializesSuccessResponse() async throws {
-        let result = await Mock.Route(responseSerializer: Mock.ResponseSerializer(.success("mock_success_response"))).asyncResult
+        let result = await Mock.Route(responseSerializer: Mock.ResponseSerializer(.success("mock_success_response"))).result
 
         XCTAssertNoThrow(try result.get())
     }
 
     func testResponseSerializerSerializesFailureResponse() async throws {
         let mockError = NSError(domain: "failed to serialize", code: 0)
-        let result = await Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.failure(mockError))).asyncResult
+        let result = await Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.failure(mockError))).result
 
         XCTAssertThrowsError(try result.get()) { error in
             XCTAssertEqual(error as NSError, mockError)
