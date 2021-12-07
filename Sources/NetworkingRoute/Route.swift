@@ -16,7 +16,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
     public var parameterEncoding: NetworkingRequestParameterEncoding
     public var session: NetworkingSession
     public var responseSerializer: ResponseSerializer
-    public var responseRetrier: ResponseRetrier?
+    public var retrier: Retrier?
 
     public init(baseUrl: String,
                 path: String = "",
@@ -25,7 +25,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
                 parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil),
                 session: NetworkingSession = NetworkingSession(urlSession: URLSession(configuration: .default)),
                 responseSerializer: ResponseSerializer,
-                responseRetrier: @escaping ResponseRetrier) {
+                retrier: @escaping Retrier) {
         self.baseUrl = baseUrl
         self.path = path
         self.method = method
@@ -33,6 +33,6 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
         self.parameterEncoding = parameterEncoding
         self.session = session
         self.responseSerializer = responseSerializer
-        self.responseRetrier = responseRetrier
+        self.retrier = retrier
     }
 }

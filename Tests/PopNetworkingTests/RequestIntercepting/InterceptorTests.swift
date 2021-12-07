@@ -18,7 +18,7 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .doNotRetry)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).asyncResult
+                             responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
         XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
@@ -34,7 +34,7 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .doNotRetry)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).asyncResult
+                             responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
         XCTAssertFalse(mockRequestInterceptor2.adapterDidRun)
@@ -48,7 +48,7 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .doNotRetry)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         interceptor: Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])),
-                             responseSerializer: Mock.ResponseSerializer([.failure(NSError()), .success(())])).asyncResult
+                             responseSerializer: Mock.ResponseSerializer([.failure(NSError()), .success(())])).result
         XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
         XCTAssertFalse(mockRequestInterceptor2.retrierDidRun)
     }
