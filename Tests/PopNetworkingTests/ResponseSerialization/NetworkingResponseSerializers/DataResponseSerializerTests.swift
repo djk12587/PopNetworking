@@ -14,7 +14,7 @@ class DataResponseSerializerTests: XCTestCase {
 
         let mockData = "mock Data".data(using: .utf8)
         let responseData = try await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseData: mockData)),
-                                                      responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).task.result.get()
+                                                responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).task.result.get()
 
         XCTAssertEqual(responseData, mockData)
     }
@@ -36,5 +36,4 @@ class DataResponseSerializerTests: XCTestCase {
             XCTAssertEqual(mockNetworkingResponseError, error as NSError)
         }
     }
-
 }

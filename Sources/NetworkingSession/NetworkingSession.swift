@@ -86,19 +86,19 @@ public class NetworkingSession {
         let (request, responseData, response, error) = await routeDataTask.executeRoute(urlSession: urlSession,
                                                                                         requestAdapter: requestAdapter)
 
-        var serializedResult = routeDataTask.executeResponseSerializer(responseData: responseData,
-                                                                       response: response,
-                                                                       responseError: error)
+        var result = routeDataTask.executeResponseSerializer(responseData: responseData,
+                                                             response: response,
+                                                             responseError: error)
 
-        serializedResult = try await routeDataTask.executeSessionRetrier(retrier: requestRetrier,
-                                                                         serializedResult: serializedResult,
-                                                                         request: request,
-                                                                         response: response,
-                                                                         responseError: error)
+        result = try await routeDataTask.executeSessionRetrier(retrier: requestRetrier,
+                                                               serializedResult: result,
+                                                               request: request,
+                                                               response: response,
+                                                               responseError: error)
 
-        serializedResult = try await routeDataTask.executeResponseRetrier(serializedResult: serializedResult,
-                                                                          response: response)
-        return serializedResult
+        result = try await routeDataTask.executeRouteRetrier(serializedResult: result,
+                                                             response: response)
+        return result
     }
 }
 
