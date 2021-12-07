@@ -8,7 +8,7 @@
 import Foundation
 
 /**
- A protocol that helps ensure a `URLRequest`'s authorization is always up to date. ``AccessTokenVerification`` can be applied to a ``NetworkingSession`` via ``NetworkingSession/init(session:accessTokenVerifier:)``
+ A protocol that helps ensure a `URLRequest`'s authorization is always up to date. ``AccessTokenVerification`` can be applied to a ``NetworkingSession`` via ``NetworkingSession/init(urlSession:accessTokenVerifier:)``
 
  - Attention: You are responsible for supplying and saving your own access token.
  */
