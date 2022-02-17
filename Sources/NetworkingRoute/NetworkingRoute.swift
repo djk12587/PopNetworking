@@ -76,11 +76,15 @@ public extension NetworkingRoute {
     }
 
     var task: Task<ResponseSerializer.SerializedObject, Error> {
-        Task { try await run }
+        Task {
+            try await run
+        }
     }
 
     var result: Result<ResponseSerializer.SerializedObject, Error> {
-        get async { await task.result }
+        get async {
+            await task.result
+        }
     }
 
     @discardableResult
