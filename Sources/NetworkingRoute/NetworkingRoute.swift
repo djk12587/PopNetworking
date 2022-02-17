@@ -48,9 +48,6 @@ public protocol NetworkingRoute {
 
     /// Allows you to mock a response. Mainly used for testing purposes.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
-
-    /// Task which executes the HTTP request, and parses the networking response into whatever type is set for `ResponseSerializer.SerializedObject`
-    var task: Task<ResponseSerializer.SerializedObject, Error> { get }
 }
 
 public extension NetworkingRoute {
@@ -72,20 +69,30 @@ public extension NetworkingRoute {
         }
     }
 
-    /// Default implementation. Feel free to implement your own version if needed.
-    var task: Task<ResponseSerializer.SerializedObject, Error> {
-        session.execute(route: self)
+    var run: ResponseSerializer.SerializedObject {
+        get async throws {
+            try await session.execute(route: self)
+        }
+    }
+
+    func task(priority: TaskPriority? = nil) -> Task<ResponseSerializer.SerializedObject, Error> {
+        Task(priority: priority) {
+            try await run
+        }
     }
 
     var result: Result<ResponseSerializer.SerializedObject, Error> {
-        get async { await task.result }
+        get async {
+            await Result { try await run }
+        }
     }
 
     @discardableResult
-    func request(completeOn queue: DispatchQueue = .main,
+    func request(priority: TaskPriority? = nil,
+                 completeOn queue: DispatchQueue = .main,
                  completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
-        let requestTask = task
-        Task {
+        let requestTask = task(priority: priority ?? .medium)
+        Task(priority: priority) {
             let result = await requestTask.result
             queue.async { completion(result) }
         }
@@ -97,4 +104,15 @@ public extension NetworkingRoute {
     typealias Retrier = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
                          _ response: HTTPURLResponse?,
                          _ retryCount: Int) async throws -> NetworkingRequestRetrierResult
+}
+
+private extension Result where Failure == Error {
+    init(asyncCatching: () async throws -> Success) async {
+        do {
+            let success = try await asyncCatching()
+            self = .success(success)
+        } catch {
+            self = .failure(error)
+        }
+    }
 }

@@ -14,14 +14,14 @@ class HttpStatusCodeResponseSerializerTests: XCTestCase {
 
         let mockResponse = HTTPURLResponse(url: URL(string: "https://mockurl.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)
         let responseStatusCode = try await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockUrlResponse: mockResponse)),
-                                                      responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task.result.get()
+                                                      responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task().result.get()
 
         XCTAssertEqual(mockResponse?.statusCode, responseStatusCode)
     }
 
     func testNilResponse() async throws {
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession()),
-                                      responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task.result
+                                      responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task().result
         XCTAssertThrowsError(try result.get()) { error in
             XCTAssertEqual(error as? NetworkingResponseSerializers.HttpStatusCodeResponseSerializer.ResponseSerializerError, .httpResponseCodeMissing)
         }
@@ -31,7 +31,7 @@ class HttpStatusCodeResponseSerializerTests: XCTestCase {
 
         let mockNetworkingResponseError = NSError(domain: "mock error", code: 1)
         let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseError: mockNetworkingResponseError)),
-                                              responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task.result
+                                              responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
             XCTAssertEqual(mockNetworkingResponseError, error as NSError)
         }
