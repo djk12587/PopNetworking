@@ -89,7 +89,11 @@ public extension NetworkingRoute {
                  completeOn queue: DispatchQueue = .main,
                  completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
         return Task(priority: priority) {
-            let result = await task.result
+            let requestTask = task
+            if Task.isCancelled {
+                requestTask.cancel()
+            }
+            let result = await requestTask.result
             queue.async { completion(result) }
             return try result.get()
         }
