@@ -44,7 +44,7 @@ final class ReauthenticationTests: XCTestCase {
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let reauthRequestTask = Mock.Route(session: NetworkingSession(accessTokenVerifier: mockTokenVerifier),
-                                           responseSerializer: Mock.ResponseSerializer<Void>()).task
+                                           responseSerializer: Mock.ResponseSerializer<Void>()).task()
         reauthRequestTask.cancel()
         let reauthResult = await reauthRequestTask.result
 

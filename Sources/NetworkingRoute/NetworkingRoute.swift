@@ -75,8 +75,8 @@ public extension NetworkingRoute {
         }
     }
 
-    var task: Task<ResponseSerializer.SerializedObject, Error> {
-        Task {
+    func task(priority: TaskPriority? = nil) -> Task<ResponseSerializer.SerializedObject, Error> {
+        Task(priority: priority ?? .medium) {
             try await run
         }
     }
@@ -88,10 +88,11 @@ public extension NetworkingRoute {
     }
 
     @discardableResult
-    func request(completeOn queue: DispatchQueue = .main,
+    func request(priority: TaskPriority? = nil,
+                 completeOn queue: DispatchQueue = .main,
                  completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
-        let requestTask = task
-        Task {
+        let requestTask = task(priority: priority ?? .medium)
+        Task(priority: priority ?? .medium) {
             let result = await requestTask.result
             queue.async { completion(result) }
         }
