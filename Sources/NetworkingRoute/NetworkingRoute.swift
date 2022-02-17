@@ -85,20 +85,14 @@ public extension NetworkingRoute {
     }
 
     @discardableResult
-    func request(priority: TaskPriority = .userInitiated,
-                 completeOn queue: DispatchQueue = .main,
+    func request(completeOn queue: DispatchQueue = .main,
                  completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
-        return Task(priority: priority) {
-            let requestTask = task
-            if Task.isCancelled {
-                requestTask.cancel()
-            }
+        let requestTask = task
+        Task {
             let result = await requestTask.result
-            defer {
-                queue.async { completion(result) }
-            }
-            return try result.get()
+            queue.async { completion(result) }
         }
+        return requestTask
     }
 }
 
