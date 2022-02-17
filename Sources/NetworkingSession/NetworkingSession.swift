@@ -66,23 +66,10 @@ public class NetworkingSession {
         self.requestRetrier = interceptor
     }
 
-    /// Performs an HTTP request and parses the HTTP response into a `Task<Route.ResponseSerializer.SerializedObject, Error>`
+    /// Performs an HTTP request and parses the HTTP response into the `Route.ResponseSerializer.SerializedObject`
     /// - Parameters:
     ///     - route: The ``NetworkingRoute`` you want to execute.
-    /// - Returns: A `Task` that will return the `Route.ResponseSerializer.SerializedObject` or an `Error`. A `Task` can be cancelled.
-//    public func execute<Route: NetworkingRoute>(route: Route) -> Task<Route.ResponseSerializer.SerializedObject, Error> {
-//        Task {
-//            if let mockResponse = route.mockResponse {
-//                return try mockResponse.get()
-//            }
-//            else {
-//                let routeDataTask = RouteDataTask(route: route,
-//                                                  networkingSessionDelegate: self)
-//                return try await execute(routeDataTask).get()
-//            }
-//        }
-//    }
-
+    /// - Returns: The `Route.ResponseSerializer.SerializedObject` or throws an `Error`.
     public func execute<Route: NetworkingRoute>(route: Route) async throws -> Route.ResponseSerializer.SerializedObject {
         if let mockResponse = route.mockResponse {
             return try mockResponse.get()

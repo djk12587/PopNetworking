@@ -75,7 +75,6 @@ public extension NetworkingRoute {
         }
     }
 
-    /// Default implementation. Feel free to implement your own version if needed.
     var task: Task<ResponseSerializer.SerializedObject, Error> {
         Task { try await run }
     }
