@@ -10,7 +10,7 @@ import XCTest
 
 class NetworkingRouteTests: XCTestCase {
 
-    func testCancellingNetworkingRoute() {
+    func testCancellingNetworkingRouteRequest() {
         let expectation = expectation(description: "this")
         let routeTask = Route(baseUrl: "www.thisRequestWillBeCancelled.com", responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).request { result in
             do {
@@ -23,5 +23,16 @@ class NetworkingRouteTests: XCTestCase {
         }
         routeTask.cancel()
         waitForExpectations(timeout: 10)
+    }
+
+    func testCancellingNetworkingRouteTask() async throws {
+        let routeTask = Route(baseUrl: "www.thisRequestWillBeCancelled.com", responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).task
+        routeTask.cancel()
+        do {
+            _ = try await routeTask.value
+            XCTFail("result.get() should throw a cancellation error")
+        } catch {
+            XCTAssertEqual((error as NSError).code, NSURLErrorCancelled)
+        }
     }
 }
