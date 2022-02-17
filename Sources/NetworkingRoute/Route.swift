@@ -37,7 +37,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
                 method: NetworkingRouteHttpMethod = .get,
                 headers: NetworkingRouteHttpHeaders? = nil,
                 parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil),
-                session: NetworkingSession = NetworkingSession(),
+                session: NetworkingSession = .shared,
                 responseSerializer: ResponseSerializer,
                 retrier: Retrier? = nil) {
         self.baseUrl = baseUrl
