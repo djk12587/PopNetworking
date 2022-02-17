@@ -106,9 +106,9 @@ public extension NetworkingRoute {
 }
 
 private extension Result where Failure == Error {
-    init(catching: () async throws -> Success) async {
+    init(asyncCatching: () async throws -> Success) async {
         do {
-            let success = try await catching()
+            let success = try await asyncCatching()
             self = .success(success)
         } catch {
             self = .failure(error)
