@@ -83,7 +83,7 @@ public extension NetworkingRoute {
 
     var result: Result<ResponseSerializer.SerializedObject, Error> {
         get async {
-            await task.result
+            return await Result { try await run }
         }
     }
 
@@ -103,4 +103,15 @@ public extension NetworkingRoute {
     typealias Retrier = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
                          _ response: HTTPURLResponse?,
                          _ retryCount: Int) async throws -> NetworkingRequestRetrierResult
+}
+
+private extension Result where Failure == Error {
+    init(catching: () async throws -> Success) async {
+        do {
+            let success = try await catching()
+            self = .success(success)
+        } catch {
+            self = .failure(error)
+        }
+    }
 }
