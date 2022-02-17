@@ -94,7 +94,9 @@ public extension NetworkingRoute {
                 requestTask.cancel()
             }
             let result = await requestTask.result
-            queue.async { completion(result) }
+            defer {
+                queue.async { completion(result) }
+            }
             return try result.get()
         }
     }
