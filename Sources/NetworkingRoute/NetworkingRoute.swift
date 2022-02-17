@@ -83,7 +83,7 @@ public extension NetworkingRoute {
 
     var result: Result<ResponseSerializer.SerializedObject, Error> {
         get async {
-            return await Result { try await run }
+            await Result { try await run }
         }
     }
 
