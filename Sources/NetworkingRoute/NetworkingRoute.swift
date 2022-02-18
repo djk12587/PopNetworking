@@ -91,7 +91,7 @@ public extension NetworkingRoute {
     func request(priority: TaskPriority? = nil,
                  completeOn queue: DispatchQueue = .main,
                  completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
-        let requestTask = task(priority: priority ?? .medium)
+        let requestTask = task(priority: priority)
         Task(priority: priority) {
             let result = await requestTask.result
             queue.async { completion(result) }
