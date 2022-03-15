@@ -27,7 +27,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
     public var path: String
     public var method: NetworkingRouteHttpMethod
     public var headers: NetworkingRouteHttpHeaders?
-    public var parameterEncoding: NetworkingRequestParameterEncoding
+    public var parameterEncoding: NetworkingRequestParameterEncoding?
     public var session: NetworkingSession
     public var responseSerializer: ResponseSerializer
     public var retrier: Retrier?
@@ -36,7 +36,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
                 path: String = "",
                 method: NetworkingRouteHttpMethod = .get,
                 headers: NetworkingRouteHttpHeaders? = nil,
-                parameterEncoding: NetworkingRequestParameterEncoding = .url(params: nil),
+                parameterEncoding: NetworkingRequestParameterEncoding? = .url(params: nil),
                 session: NetworkingSession = .shared,
                 responseSerializer: ResponseSerializer,
                 retrier: Retrier? = nil) {
