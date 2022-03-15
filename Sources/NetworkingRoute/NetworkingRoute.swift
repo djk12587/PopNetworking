@@ -26,7 +26,7 @@ public protocol NetworkingRoute {
     var headers: NetworkingRouteHttpHeaders? { get }
 
     /// ``parameterEncoding`` is responsible for encoding all of your network request's parameters.
-    var parameterEncoding: NetworkingRequestParameterEncoding { get }
+    var parameterEncoding: NetworkingRequestParameterEncoding? { get }
 
     /// ``urlRequest-793sf`` is responsible for converting `self` into a `URLRequest`
     var urlRequest: URLRequest { get throws }
@@ -63,7 +63,7 @@ public extension NetworkingRoute {
             guard let url = URL(string: baseUrl.appending(path)) else { throw NetworkingRouteError.invalidUrl }
             var mutableRequest = URLRequest(url: url)
             mutableRequest.httpMethod = method.rawValue
-            try parameterEncoding.encodeParams(into: &mutableRequest)
+            try parameterEncoding?.encodeParams(into: &mutableRequest)
             headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
             return mutableRequest
         }
