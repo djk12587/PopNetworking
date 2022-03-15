@@ -23,7 +23,7 @@ enum Mock {
         init(baseUrl: String = "https://mockUrl.com",
              path: String = "",
              method: NetworkingRouteHttpMethod = .get,
-             parameterEncoding: NetworkingRequestParameterEncoding? = .url(params: nil),
+             parameterEncoding: NetworkingRequestParameterEncoding? = nil,
              session: NetworkingSession = NetworkingSession(urlSession: Mock.UrlSession()),
              responseSerializer: ResponseSerializer,
              retrier: Retrier? = nil) {
