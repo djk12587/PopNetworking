@@ -48,9 +48,4 @@ public enum NetworkingRouteHttpMethod: String {
 public enum NetworkingRouteError: Error {
     case invalidUrl
     case jsonParameterEncodingFailed(reason: Error)
-
-    public enum AggregatedRoutes: Error {
-        case routeNeverFinished
-        case multiFailure([Error])
-    }
 }
