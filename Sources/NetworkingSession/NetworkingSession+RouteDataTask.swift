@@ -26,7 +26,7 @@ extension NetworkingSession {
                           requestAdapter: NetworkingRequestAdapter?) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
             do {
                 let urlRequestToRun = try await getUrlRequest(requestAdapter: requestAdapter)
-                return await withCheckedContinuation { continuation in
+                let routeResponse: (URLRequest?, Data?, HTTPURLResponse?, Error?) = await withCheckedContinuation { continuation in
                     dataTask = urlSession.dataTask(with: urlRequestToRun) { data, response, error in
                         continuation.resume(returning: (urlRequestToRun,
                                                         data,
@@ -35,6 +35,7 @@ extension NetworkingSession {
                     }
                     Task.isCancelled ? dataTask?.cancel() : dataTask?.resume()
                 }
+                return routeResponse
             }
             catch {
                 return (nil, nil, nil, error)
