@@ -72,7 +72,7 @@ extension NetworkingSession {
                     return try await networkingSessionDelegate.retry(self)
 
                 case .retryWithDelay(let delay):
-                    try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                     incrementSessionRetryCount()
                     return try await networkingSessionDelegate.retry(self)
 
@@ -96,7 +96,7 @@ extension NetworkingSession {
                     return try await networkingSessionDelegate.retry(self)
 
                 case .retryWithDelay(let delay):
-                    try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                     incrementResponseRetryCount()
                     return try await networkingSessionDelegate.retry(self)
 
