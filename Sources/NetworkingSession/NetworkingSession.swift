@@ -109,32 +109,27 @@ private extension NetworkingSession {
                                                                responseError: error)
 
         try checkForCancellation(routeType: Route.self,
+                                 rawPayload: (request, responseData, response, error),
                                  result: result)
 
         result = try await routeDataTask.executeRouteRetrier(serializedResult: result,
                                                              response: response)
 
         try checkForCancellation(routeType: Route.self,
+                                 rawPayload: (request, responseData, response, error),
                                  result: result)
 
         return result
     }
 
     func checkForCancellation<Route: NetworkingRoute>(routeType: Route.Type,
-                                                      rawPayload: (request: URLRequest?, responseData: Data?, response: HTTPURLResponse?, error: Error?)) throws {
+                                                      rawPayload: (request: URLRequest?, responseData: Data?, response: HTTPURLResponse?, error: Error?),
+                                                      result: Result<Route.ResponseSerializer.SerializedObject, Error>? = nil) throws {
         guard Task.isCancelled else { return }
         throw NSError(domain: URLError.errorDomain,
                       code: URLError.cancelled.rawValue,
                       userInfo: ["Reason": "\(routeType.self) was cancelled.",
-                                 "RawPayload": (rawPayload.request, rawPayload.responseData, rawPayload.response, rawPayload.error)])
-    }
-
-    func checkForCancellation<Route: NetworkingRoute>(routeType: Route.Type,
-                                                      result: Result<Route.ResponseSerializer.SerializedObject, Error>) throws {
-        guard Task.isCancelled else { return }
-        throw NSError(domain: URLError.errorDomain,
-                      code: URLError.cancelled.rawValue,
-                      userInfo: ["Reason": "\(routeType.self) was cancelled.",
-                                 "Result": result])
+                                 "RawPayload": (rawPayload.request, rawPayload.responseData, rawPayload.response, rawPayload.error),
+                                 "Result": result].compactMapValues({ $0 }))
     }
 }
