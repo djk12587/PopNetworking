@@ -60,7 +60,9 @@ public extension NetworkingRoute {
     /// Default implementation. Feel free to implement your own version if needed.
     var urlRequest: URLRequest {
         get throws {
-            guard let url = URL(string: baseUrl.appending(path)) else { throw NetworkingRouteError.invalidUrl }
+            guard let url = URL(string: baseUrl.appending(path)) else {
+                throw URLError(.badURL, userInfo: ["baseUrl": baseUrl, "path": path])
+            }
             var mutableRequest = URLRequest(url: url)
             mutableRequest.httpMethod = method.rawValue
             try parameterEncoding?.encodeParams(into: &mutableRequest)

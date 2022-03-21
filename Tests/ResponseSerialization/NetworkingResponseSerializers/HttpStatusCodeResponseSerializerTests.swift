@@ -23,7 +23,7 @@ class HttpStatusCodeResponseSerializerTests: XCTestCase {
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession()),
                                       responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task().result
         XCTAssertThrowsError(try result.get()) { error in
-            XCTAssertEqual(error as? NetworkingResponseSerializers.HttpStatusCodeResponseSerializer.ResponseSerializerError, .httpResponseCodeMissing)
+            XCTAssertEqual((error as NSError).code, URLError.badServerResponse.rawValue)
         }
     }
 

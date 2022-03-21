@@ -39,21 +39,11 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
                                               responseSerializer: NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<Mock.DecodableModel, Mock.DecodableError>()).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
 
-            let responseSerializerError = error as? NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<Mock.DecodableModel, Mock.DecodableError>.ResponseSerializerError
-            guard case .multipleFailures(let responseSerializerErrors) = responseSerializerError else {
-                XCTFail("responseSerializerErrors should be .multipleFailures")
+            guard let errors = error as? [DecodingError] else {
+                XCTFail("error should be of type [DecodingError]")
                 return
             }
-
-            XCTAssertEqual(responseSerializerErrors.count, 2)
-            switch (responseSerializerErrors.first, responseSerializerErrors.last) {
-                case (.serializingObjectFailure(let decodingDecodableModelError),
-                      .serializingErrorObjectFailure(let decodingErrorModelError)):
-                    XCTAssertTrue(decodingDecodableModelError is DecodingError)
-                    XCTAssertTrue(decodingErrorModelError is DecodingError)
-                default:
-                    XCTFail("decodingDecodableModelError should be of type .serializingObjectFailure")
-            }
+            XCTAssertEqual(errors.count, 2)
         }
     }
 
@@ -71,11 +61,7 @@ class DecodableResponseWithErrorSerializerTests: XCTestCase {
 
         let responseResult = await Mock.Route(responseSerializer: NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<Mock.DecodableModel, Mock.DecodableError>()).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
-            let responseSerializerError = error as? NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<Mock.DecodableModel, Mock.DecodableError>.ResponseSerializerError
-            guard case .noData = responseSerializerError else {
-                XCTFail("The error should be .noData")
-                return
-            }
+            XCTAssertEqual((error as NSError).code, URLError.cannotParseResponse.rawValue)
         }
     }
 }
