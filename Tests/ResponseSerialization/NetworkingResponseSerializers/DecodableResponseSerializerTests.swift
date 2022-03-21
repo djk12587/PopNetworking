@@ -43,7 +43,7 @@ class DecodableResponseSerializerTests: XCTestCase {
 
         let responseResult = await Mock.Route(responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<Mock.DecodableModel>()).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
-            XCTAssertEqual(error as? NetworkingResponseSerializers.DecodableResponseSerializer<Mock.DecodableModel>.ResponseSerializerError, .noData)
+            XCTAssertEqual((error as NSError).code, URLError.cannotParseResponse.rawValue)
         }
     }
 }

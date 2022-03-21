@@ -8,6 +8,8 @@
 
 import Foundation
 
+extension Array: Error where Element: Error {}
+
 /// Contains default implementations of ``NetworkingResponseSerializer``. Such as ``DecodableResponseSerializer``, etc.
 public enum NetworkingResponseSerializers {
 
@@ -30,12 +32,10 @@ public enum NetworkingResponseSerializers {
 
         public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
             if let error = responseError { return .failure(error) }
-            guard let data = responseData else { return .failure(ResponseSerializerError.noData) }
+            guard let data = responseData else {
+                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
+            }
             return Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
-        }
-
-        public enum ResponseSerializerError: Error {
-            case noData
         }
     }
 
@@ -65,7 +65,9 @@ public enum NetworkingResponseSerializers {
         public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
 
             if let error = responseError { return .failure(error) }
-            guard let data = responseData else { return .failure(ResponseSerializerError.noData) }
+            guard let data = responseData else {
+                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
+            }
 
             do {
                 let serializedOjbect = try jsonDecoder.decode(SerializedObject.self, from: data)
@@ -77,17 +79,9 @@ public enum NetworkingResponseSerializers {
                     return .failure(serializedError)
                 }
                 catch let errorSerializerError {
-                    return .failure(ResponseSerializerError.multipleFailures([.serializingObjectFailure(error: serializedObjectError),
-                                                                              .serializingErrorObjectFailure(error: errorSerializerError)]))
+                    return .failure([serializedObjectError, errorSerializerError])
                 }
             }
-        }
-
-        public enum ResponseSerializerError: Error {
-            case noData
-            case serializingObjectFailure(error: Error)
-            case serializingErrorObjectFailure(error: Error)
-            case multipleFailures([ResponseSerializerError])
         }
     }
 
@@ -99,12 +93,8 @@ public enum NetworkingResponseSerializers {
 
         public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
             if let error = responseError { return .failure(error) }
-            guard let response = urlResponse else { return .failure(ResponseSerializerError.httpResponseCodeMissing) }
+            guard let response = urlResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
             return .success(response.statusCode)
-        }
-
-        public enum ResponseSerializerError: Error {
-            case httpResponseCodeMissing
         }
     }
 
@@ -116,12 +106,10 @@ public enum NetworkingResponseSerializers {
 
         public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
             if let error = responseError { return .failure(error) }
-            guard let data = responseData else { return .failure(ResponseSerializerError.noData) }
+            guard let data = responseData else {
+                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
+            }
             return .success(data)
-        }
-
-        public enum ResponseSerializerError: Error {
-            case noData
         }
     }
 }

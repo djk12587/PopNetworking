@@ -126,10 +126,8 @@ private extension NetworkingSession {
                                                       rawPayload: (request: URLRequest?, responseData: Data?, response: HTTPURLResponse?, error: Error?),
                                                       result: Result<Route.ResponseSerializer.SerializedObject, Error>? = nil) throws {
         guard Task.isCancelled else { return }
-        throw NSError(domain: URLError.errorDomain,
-                      code: URLError.cancelled.rawValue,
-                      userInfo: ["Reason": "\(routeType.self) was cancelled.",
-                                 "RawPayload": (rawPayload.request, rawPayload.responseData, rawPayload.response, rawPayload.error),
-                                 "Result": result].compactMapValues({ $0 }))
+        throw URLError(.cancelled, userInfo: ["Reason": "\(routeType.self) was cancelled.",
+                                              "RawPayload": (rawPayload.request, rawPayload.responseData, rawPayload.response, rawPayload.error),
+                                              "Result": result].compactMapValues({ $0 }))
     }
 }
