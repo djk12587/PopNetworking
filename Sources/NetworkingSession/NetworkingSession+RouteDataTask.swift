@@ -26,7 +26,7 @@ extension NetworkingSession {
                           requestAdapter: NetworkingRequestAdapter?) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
             do {
                 let urlRequestToRun = try await getUrlRequest(requestAdapter: requestAdapter)
-                return await withCheckedContinuation { continuation in
+                let routeResponse: (URLRequest?, Data?, HTTPURLResponse?, Error?) = await withCheckedContinuation { continuation in
                     dataTask = urlSession.dataTask(with: urlRequestToRun) { data, response, error in
                         continuation.resume(returning: (urlRequestToRun,
                                                         data,
@@ -35,6 +35,7 @@ extension NetworkingSession {
                     }
                     Task.isCancelled ? dataTask?.cancel() : dataTask?.resume()
                 }
+                return routeResponse
             }
             catch {
                 return (nil, nil, nil, error)
@@ -71,7 +72,7 @@ extension NetworkingSession {
                     return try await networkingSessionDelegate.retry(self)
 
                 case .retryWithDelay(let delay):
-                    try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                     incrementSessionRetryCount()
                     return try await networkingSessionDelegate.retry(self)
 
@@ -95,7 +96,7 @@ extension NetworkingSession {
                     return try await networkingSessionDelegate.retry(self)
 
                 case .retryWithDelay(let delay):
-                    try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                     incrementResponseRetryCount()
                     return try await networkingSessionDelegate.retry(self)
 

@@ -43,14 +43,3 @@ public enum NetworkingRouteHttpMethod: String {
     case put
     case patch
 }
-
-/// Potential system errors that can occur when executing a ``NetworkingRoute``
-public enum NetworkingRouteError: Error {
-    case invalidUrl
-    case jsonParameterEncodingFailed(reason: Error)
-
-    public enum AggregatedRoutes: Error {
-        case routeNeverFinished
-        case multiFailure([Error])
-    }
-}

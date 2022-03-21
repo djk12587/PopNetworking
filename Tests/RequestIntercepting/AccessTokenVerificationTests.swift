@@ -49,7 +49,7 @@ final class ReauthenticationTests: XCTestCase {
         let reauthResult = await reauthRequestTask.result
 
         XCTAssertThrowsError(try reauthResult.get()) { error in
-            XCTAssertEqual(NSURLErrorCancelled, (error as NSError).code)
+            XCTAssertEqual(URLError.cancelled.rawValue, (error as NSError).code)
         }
     }
 

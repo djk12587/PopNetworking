@@ -143,7 +143,7 @@ public struct URLEncoding {
 
         if let method = NetworkingRouteHttpMethod(rawValue: urlRequest.httpMethod?.lowercased() ?? ""), destination.encodesParametersInURL(for: method) {
             guard let url = urlRequest.url else {
-                throw NetworkingRouteError.invalidUrl
+                throw URLError(.badURL, userInfo: ["reason": "url is nil"])
             }
 
             if var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false), !parameters.isEmpty {
@@ -271,7 +271,7 @@ public struct JSONEncoding {
 
             urlRequest.httpBody = data
         } catch {
-            throw NetworkingRouteError.jsonParameterEncodingFailed(reason: error)
+            throw error
         }
     }
 

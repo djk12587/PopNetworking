@@ -62,7 +62,7 @@ internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificat
         Task {
             defer { activeReauthenticationTask = nil }
 
-            let reauthResult = await accessTokenVerifier.reauthenticationRoute.task(priority: .userInitiated).result
+            let reauthResult = await accessTokenVerifier.reauthenticationRoute.result
             let saveWasSuccessful = await accessTokenVerifier.saveReauthentication(result: reauthResult)
             switch reauthResult {
                 case .success where saveWasSuccessful:

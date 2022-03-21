@@ -23,7 +23,7 @@ class DataResponseSerializerTests: XCTestCase {
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession()),
                                       responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).task().result
         XCTAssertThrowsError(try result.get()) { error in
-            XCTAssertEqual(error as? NetworkingResponseSerializers.DataResponseSerializer.ResponseSerializerError, .noData)
+            XCTAssertEqual((error as NSError).code, URLError.cannotParseResponse.rawValue)
         }
     }
 
