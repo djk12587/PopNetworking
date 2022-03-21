@@ -18,7 +18,9 @@ class NetworkingRouteTests: XCTestCase {
                 _ = try result.get()
                 XCTFail("result.get() should throw a cancellation error")
             } catch {
-                XCTAssertEqual((error as NSError).code, NSURLErrorCancelled)
+                XCTAssertEqual((error as NSError).code, URLError.cancelled.rawValue)
+                XCTAssertNotNil((error as NSError).userInfo["Reason"])
+                XCTAssertNotNil((error as NSError).userInfo["RawPayload"])
             }
             expectation.fulfill()
         }
@@ -32,9 +34,11 @@ class NetworkingRouteTests: XCTestCase {
         routeTask.cancel()
         do {
             _ = try await routeTask.value
-            XCTFail("result.get() should throw a cancellation error")
+            XCTFail("routeTask.value should throw a cancellation error")
         } catch {
-            XCTAssertEqual((error as NSError).code, NSURLErrorCancelled)
+            XCTAssertEqual((error as NSError).code, URLError.cancelled.rawValue)
+            XCTAssertNotNil((error as NSError).userInfo["Reason"])
+            XCTAssertNotNil((error as NSError).userInfo["RawPayload"])
         }
     }
 }
