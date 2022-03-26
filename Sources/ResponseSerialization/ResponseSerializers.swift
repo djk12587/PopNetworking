@@ -86,7 +86,7 @@ public extension NetworkingResponseSerializer where SerializedObject: Decodable 
 
     static func decodable<SuccessType: Decodable>(successType: SuccessType.Type,
                                                   jsonDecoder: JSONDecoder = JSONDecoder()) -> Self where Self == NetworkingResponseSerializers.DecodableResponseSerializer<SuccessType> {
-        return Self()
+        return Self(jsonDecoder: jsonDecoder)
     }
 }
 
@@ -146,6 +146,6 @@ public extension NetworkingResponseSerializer where SerializedObject: Decodable 
     static func decodable<SuccessType: Decodable, ErrorType: Error & Decodable>(successType: SuccessType.Type,
                                                                                 errorType: ErrorType.Type,
                                                                                 jsonDecoder: JSONDecoder = JSONDecoder()) -> Self where Self == NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<SuccessType, ErrorType> {
-        return Self()
+        return Self(jsonDecoder: jsonDecoder)
     }
 }
