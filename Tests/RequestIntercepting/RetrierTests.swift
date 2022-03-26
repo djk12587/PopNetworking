@@ -15,7 +15,7 @@ class RetrierTests: XCTestCase {
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .doNotRetry)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
-                             responseSerializer: Mock.ResponseSerializer<Void>(.success(()))).result
+                             responseSerializer: .mock(.success(Void()))).result
 
         XCTAssertFalse(mockRetrier.retrierDidRun)
     }
@@ -25,7 +25,7 @@ class RetrierTests: XCTestCase {
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .doNotRetry)
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
-                                      responseSerializer: Mock.ResponseSerializer<Void>(.failure(NSError()))).result
+                                      responseSerializer: .mock(Result<Void, Error>.failure(NSError()))).result
 
         XCTAssertTrue(mockRetrier.retrierDidRun)
         XCTAssertThrowsError(try result.get())
@@ -36,7 +36,7 @@ class RetrierTests: XCTestCase {
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .retryWithDelay(0))
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
-                                      responseSerializer: Mock.ResponseSerializer<Void>([.failure(NSError()), .success(())])).result
+                                      responseSerializer: .mock([.failure(NSError()), .success(Void())])).result
 
         XCTAssertTrue(mockRetrier.retrierDidRun)
         XCTAssertEqual(mockRetrier.retryCounter, 1)

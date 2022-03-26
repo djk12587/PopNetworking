@@ -58,38 +58,6 @@ enum Mock {
         }
     }
 
-    class ResponseSerializer<SuccessType>: NetworkingResponseSerializer {
-
-        var serializedResult: Result<SuccessType, Error>?
-        var sequentialResults: [Result<SuccessType, Error>]
-        var payload: (responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?)?
-
-        init(_ serializedResult: Result<SuccessType, Error>) {
-            self.serializedResult = serializedResult
-            sequentialResults = []
-        }
-
-        init(_ sequentialResults: [Result<SuccessType, Error>] = []) {
-            self.sequentialResults = sequentialResults
-            serializedResult = nil
-        }
-
-        func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
-            defer { payload = (responseData, urlResponse, responseError) }
-
-            if let serializedResult = serializedResult {
-                return serializedResult
-            }
-            else if let sequentialResult = sequentialResults.first {
-                sequentialResults.removeFirst()
-                return sequentialResult
-            }
-            else {
-                return .failure(responseError ?? NSError(domain: "Missing a mocked serialized response", code: 0))
-            }
-        }
-    }
-
     class RequestInterceptor: NetworkingRequestInterceptor {
 
         enum AdapterResult {
@@ -134,4 +102,45 @@ enum Mock {
             return retrierResult
         }
     }
+
+    class ResponseSerializer<SuccessType>: NetworkingResponseSerializer {
+
+        var serializedResult: Result<SuccessType, Error>?
+        var sequentialResults: [Result<SuccessType, Error>]
+        var payload: (responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?)?
+
+        init(_ serializedResult: Result<SuccessType, Error>) {
+            self.serializedResult = serializedResult
+            sequentialResults = []
+        }
+
+        init(_ sequentialResults: [Result<SuccessType, Error>] = []) {
+            self.sequentialResults = sequentialResults
+            serializedResult = nil
+        }
+
+        func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
+            defer { payload = (responseData, urlResponse, responseError) }
+
+            if let responseError = responseError {
+                return .failure(responseError)
+            }
+
+            if let serializedResult = serializedResult {
+                return serializedResult
+            }
+            else if let sequentialResult = sequentialResults.first {
+                sequentialResults.removeFirst()
+                return sequentialResult
+            }
+            else {
+                return .failure(responseError ?? NSError(domain: "Missing a mocked serialized response", code: 0))
+            }
+        }
+    }
+}
+
+extension NetworkingResponseSerializer {
+    static func mock<T>(_ result: Result<T, Error>) -> Self where Self == Mock.ResponseSerializer<T> { Self(result) }
+    static func mock<T>(_ sequentialResults: [Result<T, Error>] = []) -> Self where Self == Mock.ResponseSerializer<T> { Self(sequentialResults) }
 }

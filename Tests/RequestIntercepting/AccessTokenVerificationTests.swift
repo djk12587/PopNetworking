@@ -12,12 +12,12 @@ final class ReauthenticationTests: XCTestCase {
 
     func testReauthenticationSuccess() async {
 
-        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: Mock.ResponseSerializer(.success(()))))
+        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: .mock(.success(Void()))))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         accessTokenVerifier: mockTokenVerifier),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).result
+                             responseSerializer: .mock(Result<Void, Error>.failure(NSError()))).result
 
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isSuccess == true)
         XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)
@@ -25,12 +25,12 @@ final class ReauthenticationTests: XCTestCase {
 
     func testReauthenticationFailure() async {
 
-        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.failure(NSError(domain: "force authorization failure", code: 0)))))
+        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: .mock(.failure(NSError(domain: "force authorization failure", code: 0)))))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let reauthResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                                        accessTokenVerifier: mockTokenVerifier),
-                                            responseSerializer: Mock.ResponseSerializer<Void>()).result
+                                            responseSerializer: .mock(.success(Void()))).result
         XCTAssertThrowsError(try reauthResult.get()) { error in
             XCTAssertEqual(error as? Mock.TokenVerifier.AccessTokenError, .tokenIsInvalid)
         }
@@ -40,11 +40,11 @@ final class ReauthenticationTests: XCTestCase {
 
     func testCancelingReauthenticationRequest() async {
 
-        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: Mock.ResponseSerializer(.success(()))))
+        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: .mock(.success(Void()))))
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let reauthRequestTask = Mock.Route(session: NetworkingSession(accessTokenVerifier: mockTokenVerifier),
-                                           responseSerializer: Mock.ResponseSerializer<Void>()).task()
+                                           responseSerializer: .mock(.success(Void()))).task()
         reauthRequestTask.cancel()
         let reauthResult = await reauthRequestTask.result
 
@@ -55,14 +55,14 @@ final class ReauthenticationTests: XCTestCase {
 
     func testMultipleUnauthorizedRoutesPerformsReauthenticationOnlyOnce() async throws {
 
-        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: Mock.ResponseSerializer(.success(()))))
+        let mockTokenVerifier = Mock.TokenVerifier(route: Mock.Route(responseSerializer: .mock(.success(()))))
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 0)
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
 
         let session = NetworkingSession(urlSession: Mock.UrlSession(),
                                         accessTokenVerifier: mockTokenVerifier)
-        _ = await Mock.Route(session: session, responseSerializer: Mock.ResponseSerializer<Void>()).result
-        _ = await Mock.Route(session: session, responseSerializer: Mock.ResponseSerializer<Void>()).result
+        _ = await Mock.Route(session: session, responseSerializer: .mock(.success(Void()))).result
+        _ = await Mock.Route(session: session, responseSerializer: .mock(.success(Void()))).result
 
         XCTAssertEqual(mockTokenVerifier.reauthorizationCount, 1)
         XCTAssertTrue(mockTokenVerifier.accessTokenIsValid)

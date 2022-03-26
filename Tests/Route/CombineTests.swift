@@ -15,7 +15,7 @@ class CombineTests: XCTestCase {
         let expectation = expectation(description: "wait for response")
         var cancellables = Set<AnyCancellable>()
 
-        let mockRoute = Mock.Route(responseSerializer: Mock.ResponseSerializer(.success("mock_response")))
+        let mockRoute = Mock.Route(responseSerializer: .mock(.success("mock_response")))
         mockRoute.publisher.sink { completion in
             XCTAssertEqual(completion, .finished)
             expectation.fulfill()
@@ -36,7 +36,7 @@ class CombineTests: XCTestCase {
         var cancellables = Set<AnyCancellable>()
 
         let mockError = NSError(domain: "mockError", code: 1)
-        let mockRoute = Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.failure(mockError)))
+        let mockRoute = Mock.Route(responseSerializer: .mock(Result<Void, Error>.failure(mockError)))
         mockRoute.publisher.sink { completion in
             XCTAssertEqual(completion, .finished)
             expectation.fulfill()
@@ -56,7 +56,7 @@ class CombineTests: XCTestCase {
         let expectation = expectation(description: "wait for response")
         var cancellables = Set<AnyCancellable>()
 
-        let mockRoute = Mock.Route(responseSerializer: Mock.ResponseSerializer(.success("mock_response")))
+        let mockRoute = Mock.Route(responseSerializer: .mock(.success("mock_response")))
         mockRoute.failablePublisher.sink { completion in
             if case .failure = completion {
                 XCTFail("request should not fail")
@@ -74,7 +74,7 @@ class CombineTests: XCTestCase {
         var cancellables = Set<AnyCancellable>()
 
         let mockError = NSError(domain: "mockError", code: 1)
-        let mockRoute = Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.failure(mockError)))
+        let mockRoute = Mock.Route(responseSerializer: .mock(Result<Void, Error>.failure(mockError)))
         mockRoute.failablePublisher.sink { completion in
             switch completion {
                 case .failure(let error):
@@ -95,7 +95,7 @@ class CombineTests: XCTestCase {
         let expectation = expectation(description: "wait for response")
 
         let mockRoute = Mock.Route(session: NetworkingSession(urlSession: URLSession(configuration: .default)),
-                                   responseSerializer: Mock.ResponseSerializer(.success("mock_response")))
+                                   responseSerializer: .mock(.success("mock_response")))
         let cancellable = mockRoute.publisher
             .handleEvents(receiveCancel: {
                 expectation.fulfill()
@@ -113,7 +113,7 @@ class CombineTests: XCTestCase {
         let expectation = expectation(description: "wait for response")
 
         let mockRoute = Mock.Route(session: NetworkingSession(urlSession: URLSession(configuration: .default)),
-                                   responseSerializer: Mock.ResponseSerializer(.success("mock_response")))
+                                   responseSerializer: .mock(.success("mock_response")))
         let cancellable = mockRoute.failablePublisher
             .handleEvents(receiveCancel: {
                 expectation.fulfill()

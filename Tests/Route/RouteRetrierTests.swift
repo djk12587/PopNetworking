@@ -13,7 +13,7 @@ class RouteRetrierTests: XCTestCase {
     func testRetrierRetry() async {
         var numberOfRetries = 0
         _ = await Mock.Route(baseUrl: "base",
-                             responseSerializer: Mock.ResponseSerializer(.success("success")),
+                             responseSerializer: .mock(.success("success")),
                              retrier: { _, _, retryCount in
             numberOfRetries = retryCount
             return retryCount > 1 ? .doNotRetry : .retry
@@ -25,7 +25,7 @@ class RouteRetrierTests: XCTestCase {
     func testRetrierRetryWithDelay() async {
         var numberOfRetries = 0
         _ = await Mock.Route(baseUrl: "base",
-                             responseSerializer: Mock.ResponseSerializer(.success("success")),
+                             responseSerializer: .mock(.success("success")),
                              retrier: { _, _, retryCount in
             numberOfRetries = retryCount
             return retryCount > 0 ? .doNotRetry : .retryWithDelay(0)
@@ -37,7 +37,7 @@ class RouteRetrierTests: XCTestCase {
     func testRetrierDoNotRetry() async {
         var numberOfRetries = 0
         _ = await Mock.Route(baseUrl: "base",
-                             responseSerializer: Mock.ResponseSerializer(.success("success")),
+                             responseSerializer: .mock(.success("success")),
                              retrier: { _, _, retryCount in
             numberOfRetries = retryCount
             return .doNotRetry
@@ -49,7 +49,7 @@ class RouteRetrierTests: XCTestCase {
     func testRetrierThrows() async {
         let mockError = NSError(domain: "mock Error", code: 1)
         let result = await Mock.Route(baseUrl: "base",
-                                      responseSerializer: Mock.ResponseSerializer(.success("success")),
+                                      responseSerializer: .mock(.success("success")),
                                       retrier: { _, _, _ in
             throw mockError
         }).result
@@ -62,7 +62,7 @@ class RouteRetrierTests: XCTestCase {
     func testRetrierParameters() async throws {
         _ = await Mock.Route(baseUrl: "base",
                              session: NetworkingSession(urlSession: Mock.UrlSession(mockUrlResponse: HTTPURLResponse())),
-                             responseSerializer: Mock.ResponseSerializer(.success("success")),
+                             responseSerializer: .mock(.success("success")),
                              retrier: { result, response, retryCount in
             XCTAssertEqual(try result.get(), "success")
             XCTAssertNotNil(response)

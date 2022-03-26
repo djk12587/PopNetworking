@@ -12,7 +12,7 @@ import Foundation
 /// ```
 /// //Example usage
 /// Route(baseUrl: "https://www.baseUrl.com",
-///       responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).request { result in
+///       responseSerializer: .data).request { result in
 ///     switch result {
 ///         case .success(let responseData):
 ///             print(responseData)

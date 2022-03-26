@@ -15,7 +15,7 @@ class DecodableResponseSerializerTests: XCTestCase {
         let mockModel = Mock.DecodableModel(mockProperty: "mock value")
         let encodedModel = try JSONEncoder().encode(mockModel)
         let responseModel = try await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseData: encodedModel)),
-                                                 responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<Mock.DecodableModel>()).task().result.get()
+                                                 responseSerializer: .decodable(successType: Mock.DecodableModel.self)).task().result.get()
         XCTAssertEqual(mockModel, responseModel)
     }
 
@@ -23,7 +23,7 @@ class DecodableResponseSerializerTests: XCTestCase {
 
         let encodedUnexpectedModel = try JSONEncoder().encode("mockModel")
         let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseData: encodedUnexpectedModel)),
-                                              responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<Mock.DecodableModel>()).task().result
+                                              responseSerializer: .decodable(successType: Mock.DecodableModel.self)).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
             XCTAssertNotNil(error as? DecodingError)
         }
@@ -33,7 +33,7 @@ class DecodableResponseSerializerTests: XCTestCase {
 
         let mockNetworkingResponseError = NSError(domain: "mock error", code: 1)
         let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseError: mockNetworkingResponseError)),
-                                              responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<Mock.DecodableModel>()).task().result
+                                              responseSerializer: .decodable(successType: Mock.DecodableModel.self)).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
             XCTAssertEqual(mockNetworkingResponseError, error as NSError)
         }
@@ -41,7 +41,7 @@ class DecodableResponseSerializerTests: XCTestCase {
 
     func testNilDataFailure() async throws {
 
-        let responseResult = await Mock.Route(responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<Mock.DecodableModel>()).task().result
+        let responseResult = await Mock.Route(responseSerializer: .decodable(successType: Mock.DecodableModel.self)).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
             XCTAssertEqual((error as NSError).code, URLError.cannotParseResponse.rawValue)
         }

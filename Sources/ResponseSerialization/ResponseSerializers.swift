@@ -8,15 +8,57 @@
 
 import Foundation
 
-extension Array: Error where Element: Error {}
-
 /// Contains default implementations of ``NetworkingResponseSerializer``. Such as ``DecodableResponseSerializer``, etc.
 public enum NetworkingResponseSerializers {
+
+    /// The `DataResponseSerializer` returns the raw networking `Data` from an HTTP response
+    public struct DataResponseSerializer: NetworkingResponseSerializer {
+        public typealias SerializedObject = Data
+
+        public init() {}
+
+        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
+            if let error = responseError { return .failure(error) }
+            guard let data = responseData else {
+                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
+            }
+            return .success(data)
+        }
+    }
+}
+
+public extension NetworkingResponseSerializer where Self == NetworkingResponseSerializers.DataResponseSerializer {
+    static var data: Self { Self() }
+}
+
+public extension NetworkingResponseSerializers {
+
+    /// The `HttpStatusCodeResponseSerializer` returns the `HTTPURLResponse.statusCode`.
+    struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
+        public typealias SerializedObject = Int
+
+        public init() {}
+
+        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
+            if let error = responseError { return .failure(error) }
+            guard let response = urlResponse else {
+                return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"]))
+            }
+            return .success(response.statusCode)
+        }
+    }
+}
+
+public extension NetworkingResponseSerializer where Self == NetworkingResponseSerializers.HttpStatusCodeResponseSerializer {
+    static var httpStatusCode: Self { Self() }
+}
+
+public extension NetworkingResponseSerializers {
 
     /// The `DecodableResponseSerializer` will attempt to parse response `Data` into a the generic `SuccessType`. `SuccessType` must adhere to `Decodable`.
     ///
     /// - Note: `DecodableResponseSerializer` cannot handle API's errors. To handle custom API errors see ``DecodableResponseWithErrorSerializer``
-    public struct DecodableResponseSerializer<SuccessType: Decodable>: NetworkingResponseSerializer {
+    struct DecodableResponseSerializer<SuccessType: Decodable>: NetworkingResponseSerializer {
 
         /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
         public typealias SerializedObject = SuccessType
@@ -38,10 +80,23 @@ public enum NetworkingResponseSerializers {
             return Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
         }
     }
+}
+
+public extension NetworkingResponseSerializer where SerializedObject: Decodable {
+
+    static func decodable<SuccessType: Decodable>(successType: SuccessType.Type,
+                                                  jsonDecoder: JSONDecoder = JSONDecoder()) -> Self where Self == NetworkingResponseSerializers.DecodableResponseSerializer<SuccessType> {
+        return Self()
+    }
+}
+
+extension Array: Error where Element: Error {}
+
+public extension NetworkingResponseSerializers {
 
     /// The `DecodableResponseWithErrorSerializer` will attempt to parse response `Data` into a the generic `SuccessType`.  If your networking request failed, the `DecodableResponseWithErrorSerializer` will also attempt to parse response `Data` into the generic `FailureType`. `FailureType` & `SuccessType` must adhere to  `Decodable`. In addition, `FailureType` must aslo adhere to `Error`.
-    public struct DecodableResponseWithErrorSerializer<SuccessType: Decodable,
-                                                       FailureType: Decodable & Error>: NetworkingResponseSerializer {
+    struct DecodableResponseWithErrorSerializer<SuccessType: Decodable,
+                                                FailureType: Decodable & Error>: NetworkingResponseSerializer {
 
         /// The ``SerializedObject`` must adhere to `Decodeable`.
         ///
@@ -84,32 +139,13 @@ public enum NetworkingResponseSerializers {
             }
         }
     }
+}
 
-    /// The `HttpStatusCodeResponseSerializer` returns the `HTTPURLResponse.statusCode`.
-    public struct HttpStatusCodeResponseSerializer: NetworkingResponseSerializer {
-        public typealias SerializedObject = Int
+public extension NetworkingResponseSerializer where SerializedObject: Decodable {
 
-        public init() {}
-
-        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
-            if let error = responseError { return .failure(error) }
-            guard let response = urlResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
-            return .success(response.statusCode)
-        }
-    }
-
-    /// The `DataResponseSerializer` returns the raw networking `Data` from an HTTP response
-    public struct DataResponseSerializer: NetworkingResponseSerializer {
-        public typealias SerializedObject = Data
-
-        public init() {}
-
-        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
-            if let error = responseError { return .failure(error) }
-            guard let data = responseData else {
-                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
-            }
-            return .success(data)
-        }
+    static func decodable<SuccessType: Decodable, ErrorType: Error & Decodable>(successType: SuccessType.Type,
+                                                                                errorType: ErrorType.Type,
+                                                                                jsonDecoder: JSONDecoder = JSONDecoder()) -> Self where Self == NetworkingResponseSerializers.DecodableResponseWithErrorSerializer<SuccessType, ErrorType> {
+        return Self()
     }
 }
