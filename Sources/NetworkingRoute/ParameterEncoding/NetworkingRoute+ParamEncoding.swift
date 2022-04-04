@@ -2,7 +2,7 @@
 //  File.swift
 //  
 //
-//  Created by Dan_Koza on 10/4/21.
+//  Created by Dan_Koza on 4/2/22.
 //
 
 import Foundation
@@ -28,6 +28,9 @@ public enum NetworkingRequestParameterEncoding {
     case url(params: [String: Any]?,
              encoder: URLEncoding = .default)
 
+    case multiPartForm(dataFields: [MultipartFormDataEncoder.DataField] = [],
+                       textFields: [MultipartFormDataEncoder.TextField] = [])
+
     /// Mutates a `URLRequest` by adding HTTP parameters
     /// - Parameter urlRequest: the `URLRequest` to add HTTP parameters to
     func encodeParams(into urlRequest: inout URLRequest) throws {
@@ -42,14 +45,12 @@ public enum NetworkingRequestParameterEncoding {
             case .json(let params, let jsonEncoder, let urlParams, let urlEncoder):
                 try jsonEncoder.encode(&urlRequest, with: params)
                 try urlEncoder.encode(&urlRequest, with: urlParams)
+
+            case .multiPartForm(let dataFields, let textFields):
+                let multiPartFormDataEncoder = MultipartFormDataEncoder()
+                multiPartFormDataEncoder.encode(textFields: textFields,
+                                                dataFields: dataFields,
+                                                into: &urlRequest)
         }
     }
-}
-
-public enum NetworkingRouteHttpMethod: String {
-    case get
-    case post
-    case delete
-    case put
-    case patch
 }

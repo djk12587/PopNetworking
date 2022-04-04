@@ -102,6 +102,14 @@ public extension NetworkingRoute {
     }
 }
 
+public enum NetworkingRouteHttpMethod: String {
+    case get
+    case post
+    case delete
+    case put
+    case patch
+}
+
 public extension NetworkingRoute {
     typealias Retrier = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
                          _ response: HTTPURLResponse?,
