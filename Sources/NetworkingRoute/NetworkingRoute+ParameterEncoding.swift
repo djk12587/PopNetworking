@@ -141,7 +141,7 @@ public struct URLEncoding {
 
         guard let parameters = parameters else { return }
 
-        if let method = NetworkingRouteHttpMethod(rawValue: urlRequest.httpMethod?.lowercased() ?? ""), destination.encodesParametersInURL(for: method) {
+        if let method = NetworkingRouteHttpMethod(rawValue: urlRequest.httpMethod?.uppercased() ?? ""), destination.encodesParametersInURL(for: method) {
             guard let url = urlRequest.url else {
                 throw URLError(.badURL, userInfo: ["reason": "url is nil"])
             }
