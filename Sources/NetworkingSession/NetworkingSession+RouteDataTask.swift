@@ -11,7 +11,6 @@ extension NetworkingSession {
     internal class RouteDataTask<Route: NetworkingRoute> {
 
         private let route: Route
-        private var currentRequest: URLRequest?
         private var dataTask: URLSessionDataTask?
         private var sessionRetryCount = 0
         private var responseRetryCount = 0
@@ -110,10 +109,8 @@ extension NetworkingSession {
 private extension NetworkingSession.RouteDataTask {
 
     func getUrlRequest(requestAdapter: NetworkingRequestAdapter?) async throws -> URLRequest {
-        let urlRequest = try currentRequest ?? route.urlRequest
-        currentRequest = urlRequest
+        let urlRequest = try route.urlRequest
         let adaptedUrlRequest = try await requestAdapter?.adapt(urlRequest: urlRequest)
-        currentRequest = adaptedUrlRequest ?? urlRequest
         return adaptedUrlRequest ?? urlRequest
     }
 
