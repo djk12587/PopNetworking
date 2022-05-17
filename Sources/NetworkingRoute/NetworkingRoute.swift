@@ -54,6 +54,7 @@ public extension NetworkingRoute {
 
     var session: NetworkingSession { .shared }
     var headers: NetworkingRouteHttpHeaders? { nil }
+    var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
     var retrier: Retrier? { nil }
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 
