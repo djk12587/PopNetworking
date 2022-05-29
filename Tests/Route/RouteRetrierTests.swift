@@ -60,14 +60,14 @@ class RouteRetrierTests: XCTestCase {
     }
 
     func testRetrierParameters() async throws {
-        _ = await Mock.Route(baseUrl: "base",
-                             session: NetworkingSession(urlSession: Mock.UrlSession(mockUrlResponse: HTTPURLResponse())),
-                             responseSerializer: Mock.ResponseSerializer(.success("success")),
-                             retrier: { result, response, retryCount in
+        _ = try await Mock.Route(baseUrl: "base",
+                                 session: NetworkingSession(urlSession: Mock.UrlSession(mockUrlResponse: HTTPURLResponse())),
+                                 responseSerializer: Mock.ResponseSerializer(.success("success")),
+                                 retrier: { result, response, retryCount in
             XCTAssertEqual(try result.get(), "success")
             XCTAssertNotNil(response)
             XCTAssertEqual(retryCount, 0)
             return .doNotRetry
-        }).result
+        }).result.get()
     }
 }
