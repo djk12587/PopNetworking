@@ -48,8 +48,8 @@ public class NetworkingSession {
     ///   - accessTokenVerifier: See ``AccessTokenVerification``
     ///
     /// - Note: Pass in an ``AccessTokenVerification`` if you want to automatically reauthenticate network requests when your access token is expired.
-    public init<AccessTokenVerifier: AccessTokenVerification>(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                                                              accessTokenVerifier: AccessTokenVerifier) {
+    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+                accessTokenVerifier: some AccessTokenVerification) {
         self.urlSession = urlSession
         let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
         self.requestAdapter = reauthenticationHandler
