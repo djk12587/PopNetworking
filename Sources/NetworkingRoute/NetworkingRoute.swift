@@ -25,7 +25,7 @@ public protocol NetworkingRoute {
     /// HTTP headers
     var headers: NetworkingRouteHttpHeaders? { get }
 
-    /// ``parameterEncoding`` is responsible for encoding all of your network request's parameters.
+    /// <doc:/documentation/PopNetworking/NetworkingRoute/parameterEncoding-5o5po> is responsible for encoding all of your network request's parameters.
     var parameterEncoding: NetworkingRequestParameterEncoding? { get }
 
     /// ``urlRequest-793sf`` is responsible for converting `self` into a `URLRequest`
