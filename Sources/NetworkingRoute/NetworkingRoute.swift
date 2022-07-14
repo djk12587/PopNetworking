@@ -46,17 +46,13 @@ public protocol NetworkingRoute {
     /// A `Retrier` allows you to retry the request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
     var retrier: Retrier? { get }
 
+    var timeout: TimeInterval? { get }
+
     /// Allows you to mock a response. Mainly used for testing purposes.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
 }
 
 public extension NetworkingRoute {
-
-    var session: NetworkingSession { .shared }
-    var headers: NetworkingRouteHttpHeaders? { nil }
-    var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
-    var retrier: Retrier? { nil }
-    var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 
     /// Default implementation. Feel free to implement your own version if needed.
     var urlRequest: URLRequest {
@@ -101,6 +97,13 @@ public extension NetworkingRoute {
         }
         return requestTask
     }
+
+    var session: NetworkingSession { .shared }
+    var headers: NetworkingRouteHttpHeaders? { nil }
+    var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
+    var retrier: Retrier? { nil }
+    var timeout: TimeInterval? { nil }
+    var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 }
 
 public extension NetworkingRoute {
