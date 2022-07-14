@@ -27,36 +27,8 @@ extension NetworkingSession {
         func executeRoute(urlSession: URLSessionProtocol,
                           requestAdapter: NetworkingRequestAdapter?) async -> RawRequestResponse {
             do {
-                let urlRequestToRun = try await getUrlRequest(requestAdapter: requestAdapter)
-                let rawRouteResponse = try await withThrowingTaskGroup(of: RawRequestResponse.self, body: { taskGroup -> RawRequestResponse in
-                    taskGroup.addTask {
-                        let routeResponse: RawRequestResponse = try await withCheckedThrowingContinuation { continuation in
-                            self.dataTask = urlSession.dataTask(with: urlRequestToRun) { data, response, error in
-                                continuation.resume(returning: (urlRequestToRun,
-                                                                data,
-                                                                response as? HTTPURLResponse,
-                                                                error))
-                            }
-                            Task.isCancelled ? self.dataTask?.cancel() : self.dataTask?.resume()
-                        }
-                        return routeResponse
-                    }
-
-                    if let timeout = route.timeout {
-                        taskGroup.addTask {
-                            try? await Task.sleep(nanoseconds: UInt64(timeout) * 1_000_000_000)
-                            return (nil, nil, nil, URLError(.timedOut, userInfo: ["Reason": "\(type(of: self.route)) timed out after \(timeout) seconds."]))
-                        }
-                    }
-
-                    guard let rawRouteResponse = try await taskGroup.next() else {
-                        throw URLError(.unknown, userInfo: ["Reason": "PopNetworking internal error, \(type(of: self.route)) failed to complete."])
-                    }
-                    taskGroup.cancelAll()
-                    self.dataTask?.cancel()
-                    return rawRouteResponse
-                })
-                return rawRouteResponse
+                let urlRequest = try await getUrlRequest(requestAdapter: requestAdapter)
+                return try await execute(urlRequest, on: urlSession)
             }
             catch {
                 return (nil, nil, nil, error)
@@ -129,6 +101,35 @@ extension NetworkingSession {
 }
 
 private extension NetworkingSession.RouteDataTask {
+
+    func execute(_ urlRequest: URLRequest, on urlSession: URLSessionProtocol) async throws -> RawRequestResponse {
+        return try await withThrowingTaskGroup(of: RawRequestResponse.self, body: { taskGroup -> RawRequestResponse in
+
+            taskGroup.addTask {
+                let routeResponse: RawRequestResponse = try await withCheckedThrowingContinuation { continuation in
+                    self.dataTask = urlSession.dataTask(with: urlRequest) { data, response, error in
+                        continuation.resume(returning: (urlRequest, data, response as? HTTPURLResponse, error))
+                    }
+                    Task.isCancelled ? self.dataTask?.cancel() : self.dataTask?.resume()
+                }
+                return routeResponse
+            }
+
+            if let timeout = route.timeout {
+                taskGroup.addTask {
+                    try? await Task.sleep(nanoseconds: UInt64(timeout) * 1_000_000_000)
+                    return (nil, nil, nil, URLError(.timedOut, userInfo: ["Reason": "\(type(of: self.route)) timed out after \(timeout) seconds."]))
+                }
+            }
+
+            guard let rawRouteResponse = try await taskGroup.next() else {
+                throw URLError(.unknown, userInfo: ["Reason": "PopNetworking internal error, \(type(of: self.route)) failed to complete."])
+            }
+            taskGroup.cancelAll()
+            self.dataTask?.cancel()
+            return rawRouteResponse
+        })
+    }
 
     func getUrlRequest(requestAdapter: NetworkingRequestAdapter?) async throws -> URLRequest {
         let urlRequest = try route.urlRequest
