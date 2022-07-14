@@ -29,42 +29,44 @@ public class NetworkingSession {
     private let requestAdapter: NetworkingRequestAdapter?
     private let requestRetrier: NetworkingRequestRetrier?
 
-    /// Creates an instance of a ``NetworkingSession``
-    /// - Parameters:
-    ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
-    ///   - requestAdapter: Responsible to modifying a `URLRequest` before being executed. See ``NetworkingRequestAdapter``
-    ///   - requestRetrier: Responsible for retrying a failed `URLRequest`. See ``NetworkingRequestRetrier``
     public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+                interceptor: Interceptor? = nil,
                 requestAdapter: NetworkingRequestAdapter? = nil,
-                requestRetrier: NetworkingRequestRetrier? = nil) {
+                requestRetrier: NetworkingRequestRetrier? = nil,
+                requestIntercepter: NetworkingRequestInterceptor? = nil) {
+
+        var adapters: [NetworkingRequestAdapter?] = []
+        adapters.append(requestAdapter)
+        adapters.append(requestIntercepter)
+        adapters.append(contentsOf: interceptor?.adapters ?? [])
+
+        var retriers: [NetworkingRequestRetrier?] = []
+        retriers.append(requestRetrier)
+        retriers.append(requestIntercepter)
+        retriers.append(contentsOf: interceptor?.retriers ?? [])
+
+        let allAdaptersAndRetriers = Interceptor(adapters: adapters.compactMap({ $0 }),
+                                                 retriers: retriers.compactMap({ $0 }))
+        self.requestAdapter = allAdaptersAndRetriers
+        self.requestRetrier = allAdaptersAndRetriers
         self.urlSession = urlSession
-        self.requestAdapter = requestAdapter
-        self.requestRetrier = requestRetrier
     }
 
-    /// Creates an instance of a ``NetworkingSession`` with an instance of an ``AccessTokenVerification``
-    /// - Parameters:
-    ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
-    ///   - accessTokenVerifier: See ``AccessTokenVerification``
-    ///
-    /// - Note: Pass in an ``AccessTokenVerification`` if you want to automatically reauthenticate network requests when your access token is expired.
-    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                accessTokenVerifier: some AccessTokenVerification) {
-        self.urlSession = urlSession
+    public convenience init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+                            interceptor: Interceptor? = nil,
+                            requestAdapter: NetworkingRequestAdapter? = nil,
+                            requestRetrier: NetworkingRequestRetrier? = nil,
+                            requestIntercepter: NetworkingRequestInterceptor? = nil,
+                            accessTokenVerifier: some AccessTokenVerification) {
+
         let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
-        self.requestAdapter = reauthenticationHandler
-        self.requestRetrier = reauthenticationHandler
-    }
-
-    /// Creates an instance of a ``NetworkingSession`` with an instance of an ``Interceptor``
-    /// - Parameters:
-    ///   - session: The underlying `URLSession` used to make an HTTP request. By default, a `URLSession` is configured with the `.default` `URLSessionConfiguration`
-    ///   - interceptor: See ``Interceptor``
-    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                interceptor: Interceptor) {
-        self.urlSession = urlSession
-        self.requestAdapter = interceptor
-        self.requestRetrier = interceptor
+        let combinedInterceptor = Interceptor(adapters: [reauthenticationHandler] + (interceptor?.adapters ?? []),
+                                              retriers: [reauthenticationHandler] + (interceptor?.retriers ?? []))
+        self.init(urlSession: urlSession,
+                  interceptor: combinedInterceptor,
+                  requestAdapter: requestAdapter,
+                  requestRetrier: requestRetrier,
+                  requestIntercepter: requestIntercepter)
     }
 
     /// Performs an HTTP request and parses the HTTP response into the `Route.ResponseSerializer.SerializedObject`
