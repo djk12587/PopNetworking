@@ -122,12 +122,12 @@ private extension NetworkingSession.RouteDataTask {
                 }
             }
 
-            guard let rawRouteResponse = try await taskGroup.next() else {
+            guard let rawRequestResponse = try await taskGroup.next() else {
                 throw URLError(.unknown, userInfo: ["Reason": "PopNetworking internal error, \(type(of: self.route)) failed to complete."])
             }
             taskGroup.cancelAll()
             self.dataTask?.cancel()
-            return rawRouteResponse
+            return rawRequestResponse
         })
     }
 
