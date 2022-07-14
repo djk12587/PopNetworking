@@ -10,31 +10,53 @@ import Foundation
 extension NetworkingSession {
     internal class RouteDataTask<Route: NetworkingRoute> {
 
+        typealias RawRequestResponse = (request: URLRequest?, responseData: Data?, response: HTTPURLResponse?, error: Error?)
+
         private let route: Route
         private var dataTask: URLSessionDataTask?
         private var sessionRetryCount = 0
         private var responseRetryCount = 0
         private weak var networkingSessionDelegate: NetworkingSessionDelegate?
 
-        init(route: Route, networkingSessionDelegate: NetworkingSessionDelegate) {
+        init(route: Route,
+             networkingSessionDelegate: NetworkingSessionDelegate) {
             self.route = route
             self.networkingSessionDelegate = networkingSessionDelegate
         }
 
         func executeRoute(urlSession: URLSessionProtocol,
-                          requestAdapter: NetworkingRequestAdapter?) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
+                          requestAdapter: NetworkingRequestAdapter?) async -> RawRequestResponse {
             do {
                 let urlRequestToRun = try await getUrlRequest(requestAdapter: requestAdapter)
-                let routeResponse: (URLRequest?, Data?, HTTPURLResponse?, Error?) = await withCheckedContinuation { continuation in
-                    dataTask = urlSession.dataTask(with: urlRequestToRun) { data, response, error in
-                        continuation.resume(returning: (urlRequestToRun,
-                                                        data,
-                                                        response as? HTTPURLResponse,
-                                                        error))
+                let rawRouteResponse = try await withThrowingTaskGroup(of: RawRequestResponse.self, body: { taskGroup -> RawRequestResponse in
+                    taskGroup.addTask {
+                        let routeResponse: RawRequestResponse = try await withCheckedThrowingContinuation { continuation in
+                            self.dataTask = urlSession.dataTask(with: urlRequestToRun) { data, response, error in
+                                continuation.resume(returning: (urlRequestToRun,
+                                                                data,
+                                                                response as? HTTPURLResponse,
+                                                                error))
+                            }
+                            Task.isCancelled ? self.dataTask?.cancel() : self.dataTask?.resume()
+                        }
+                        return routeResponse
                     }
-                    Task.isCancelled ? dataTask?.cancel() : dataTask?.resume()
-                }
-                return routeResponse
+
+                    if let timeout = route.timeout {
+                        taskGroup.addTask {
+                            try? await Task.sleep(nanoseconds: UInt64(timeout) * 1_000_000_000)
+                            return (nil, nil, nil, URLError(.timedOut, userInfo: ["Reason": "\(type(of: self.route)) timed out after \(timeout) seconds."]))
+                        }
+                    }
+
+                    guard let rawRouteResponse = try await taskGroup.next() else {
+                        throw URLError(.unknown, userInfo: ["Reason": "PopNetworking internal error, \(type(of: self.route)) failed to complete."])
+                    }
+                    taskGroup.cancelAll()
+                    self.dataTask?.cancel()
+                    return rawRouteResponse
+                })
+                return rawRouteResponse
             }
             catch {
                 return (nil, nil, nil, error)

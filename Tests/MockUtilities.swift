@@ -19,6 +19,7 @@ enum Mock {
         var session: NetworkingSession
         var responseSerializer: ResponseSerializer
         var retrier: Retrier?
+        var timeout: TimeInterval?
 
         init(baseUrl: String = "https://mockUrl.com",
              path: String = "",
@@ -26,7 +27,8 @@ enum Mock {
              parameterEncoding: NetworkingRequestParameterEncoding? = nil,
              session: NetworkingSession = NetworkingSession(urlSession: Mock.UrlSession()),
              responseSerializer: ResponseSerializer,
-             retrier: Retrier? = nil) {
+             retrier: Retrier? = nil,
+             timeout: TimeInterval? = nil) {
             self.baseUrl = baseUrl
             self.path = path
             self.method = method
@@ -34,6 +36,7 @@ enum Mock {
             self.session = session
             self.responseSerializer = responseSerializer
             self.retrier = retrier
+            self.timeout = timeout
         }
     }
 
@@ -42,18 +45,30 @@ enum Mock {
         var mockResponseData: Data?
         var mockUrlResponse: URLResponse?
         var mockResponseError: Error?
+        var mockDelay: TimeInterval?
 
         private(set) var lastRequest: URLRequest?
 
-        init(mockResponseData: Data? = nil, mockUrlResponse: URLResponse? = nil, mockResponseError: Error? = nil) {
+        init(mockResponseData: Data? = nil,
+             mockUrlResponse: URLResponse? = nil,
+             mockResponseError: Error? = nil,
+             mockDelay: TimeInterval? = nil) {
             self.mockResponseData = mockResponseData
             self.mockUrlResponse = mockUrlResponse
             self.mockResponseError = mockResponseError
+            self.mockDelay = mockDelay
         }
 
         func dataTask(with request: URLRequest, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) -> URLSessionDataTask {
             defer { lastRequest = request }
-            completionHandler(mockResponseData, mockUrlResponse, mockResponseError)
+            if let delay = mockDelay {
+                Task {
+                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                    completionHandler(self.mockResponseData, self.mockUrlResponse, self.mockResponseError)
+                }
+            } else {
+                completionHandler(mockResponseData, mockUrlResponse, mockResponseError)
+            }
             return URLSession(configuration: .default).dataTask(with: request) //This dataTask is useless, its only used because we have to return an instance of `URLSessionDataTask`
         }
     }
@@ -77,7 +92,10 @@ enum Mock {
         func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
             defer { payload = (responseData, urlResponse, responseError) }
 
-            if let serializedResult = serializedResult {
+            if let responseError = responseError {
+                return .failure(responseError)
+            }
+            else if let serializedResult = serializedResult {
                 return serializedResult
             }
             else if let sequentialResult = sequentialResults.first {
