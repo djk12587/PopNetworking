@@ -8,9 +8,11 @@
 import Foundation
 
 extension NetworkingSession {
-    internal class RouteDataTask<Route: NetworkingRoute> {
+    internal actor RouteDataTask<Route: NetworkingRoute> {
 
-        typealias RawRequestResponse = (request: URLRequest?, responseData: Data?, response: HTTPURLResponse?, error: Error?)
+        typealias RawRequestResponse = (request: URLRequest?,
+                                        response: HTTPURLResponse?,
+                                        result: Result<Data, Error>)
 
         private let route: Route
         private var dataTask: URLSessionDataTask?
@@ -28,19 +30,17 @@ extension NetworkingSession {
                           requestAdapter: NetworkingRequestAdapter?) async -> RawRequestResponse {
             do {
                 let urlRequest = try await getUrlRequest(requestAdapter: requestAdapter)
-                return try await execute(urlRequest, on: urlSession)
+                let (_, response, result) = try await execute(urlRequest, on: urlSession)
+                return (urlRequest, response, result)
             }
             catch {
-                return (nil, nil, nil, error)
+                return (nil, nil, .failure(error))
             }
         }
 
-        func executeResponseSerializer(responseData: Data?,
-                                       response: HTTPURLResponse?,
-                                       responseError: Error?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-            return route.responseSerializer.serialize(responseData: responseData,
-                                                      urlResponse: response,
-                                                      responseError: responseError)
+        func executeResponseSerializer(result: Result<Data, Error>,
+                                       response: HTTPURLResponse?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+            return route.responseSerializer.serialize(result: result, urlResponse: response)
         }
 
         func executeSessionRetrier(retrier: NetworkingRequestRetrier?,
@@ -62,12 +62,11 @@ extension NetworkingSession {
                                        retryCount: sessionRetryCount) {
                 case .retry:
                     incrementSessionRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    return try await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                     incrementSessionRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    return try await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
                     return serializedResult
@@ -86,12 +85,11 @@ extension NetworkingSession {
             switch try await routeRetrier(serializedResult, response, responseRetryCount) {
                 case .retry:
                     incrementResponseRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    return try await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                     incrementResponseRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    return try await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
                     return serializedResult
@@ -106,19 +104,19 @@ private extension NetworkingSession.RouteDataTask {
         return try await withThrowingTaskGroup(of: RawRequestResponse.self, body: { taskGroup -> RawRequestResponse in
 
             taskGroup.addTask {
-                let routeResponse: RawRequestResponse = try await withCheckedThrowingContinuation { continuation in
-                    self.dataTask = urlSession.dataTask(with: urlRequest) { data, response, error in
-                        continuation.resume(returning: (urlRequest, data, response as? HTTPURLResponse, error))
-                    }
-                    Task.isCancelled ? self.dataTask?.cancel() : self.dataTask?.resume()
+                do {
+                    let (data, response) = try await urlSession.data(for: urlRequest)
+                    return (urlRequest, response as? HTTPURLResponse, .success(data))
                 }
-                return routeResponse
+                catch {
+                    return (urlRequest, nil, .failure(error))
+                }
             }
 
             if let timeout = route.timeout {
                 taskGroup.addTask {
                     try? await Task.sleep(nanoseconds: UInt64(timeout) * 1_000_000_000)
-                    return (nil, nil, nil, URLError(.timedOut, userInfo: ["Reason": "\(type(of: self.route)) timed out after \(timeout) seconds."]))
+                    return (urlRequest, nil, .failure(URLError(.timedOut, userInfo: ["Reason": "\(type(of: self.route)) timed out after \(timeout) seconds."])))
                 }
             }
 
@@ -126,7 +124,6 @@ private extension NetworkingSession.RouteDataTask {
                 throw URLError(.unknown, userInfo: ["Reason": "PopNetworking internal error, \(type(of: self.route)) failed to complete."])
             }
             taskGroup.cancelAll()
-            self.dataTask?.cancel()
             return rawRequestResponse
         })
     }
@@ -146,7 +143,7 @@ private extension NetworkingSession.RouteDataTask {
     }
 }
 
-private extension Result {
+internal extension Result {
     var error: Error? {
         guard case let .failure(error) = self else { return nil }
         return error
