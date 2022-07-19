@@ -13,9 +13,7 @@ extension NetworkingSession {
         typealias RawRequestResponse = (request: URLRequest?,
                                         response: HTTPURLResponse?,
                                         result: Result<Data, Error>)
-
         private let route: Route
-        private var dataTask: URLSessionDataTask?
         private var sessionRetryCount = 0
         private var responseRetryCount = 0
         private weak var networkingSessionDelegate: NetworkingSessionDelegate?
