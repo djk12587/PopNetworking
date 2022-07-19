@@ -8,7 +8,14 @@
 import Foundation
 
 /**
- A protocol that helps ensure a `URLRequest`'s authorization is always up to date. ``AccessTokenVerification`` can be applied to a ``NetworkingSession`` via ``NetworkingSession/init(urlSession:accessTokenVerifier:)``
+ A protocol that helps ensure a `URLRequest`'s authorization is always up to date. ``AccessTokenVerification`` can be applied to a ``NetworkingSession``. Initialize a ``ReauthenticationHandler`` and set the instance of ``ReauthenticationHandler`` to a ``NetworkingSession``'s ``NetworkingRequestAdapter`` & ``NetworkingRequestRetrier``
+
+ ```
+ // example usage
+ let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: yourAccessTokenVerifier())
+ let networkingSession = NetworkingSession(requestAdapter: reauthenticationHandler,
+                                           requestRetrier: reauthenticationHandler)
+ ```
 
  - Attention: You are responsible for supplying and saving your own access token.
  */
