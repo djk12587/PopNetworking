@@ -9,7 +9,7 @@ import Foundation
 
 /// An `Interceptor` allows you to utilize multiple ``NetworkingRequestInterceptor``'s for a request.
 ///
-/// - Attention: All ``NetworkingRequestAdapter``'s will run sequentially and potentially throw ann `Error` or `[Error]`. ``NetworkingRequestRetrier``'s will run until a retry results in a successful response.
+/// - Attention: All ``NetworkingRequestAdapter``'s will run until one fails. ``NetworkingRequestRetrier``'s will run until a retry results in a successful response.
 public struct Interceptor: NetworkingRequestInterceptor {
 
     let adapters: [NetworkingRequestAdapter]
@@ -27,25 +27,15 @@ public struct Interceptor: NetworkingRequestInterceptor {
     }
 
     public func adapt(urlRequest: URLRequest) async throws -> URLRequest {
-        var errors: [Error] = []
-        var adaptedRequest = urlRequest
-        for adapter in adapters {
-            do {
-                adaptedRequest = try await adapter.adapt(urlRequest: adaptedRequest)
-            }
-            catch {
-                errors.append(error)
-            }
-        }
+        return try await adapt(urlRequest: urlRequest, with: adapters)
+    }
 
-        if errors.isEmpty {
-            return adaptedRequest
-        }
-        else if errors.count == 1, let onlyError = errors.first {
-            throw onlyError
-        } else {
-            throw errors
-        }
+    private func adapt(urlRequest: URLRequest, with adapters: [NetworkingRequestAdapter]) async throws -> URLRequest {
+        var pendingAdapters = adapters
+        guard let adapter = pendingAdapters.first else { return urlRequest }
+        pendingAdapters.removeFirst()
+        let adaptedRequest = try await adapter.adapt(urlRequest: urlRequest)
+        return try await adapt(urlRequest: adaptedRequest, with: pendingAdapters)
     }
 
     public func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) async -> NetworkingRequestRetrierResult {
