@@ -28,7 +28,7 @@ class InterceptorTests: XCTestCase {
         XCTAssertTrue(mockRequestInterceptor2.retrierDidRun)
     }
 
-    func testAllAdaptersRunWhenOneFails() async throws {
+    func testAdaptersDoNotRunAfterFirstFailure() async throws {
 
         let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .failure(error: NSError(domain: "adapterFailure", code: 0)),
                                                               retrierResult: .doNotRetry)
@@ -41,7 +41,7 @@ class InterceptorTests: XCTestCase {
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
-        XCTAssertTrue(mockRequestInterceptor2.adapterDidRun)
+        XCTAssertFalse(mockRequestInterceptor2.adapterDidRun)
     }
 
     func testStopRetryingAfterFirstSuccessfulRetry() async throws {
