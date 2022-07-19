@@ -60,7 +60,14 @@ public extension NetworkingRoute {
             guard let url = URL(string: baseUrl.appending(path)) else {
                 throw URLError(.badURL, userInfo: ["baseUrl": baseUrl, "path": path])
             }
-            var mutableRequest = URLRequest(url: url)
+            var mutableRequest: URLRequest
+            if let timeout = timeout {
+                mutableRequest = URLRequest(url: url, timeoutInterval: timeout)
+            }
+            else {
+                mutableRequest = URLRequest(url: url)
+            }
+
             mutableRequest.httpMethod = method.rawValue
             try parameterEncoding?.encodeParams(into: &mutableRequest)
             headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
