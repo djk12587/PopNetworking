@@ -61,8 +61,8 @@ public class NetworkingSession {
                             accessTokenVerifier: some AccessTokenVerification) {
 
         let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
-        let combinedInterceptor = Interceptor(adapters: [reauthenticationHandler] + (interceptor?.adapters ?? []),
-                                              retriers: [reauthenticationHandler] + (interceptor?.retriers ?? []))
+        let combinedInterceptor = Interceptor(adapters: (interceptor?.adapters ?? []) + [reauthenticationHandler],
+                                              retriers: (interceptor?.retriers ?? []) + [reauthenticationHandler])
         self.init(urlSession: urlSession,
                   interceptor: combinedInterceptor,
                   requestAdapter: requestAdapter,
