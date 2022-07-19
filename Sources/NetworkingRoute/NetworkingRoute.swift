@@ -46,6 +46,7 @@ public protocol NetworkingRoute {
     /// A `Retrier` allows you to retry the request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
     var retrier: Retrier? { get }
 
+    /// ``urlRequest-5u991``'s default implementation will use ``timeout-1inwx`` when instantiating a `URLRequest(url: timeoutInterval:)`
     var timeout: TimeInterval? { get }
 
     /// Allows you to mock a response. Mainly used for testing purposes.
