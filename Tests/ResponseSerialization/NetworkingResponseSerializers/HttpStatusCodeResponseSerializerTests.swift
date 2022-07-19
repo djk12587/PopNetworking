@@ -20,6 +20,7 @@ class HttpStatusCodeResponseSerializerTests: XCTestCase {
     }
 
     func testNilResponse() async throws {
+
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession()),
                                       responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task().result
         XCTAssertThrowsError(try result.get()) { error in
@@ -30,7 +31,7 @@ class HttpStatusCodeResponseSerializerTests: XCTestCase {
     func testNetworkingFailure() async throws {
 
         let mockNetworkingResponseError = NSError(domain: "mock error", code: 1)
-        let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResponseError: mockNetworkingResponseError)),
+        let responseResult = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResult: .failure(mockNetworkingResponseError))),
                                               responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).task().result
         XCTAssertThrowsError(try responseResult.get()) { error in
             XCTAssertEqual(mockNetworkingResponseError, error as NSError)

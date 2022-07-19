@@ -42,34 +42,24 @@ enum Mock {
 
     class UrlSession: URLSessionProtocol {
 
-        var mockResponseData: Data?
+        var mockResult: Result<Data, Error>
         var mockUrlResponse: URLResponse?
-        var mockResponseError: Error?
         var mockDelay: TimeInterval?
 
         private(set) var lastRequest: URLRequest?
 
-        init(mockResponseData: Data? = nil,
+        init(mockResult: Result<Data, Error> = .success(Data()),
              mockUrlResponse: URLResponse? = nil,
-             mockResponseError: Error? = nil,
              mockDelay: TimeInterval? = nil) {
-            self.mockResponseData = mockResponseData
+            self.mockResult = mockResult
             self.mockUrlResponse = mockUrlResponse
-            self.mockResponseError = mockResponseError
             self.mockDelay = mockDelay
         }
 
-        func dataTask(with request: URLRequest, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) -> URLSessionDataTask {
+        func data(for request: URLRequest) async throws -> (Data, URLResponse) {
             defer { lastRequest = request }
-            if let delay = mockDelay {
-                Task {
-                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
-                    completionHandler(self.mockResponseData, self.mockUrlResponse, self.mockResponseError)
-                }
-            } else {
-                completionHandler(mockResponseData, mockUrlResponse, mockResponseError)
-            }
-            return URLSession(configuration: .default).dataTask(with: request) //This dataTask is useless, its only used because we have to return an instance of `URLSessionDataTask`
+            try? await Task.sleep(nanoseconds: UInt64(mockDelay ?? 0) * 1_000_000_000)
+            return (try mockResult.get(), self.mockUrlResponse ?? URLResponse())
         }
     }
 
@@ -77,7 +67,7 @@ enum Mock {
 
         var serializedResult: Result<SuccessType, Error>?
         var sequentialResults: [Result<SuccessType, Error>]
-        var payload: (responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?)?
+        var payload: (result: Result<Data, Error>, urlResponse: HTTPURLResponse?)?
 
         init(_ serializedResult: Result<SuccessType, Error>) {
             self.serializedResult = serializedResult
@@ -89,10 +79,10 @@ enum Mock {
             serializedResult = nil
         }
 
-        func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
-            defer { payload = (responseData, urlResponse, responseError) }
+        func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
+            defer { payload = (result, urlResponse) }
 
-            if let responseError = responseError {
+            if let responseError = result.error {
                 return .failure(responseError)
             }
             else if let serializedResult = serializedResult {
@@ -103,7 +93,7 @@ enum Mock {
                 return sequentialResult
             }
             else {
-                return .failure(responseError ?? NSError(domain: "Missing a mocked serialized response", code: 0))
+                return .failure(NSError(domain: "Missing a mocked serialized response", code: 0))
             }
         }
     }
