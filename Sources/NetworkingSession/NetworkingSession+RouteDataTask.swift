@@ -99,31 +99,13 @@ extension NetworkingSession {
 private extension NetworkingSession.RouteDataTask {
 
     func execute(_ urlRequest: URLRequest, on urlSession: URLSessionProtocol) async throws -> RawRequestResponse {
-        return try await withThrowingTaskGroup(of: RawRequestResponse.self, body: { taskGroup -> RawRequestResponse in
-
-            taskGroup.addTask {
-                do {
-                    let (data, response) = try await urlSession.data(for: urlRequest)
-                    return (urlRequest, response as? HTTPURLResponse, .success(data))
-                }
-                catch {
-                    return (urlRequest, nil, .failure(error))
-                }
-            }
-
-            if let timeout = route.timeout {
-                taskGroup.addTask {
-                    try? await Task.sleep(nanoseconds: UInt64(timeout) * 1_000_000_000)
-                    return (urlRequest, nil, .failure(URLError(.timedOut, userInfo: ["Reason": "\(type(of: self.route)) timed out after \(timeout) seconds."])))
-                }
-            }
-
-            guard let rawRequestResponse = try await taskGroup.next() else {
-                throw URLError(.unknown, userInfo: ["Reason": "PopNetworking internal error, \(type(of: self.route)) failed to complete."])
-            }
-            taskGroup.cancelAll()
-            return rawRequestResponse
-        })
+        do {
+            let (data, response) = try await urlSession.data(for: urlRequest)
+            return (urlRequest, response as? HTTPURLResponse, .success(data))
+        }
+        catch {
+            return (urlRequest, nil, .failure(error))
+        }
     }
 
     func getUrlRequest(requestAdapter: NetworkingRequestAdapter?) async throws -> URLRequest {
