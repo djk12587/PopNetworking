@@ -41,32 +41,4 @@ class NetworkingRouteTests: XCTestCase {
             XCTAssertNotNil((error as NSError).userInfo["RawPayload"])
         }
     }
-
-    func testRequestDoesNotTimeout() async throws {
-        let routeTask = Mock.Route(baseUrl: "www.mockUrl.com",
-                                   responseSerializer: Mock.ResponseSerializer(.success("success")),
-                                   timeout: 1).task()
-        do {
-            let success = try await routeTask.value
-            XCTAssertEqual(success, "success")
-        } catch {
-            print(error)
-            XCTFail("the request should not timeout")
-        }
-    }
-
-    func testRequestTimesout() async throws {
-
-        let routeTask = Mock.Route(baseUrl: "www.mockUrl.com",
-                                   session: NetworkingSession(urlSession: Mock.UrlSession(mockDelay: 1)),
-                                   responseSerializer: Mock.ResponseSerializer(.success("success")),
-                                   timeout: 0).task()
-        do {
-            let success = try await routeTask.value
-            XCTAssertEqual(success, "this request should have timed out")
-        } catch {
-            XCTAssertEqual((error as NSError).code, URLError.timedOut.rawValue)
-            XCTAssertNotNil((error as NSError).userInfo["Reason"])
-        }
-    }
 }

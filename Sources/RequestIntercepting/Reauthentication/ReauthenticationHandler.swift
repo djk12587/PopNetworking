@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
+public actor ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
 
     private var activeReauthenticationTask: Task<NetworkingRequestRetrierResult, Never>?
     private let accessTokenVerifier: AccessTokenVerifier

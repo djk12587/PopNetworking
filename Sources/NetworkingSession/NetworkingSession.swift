@@ -31,43 +31,11 @@ public class NetworkingSession {
     private let requestRetrier: NetworkingRequestRetrier?
 
     public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                interceptor: Interceptor? = nil,
                 requestAdapter: NetworkingRequestAdapter? = nil,
-                requestRetrier: NetworkingRequestRetrier? = nil,
-                requestIntercepter: NetworkingRequestInterceptor? = nil) {
-
-        var adapters: [NetworkingRequestAdapter?] = []
-        adapters.append(requestAdapter)
-        adapters.append(requestIntercepter)
-        adapters.append(contentsOf: interceptor?.adapters ?? [])
-
-        var retriers: [NetworkingRequestRetrier?] = []
-        retriers.append(requestRetrier)
-        retriers.append(requestIntercepter)
-        retriers.append(contentsOf: interceptor?.retriers ?? [])
-
-        let allAdaptersAndRetriers = Interceptor(adapters: adapters.compactMap({ $0 }),
-                                                 retriers: retriers.compactMap({ $0 }))
-        self.requestAdapter = allAdaptersAndRetriers
-        self.requestRetrier = allAdaptersAndRetriers
+                requestRetrier: NetworkingRequestRetrier? = nil) {
         self.urlSession = urlSession
-    }
-
-    public convenience init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                            interceptor: Interceptor? = nil,
-                            requestAdapter: NetworkingRequestAdapter? = nil,
-                            requestRetrier: NetworkingRequestRetrier? = nil,
-                            requestIntercepter: NetworkingRequestInterceptor? = nil,
-                            accessTokenVerifier: some AccessTokenVerification) {
-
-        let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: accessTokenVerifier)
-        let combinedInterceptor = Interceptor(adapters: (interceptor?.adapters ?? []) + [reauthenticationHandler],
-                                              retriers: (interceptor?.retriers ?? []) + [reauthenticationHandler])
-        self.init(urlSession: urlSession,
-                  interceptor: combinedInterceptor,
-                  requestAdapter: requestAdapter,
-                  requestRetrier: requestRetrier,
-                  requestIntercepter: requestIntercepter)
+        self.requestAdapter = requestAdapter
+        self.requestRetrier = requestRetrier
     }
 
     /// Performs an HTTP request and parses the HTTP response into the `Route.ResponseSerializer.SerializedObject`
