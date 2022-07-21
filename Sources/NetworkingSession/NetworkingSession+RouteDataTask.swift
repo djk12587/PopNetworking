@@ -28,8 +28,7 @@ extension NetworkingSession {
                           requestAdapter: NetworkingRequestAdapter?) async -> RawRequestResponse {
             do {
                 let urlRequest = try await getUrlRequest(requestAdapter: requestAdapter)
-                let (_, response, result) = try await execute(urlRequest, on: urlSession)
-                return (urlRequest, response, result)
+                return await execute(urlRequest, on: urlSession)
             }
             catch {
                 return (nil, nil, .failure(error))
@@ -98,7 +97,7 @@ extension NetworkingSession {
 
 private extension NetworkingSession.RouteDataTask {
 
-    func execute(_ urlRequest: URLRequest, on urlSession: URLSessionProtocol) async throws -> RawRequestResponse {
+    func execute(_ urlRequest: URLRequest, on urlSession: URLSessionProtocol) async -> RawRequestResponse {
         do {
             let (data, response) = try await urlSession.data(for: urlRequest)
             return (urlRequest, response as? HTTPURLResponse, .success(data))
