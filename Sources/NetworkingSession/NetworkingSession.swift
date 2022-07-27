@@ -63,8 +63,9 @@ public class NetworkingSession {
 extension NetworkingSession: NetworkingSessionDelegate {
 
     func retry<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>, delay: TimeInterval?) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        guard let delay = delay else { return try await execute(routeDataTask) }
-        try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+        if let delay = delay {
+            try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+        }
         return try await execute(routeDataTask)
     }
 }
