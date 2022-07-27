@@ -38,6 +38,13 @@ public class NetworkingSession {
         self.requestRetrier = requestRetrier
     }
 
+    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+                requestInterceptor: NetworkingRequestInterceptor? = nil) {
+        self.urlSession = urlSession
+        self.requestAdapter = requestInterceptor
+        self.requestRetrier = requestInterceptor
+    }
+
     /// Performs an HTTP request and parses the HTTP response into the `Route.ResponseSerializer.SerializedObject`
     /// - Parameters:
     ///     - route: The ``NetworkingRoute`` you want to execute.

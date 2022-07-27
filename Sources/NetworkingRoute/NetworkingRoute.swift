@@ -46,8 +46,10 @@ public protocol NetworkingRoute {
     /// A `Retrier` allows you to retry the request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
     var retrier: Retrier? { get }
 
-    /// ``urlRequest-5u991``'s default implementation will use ``timeout-1inwx`` when instantiating a `URLRequest(url: timeoutInterval:)`
-    var timeout: TimeInterval? { get }
+    /// ``urlRequest-5u991``'s default implementation will use ``timeoutInterval-9db54`` when instantiating a `URLRequest(url: timeoutInterval:)`.
+    ///
+    /// - Note: If nil, the default, 60 seconds is used.
+    var timeoutInterval: TimeInterval? { get }
 
     /// Allows you to mock a response. Mainly used for testing purposes.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
@@ -61,14 +63,8 @@ public extension NetworkingRoute {
             guard let url = URL(string: baseUrl.appending(path)) else {
                 throw URLError(.badURL, userInfo: ["baseUrl": baseUrl, "path": path])
             }
-            var mutableRequest: URLRequest
-            if let timeout = timeout {
-                mutableRequest = URLRequest(url: url, timeoutInterval: timeout)
-            }
-            else {
-                mutableRequest = URLRequest(url: url)
-            }
 
+            var mutableRequest = URLRequest(url: url, timeoutInterval: timeoutInterval ?? 60.0)
             mutableRequest.httpMethod = method.rawValue
             try parameterEncoding?.encodeParams(into: &mutableRequest)
             headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
@@ -110,7 +106,7 @@ public extension NetworkingRoute {
     var headers: NetworkingRouteHttpHeaders? { nil }
     var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
     var retrier: Retrier? { nil }
-    var timeout: TimeInterval? { nil }
+    var timeoutInterval: TimeInterval? { nil }
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 }
 
