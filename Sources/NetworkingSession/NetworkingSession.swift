@@ -30,7 +30,7 @@ public class NetworkingSession {
     private let requestAdapter: NetworkingRequestAdapter?
     private let requestRetrier: NetworkingRequestRetrier?
 
-    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+    public init(urlSession: URLSession = URLSession(configuration: .default),
                 requestAdapter: NetworkingRequestAdapter? = nil,
                 requestRetrier: NetworkingRequestRetrier? = nil) {
         self.urlSession = urlSession
@@ -38,11 +38,19 @@ public class NetworkingSession {
         self.requestRetrier = requestRetrier
     }
 
-    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+    public init(urlSession: URLSession = URLSession(configuration: .default),
                 requestInterceptor: NetworkingRequestInterceptor? = nil) {
         self.urlSession = urlSession
         self.requestAdapter = requestInterceptor
         self.requestRetrier = requestInterceptor
+    }
+
+    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+                requestAdapter: NetworkingRequestAdapter? = nil,
+                requestRetrier: NetworkingRequestRetrier? = nil) {
+        self.urlSession = urlSession
+        self.requestAdapter = requestAdapter
+        self.requestRetrier = requestRetrier
     }
 
     /// Performs an HTTP request and parses the HTTP response into the `Route.ResponseSerializer.SerializedObject`
