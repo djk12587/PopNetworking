@@ -19,7 +19,7 @@ enum Mock {
         var session: NetworkingSession
         var responseSerializer: ResponseSerializer
         var retrier: Retrier?
-        var timeout: TimeInterval?
+        var timeoutInterval: TimeInterval?
 
         init(baseUrl: String = "https://mockUrl.com",
              path: String = "",
@@ -28,7 +28,7 @@ enum Mock {
              session: NetworkingSession = NetworkingSession(urlSession: Mock.UrlSession()),
              responseSerializer: ResponseSerializer,
              retrier: Retrier? = nil,
-             timeout: TimeInterval? = nil) {
+             timeoutInterval: TimeInterval? = nil) {
             self.baseUrl = baseUrl
             self.path = path
             self.method = method
@@ -36,7 +36,7 @@ enum Mock {
             self.session = session
             self.responseSerializer = responseSerializer
             self.retrier = retrier
-            self.timeout = timeout
+            self.timeoutInterval = timeoutInterval
         }
     }
 

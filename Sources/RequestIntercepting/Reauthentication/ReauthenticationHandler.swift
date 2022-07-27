@@ -13,8 +13,7 @@ import Foundation
  ```
  // example usage
  let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: yourAccessTokenVerifier())
- let networkingSession = NetworkingSession(requestAdapter: reauthenticationHandler,
-                                           requestRetrier: reauthenticationHandler)
+ let networkingSession = NetworkingSession(requestInterceptor: reauthenticationHandler)
  ```
  */
 public actor ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
