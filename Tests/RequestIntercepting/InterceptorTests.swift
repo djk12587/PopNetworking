@@ -54,7 +54,7 @@ class InterceptorTests: XCTestCase {
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializer([.failure(NSError()), .success(())])).result
+                             responseSerializer: Mock.ResponseSerializer([.failure(NSError(domain: "", code: 0)), .success(())])).result
         XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
         XCTAssertFalse(mockRequestInterceptor2.retrierDidRun)
     }
@@ -69,7 +69,7 @@ class InterceptorTests: XCTestCase {
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializer([.failure(NSError()), .success(())])).result
+                             responseSerializer: Mock.ResponseSerializer([.failure(NSError(domain: "", code: 0)), .success(())])).result
         XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
         XCTAssertFalse(mockRequestInterceptor2.retrierDidRun)
     }
