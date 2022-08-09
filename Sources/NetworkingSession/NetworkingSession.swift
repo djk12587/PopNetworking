@@ -81,13 +81,7 @@ extension NetworkingSession: NetworkingSessionDelegate {
 private extension NetworkingSession {
 
     func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        var urlRequestResult = await routeDataTask.urlRequestResult
-
-        try checkForCancellation(routeType: Route.self,
-                                 urlRequestResult: urlRequestResult)
-
-        urlRequestResult = await routeDataTask.execute(adapter: requestAdapter,
-                                                       adapt: urlRequestResult)
+        let urlRequestResult = await routeDataTask.getUrlRequestResult(execute: requestAdapter)
 
         try checkForCancellation(routeType: Route.self,
                                  urlRequestResult: urlRequestResult)
