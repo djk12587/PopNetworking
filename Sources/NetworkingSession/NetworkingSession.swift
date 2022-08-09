@@ -130,7 +130,7 @@ private extension NetworkingSession {
                                       "URLRequest": urlRequest,
                                       "URLResponse": urlResponse,
                                       "ResponseDataResult": responseDataResult,
-                                      "SerializedResult": serializedResult].compactMapValues({ $0 })
+                                      "SerializedResult": serializedResult].compactMapValues { $0 }
         throw URLError(.cancelled, userInfo: details)
     }
 }
