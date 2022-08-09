@@ -23,14 +23,20 @@ extension NetworkingSession {
 
         func execute(on urlSession: URLSessionProtocol,
                      adapter: NetworkingRequestAdapter?) async -> (Result<Data, Error>, HTTPURLResponse?, URLRequest?) {
-            do {
+
+            let urlRequestResult = await Result {
                 let urlRequest = try route.urlRequest
                 let adaptedUrlRequest = try await adapter?.adapt(urlRequest: urlRequest)
-                let (responseData, response) = try await urlSession.data(for: adaptedUrlRequest ?? urlRequest)
-                return (.success(responseData), response as? HTTPURLResponse, adaptedUrlRequest ?? urlRequest)
+                return adaptedUrlRequest ?? urlRequest
+            }
+
+            do {
+                let urlRequest = try urlRequestResult.get()
+                let (responseData, response) = try await urlSession.data(for: urlRequest)
+                return (.success(responseData), response as? HTTPURLResponse, urlRequest)
             }
             catch {
-                return (.failure(error), nil, nil)
+                return (.failure(error), nil, try? urlRequestResult.get())
             }
         }
 
@@ -99,5 +105,16 @@ internal extension Result {
     var error: Error? {
         guard case let .failure(error) = self else { return nil }
         return error
+    }
+}
+
+internal extension Result where Failure == Error {
+    init(asyncCatching: () async throws -> Success) async {
+        do {
+            let success = try await asyncCatching()
+            self = .success(success)
+        } catch {
+            self = .failure(error)
+        }
     }
 }
