@@ -21,26 +21,16 @@ extension NetworkingSession {
             self.networkingSessionDelegate = networkingSessionDelegate
         }
 
-        func getUrlRequestResult(execute adapter: NetworkingRequestAdapter?) async -> Result<URLRequest, Error> {
+        func execute(on urlSession: URLSessionProtocol,
+                     adapter: NetworkingRequestAdapter?) async -> (Result<Data, Error>, HTTPURLResponse?, URLRequest?) {
             do {
                 let urlRequest = try route.urlRequest
                 let adaptedUrlRequest = try await adapter?.adapt(urlRequest: urlRequest)
-                return .success(adaptedUrlRequest ?? urlRequest)
+                let (responseData, response) = try await urlSession.data(for: adaptedUrlRequest ?? urlRequest)
+                return (.success(responseData), response as? HTTPURLResponse, adaptedUrlRequest ?? urlRequest)
             }
             catch {
-                return .failure(error)
-            }
-        }
-
-        func execute(_ urlRequestResult: Result<URLRequest, Error>,
-                     on urlSession: URLSessionProtocol) async -> (Result<Data, Error>, HTTPURLResponse?) {
-            do {
-                let urlRequest = try urlRequestResult.get()
-                let (responseData, response) = try await urlSession.data(for: urlRequest)
-                return (.success(responseData), response as? HTTPURLResponse)
-            }
-            catch {
-                return (.failure(error), nil)
+                return (.failure(error), nil, nil)
             }
         }
 
@@ -51,7 +41,7 @@ extension NetworkingSession {
 
         func executeRetrier(retrier: NetworkingRequestRetrier?,
                             serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                            urlRequestResult: Result<URLRequest, Error>,
+                            urlRequest: URLRequest?,
                             response: HTTPURLResponse?) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
                 let retrier = retrier,
@@ -59,7 +49,7 @@ extension NetworkingSession {
                 let error = serializedResult.error
             else { return serializedResult }
 
-            switch await retrier.retry(urlRequest: try? urlRequestResult.get(),
+            switch await retrier.retry(urlRequest: urlRequest,
                                        dueTo: error,
                                        urlResponse: response,
                                        retryCount: retryCount) {
