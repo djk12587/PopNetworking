@@ -43,8 +43,8 @@ public protocol NetworkingRoute {
     /// Prebuilt `ResponseSerializer`s can be found here: ``NetworkingResponseSerializers``.
     var responseSerializer: ResponseSerializer { get }
 
-    /// A `Retrier` allows you to retry the request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
-    var retrier: Retrier? { get }
+    /// A `Repeater` allows you to retry the entire request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
+    var repeater: Repeater? { get }
 
     /// ``urlRequest-5u991``'s default implementation will use ``timeoutInterval-9db54`` when instantiating a `URLRequest(url: timeoutInterval:)`.
     ///
@@ -105,15 +105,15 @@ public extension NetworkingRoute {
     var session: NetworkingSession { .shared }
     var headers: NetworkingRouteHttpHeaders? { nil }
     var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
-    var retrier: Retrier? { nil }
     var timeoutInterval: TimeInterval? { nil }
+    var repeater: Repeater? { nil }
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 }
 
 public extension NetworkingRoute {
-    typealias Retrier = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
-                         _ response: HTTPURLResponse?,
-                         _ retryCount: Int) async throws -> NetworkingRequestRetrierResult
+    typealias Repeater = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
+                          _ response: HTTPURLResponse?,
+                          _ repeatCount: Int) async throws -> NetworkingRequestRetrierResult
 }
 
 private extension Result where Failure == Error {

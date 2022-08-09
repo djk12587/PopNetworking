@@ -81,42 +81,67 @@ extension NetworkingSession: NetworkingSessionDelegate {
 private extension NetworkingSession {
 
     func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        let (request, response, result) = await routeDataTask.executeRoute(urlSession: urlSession,
-                                                                           requestAdapter: requestAdapter)
-
-        var serializedResult = await routeDataTask.executeResponseSerializer(result: result,
-                                                                             response: response)
+        var urlRequestResult = await routeDataTask.urlRequestResult
 
         try checkForCancellation(routeType: Route.self,
-                                 rawPayload: (request, response, result),
-                                 result: serializedResult)
-        
-        serializedResult = try await routeDataTask.executeSessionRetrier(retrier: requestRetrier,
-                                                                         serializedResult: serializedResult,
-                                                                         request: request,
-                                                                         response: response,
-                                                                         responseError: result.error)
+                                 urlRequestResult: urlRequestResult)
+
+        urlRequestResult = await routeDataTask.execute(adapter: requestAdapter,
+                                                       adapt: urlRequestResult)
 
         try checkForCancellation(routeType: Route.self,
-                                 rawPayload: (request, response, result),
-                                 result: serializedResult)
+                                 urlRequestResult: urlRequestResult)
 
-        serializedResult = try await routeDataTask.executeRouteRetrier(serializedResult: serializedResult,
-                                                                       response: response)
+        let (responseDataResult, urlResponse) = await routeDataTask.execute(urlRequestResult,
+                                                                            on: urlSession)
 
         try checkForCancellation(routeType: Route.self,
-                                 rawPayload: (request, response, result),
-                                 result: serializedResult)
+                                 urlRequestResult: urlRequestResult,
+                                 urlResponse: urlResponse,
+                                 responseDataResult: responseDataResult)
+
+        var serializedResult = await routeDataTask.executeResponseSerializer(result: responseDataResult,
+                                                                             response: urlResponse)
+
+        try checkForCancellation(routeType: Route.self,
+                                 urlRequestResult: urlRequestResult,
+                                 urlResponse: urlResponse,
+                                 responseDataResult: responseDataResult,
+                                 serializedResult: serializedResult)
+
+        serializedResult = try await routeDataTask.executeRetrier(retrier: requestRetrier,
+                                                                  serializedResult: serializedResult,
+                                                                  urlRequestResult: urlRequestResult,
+                                                                  response: urlResponse)
+        try checkForCancellation(routeType: Route.self,
+                                 urlRequestResult: urlRequestResult,
+                                 urlResponse: urlResponse,
+                                 responseDataResult: responseDataResult,
+                                 serializedResult: serializedResult)
+
+        serializedResult = try await routeDataTask.executeRepeater(serializedResult: serializedResult,
+                                                                   response: urlResponse)
+
+        try checkForCancellation(routeType: Route.self,
+                                 urlRequestResult: urlRequestResult,
+                                 urlResponse: urlResponse,
+                                 responseDataResult: responseDataResult,
+                                 serializedResult: serializedResult)
 
         return serializedResult
     }
 
     func checkForCancellation<Route: NetworkingRoute>(routeType: Route.Type,
-                                                      rawPayload: RouteDataTask.RawRequestResponse,
-                                                      result: Result<Route.ResponseSerializer.SerializedObject, Error>) throws {
+                                                      urlRequestResult: Result<URLRequest, Error>,
+                                                      urlResponse: HTTPURLResponse? = nil,
+                                                      responseDataResult: Result<Data, Error>? = nil,
+                                                      serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>? = nil) throws {
         guard Task.isCancelled else { return }
-        throw URLError(.cancelled, userInfo: ["Reason": "\(routeType.self) was cancelled.",
-                                              "RawPayload": (rawPayload.request, rawPayload.response, rawPayload.result),
-                                              "Result": result])
+        let details: [String: Any] = ["Reason": "\(routeType.self) was cancelled.",
+                                      "UrlRequestResult": urlRequestResult,
+                                      "UrlResponse": urlResponse,
+                                      "ResponseDataResult": responseDataResult,
+                                      "SerializedResult": serializedResult].compactMapValues({ $0 })
+        throw URLError(.cancelled, userInfo: details)
     }
 }
