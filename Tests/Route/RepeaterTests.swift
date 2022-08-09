@@ -1,5 +1,5 @@
 //
-//  RouteRepeaterTests.swift
+//  RepeaterTests.swift
 //  
 //
 //  Created by Dan Koza on 12/6/21.
@@ -8,7 +8,7 @@
 import XCTest
 @testable import PopNetworking
 
-class RouteRepeaterTests: XCTestCase {
+class RepeaterTests: XCTestCase {
 
     func testRepeaterRetry() async {
         var numberOfRetries = 0
