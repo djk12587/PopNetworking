@@ -21,13 +21,9 @@ extension NetworkingSession {
             self.networkingSessionDelegate = networkingSessionDelegate
         }
 
-        var urlRequestResult: Result<URLRequest, Error> {
-            Result(catching: { try route.urlRequest })
-        }
-
-        func execute(adapter: NetworkingRequestAdapter?, adapt urlRequestResult: Result<URLRequest, Error>) async -> Result<URLRequest, Error> {
+        func getUrlRequestResult(execute adapter: NetworkingRequestAdapter?) async -> Result<URLRequest, Error> {
             do {
-                let urlRequest = try urlRequestResult.get()
+                let urlRequest = try route.urlRequest
                 let adaptedUrlRequest = try await adapter?.adapt(urlRequest: urlRequest)
                 return .success(adaptedUrlRequest ?? urlRequest)
             }
