@@ -81,16 +81,11 @@ extension NetworkingSession: NetworkingSessionDelegate {
 private extension NetworkingSession {
 
     func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        let urlRequestResult = await routeDataTask.getUrlRequestResult(execute: requestAdapter)
+        let (responseDataResult, urlResponse, urlRequest) = await routeDataTask.execute(on: urlSession,
+                                                                                        adapter: requestAdapter)
 
         try checkForCancellation(routeType: Route.self,
-                                 urlRequestResult: urlRequestResult)
-
-        let (responseDataResult, urlResponse) = await routeDataTask.execute(urlRequestResult,
-                                                                            on: urlSession)
-
-        try checkForCancellation(routeType: Route.self,
-                                 urlRequestResult: urlRequestResult,
+                                 urlRequest: urlRequest,
                                  urlResponse: urlResponse,
                                  responseDataResult: responseDataResult)
 
@@ -98,17 +93,17 @@ private extension NetworkingSession {
                                                                              response: urlResponse)
 
         try checkForCancellation(routeType: Route.self,
-                                 urlRequestResult: urlRequestResult,
+                                 urlRequest: urlRequest,
                                  urlResponse: urlResponse,
                                  responseDataResult: responseDataResult,
                                  serializedResult: serializedResult)
 
         serializedResult = try await routeDataTask.executeRetrier(retrier: requestRetrier,
                                                                   serializedResult: serializedResult,
-                                                                  urlRequestResult: urlRequestResult,
+                                                                  urlRequest: urlRequest,
                                                                   response: urlResponse)
         try checkForCancellation(routeType: Route.self,
-                                 urlRequestResult: urlRequestResult,
+                                 urlRequest: urlRequest,
                                  urlResponse: urlResponse,
                                  responseDataResult: responseDataResult,
                                  serializedResult: serializedResult)
@@ -117,7 +112,7 @@ private extension NetworkingSession {
                                                                    response: urlResponse)
 
         try checkForCancellation(routeType: Route.self,
-                                 urlRequestResult: urlRequestResult,
+                                 urlRequest: urlRequest,
                                  urlResponse: urlResponse,
                                  responseDataResult: responseDataResult,
                                  serializedResult: serializedResult)
@@ -126,14 +121,14 @@ private extension NetworkingSession {
     }
 
     func checkForCancellation<Route: NetworkingRoute>(routeType: Route.Type,
-                                                      urlRequestResult: Result<URLRequest, Error>,
+                                                      urlRequest: URLRequest? = nil,
                                                       urlResponse: HTTPURLResponse? = nil,
                                                       responseDataResult: Result<Data, Error>? = nil,
                                                       serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>? = nil) throws {
         guard Task.isCancelled else { return }
         let details: [String: Any] = ["Reason": "\(routeType.self) was cancelled.",
-                                      "UrlRequestResult": urlRequestResult,
-                                      "UrlResponse": urlResponse,
+                                      "URLRequest": urlRequest,
+                                      "URLResponse": urlResponse,
                                       "ResponseDataResult": responseDataResult,
                                       "SerializedResult": serializedResult].compactMapValues({ $0 })
         throw URLError(.cancelled, userInfo: details)
