@@ -68,11 +68,11 @@ extension NetworkingSession {
                                        urlResponse: response,
                                        retryCount: retryCount) {
                 case .retry:
-                    incrementRetryCount()
+                    retryCount.increment()
                     return try await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    incrementRetryCount()
+                    retryCount.increment()
                     return try await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
@@ -89,11 +89,11 @@ extension NetworkingSession {
 
             switch try await routeRetrier(serializedResult, response, repeatCount) {
                 case .retry:
-                    incrementRepeatCount()
+                    repeatCount.increment()
                     return try await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    incrementRepeatCount()
+                    repeatCount.increment()
                     return try await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
@@ -103,14 +103,9 @@ extension NetworkingSession {
     }
 }
 
-private extension NetworkingSession.RouteDataTask {
-
-    func incrementRetryCount() {
-        retryCount += 1
-    }
-
-    func incrementRepeatCount() {
-        repeatCount += 1
+private extension Int {
+    mutating func increment() {
+        self += 1
     }
 }
 
