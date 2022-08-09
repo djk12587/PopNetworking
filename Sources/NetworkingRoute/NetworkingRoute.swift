@@ -115,14 +115,3 @@ public extension NetworkingRoute {
                           _ response: HTTPURLResponse?,
                           _ repeatCount: Int) async throws -> NetworkingRequestRetrierResult
 }
-
-private extension Result where Failure == Error {
-    init(asyncCatching: () async throws -> Success) async {
-        do {
-            let success = try await asyncCatching()
-            self = .success(success)
-        } catch {
-            self = .failure(error)
-        }
-    }
-}
