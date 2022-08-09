@@ -1,5 +1,5 @@
 //
-//  RetrierTests.swift
+//  RouteRepeaterTests.swift
 //  
 //
 //  Created by Dan Koza on 12/6/21.
@@ -8,9 +8,9 @@
 import XCTest
 @testable import PopNetworking
 
-class RouteRetrierTests: XCTestCase {
+class RouteRepeaterTests: XCTestCase {
 
-    func testRetrierRetry() async {
+    func testRepeaterRetry() async {
         var numberOfRetries = 0
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
@@ -22,7 +22,7 @@ class RouteRetrierTests: XCTestCase {
         XCTAssertEqual(numberOfRetries, 2)
     }
 
-    func testRetrierRetryWithDelay() async {
+    func testRepeaterRetryWithDelay() async {
         var numberOfRetries = 0
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
@@ -34,7 +34,7 @@ class RouteRetrierTests: XCTestCase {
         XCTAssertEqual(numberOfRetries, 1)
     }
 
-    func testRetrierDoNotRetry() async {
+    func testRepeaterDoNotRetry() async {
         var numberOfRetries = 0
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
@@ -46,7 +46,7 @@ class RouteRetrierTests: XCTestCase {
         XCTAssertEqual(numberOfRetries, 0)
     }
 
-    func testRetrierThrows() async {
+    func testRepeaterThrows() async {
         let mockError = NSError(domain: "mock Error", code: 1)
         let result = await Mock.Route(baseUrl: "base",
                                       responseSerializer: Mock.ResponseSerializer(.success("success")),
@@ -59,7 +59,7 @@ class RouteRetrierTests: XCTestCase {
         }
     }
 
-    func testRetrierParameters() async throws {
+    func testRepeaterParameters() async throws {
         _ = try await Mock.Route(baseUrl: "base",
                                  session: NetworkingSession(urlSession: Mock.UrlSession(mockUrlResponse: HTTPURLResponse())),
                                  responseSerializer: Mock.ResponseSerializer(.success("success")),
