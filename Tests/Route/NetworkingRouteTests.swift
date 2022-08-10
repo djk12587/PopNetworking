@@ -19,7 +19,6 @@ class NetworkingRouteTests: XCTestCase {
             XCTFail("routeTask.value should throw a cancellation error")
         } catch {
             XCTAssertEqual((error as NSError).code, URLError.cancelled.rawValue)
-            XCTAssertNotNil((error as NSError).userInfo["Reason"])
         }
     }
 }

@@ -113,5 +113,5 @@ public extension NetworkingRoute {
 public extension NetworkingRoute {
     typealias Repeater = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
                           _ response: HTTPURLResponse?,
-                          _ repeatCount: Int) async throws -> NetworkingRequestRetrierResult
+                          _ repeatCount: Int) async -> NetworkingRequestRetrierResult
 }
