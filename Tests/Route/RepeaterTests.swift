@@ -46,28 +46,33 @@ class RepeaterTests: XCTestCase {
         XCTAssertEqual(numberOfRetries, 0)
     }
 
-    func testRepeaterThrows() async {
-        let mockError = NSError(domain: "mock Error", code: 1)
-        let result = await Mock.Route(baseUrl: "base",
-                                      responseSerializer: Mock.ResponseSerializer(.success("success")),
-                                      repeater: { _, _, _ in
-            throw mockError
-        }).result
-
-        XCTAssertThrowsError(try result.get()) { error in
-            XCTAssertEqual(mockError, error as NSError)
-        }
-    }
-
     func testRepeaterParameters() async throws {
         _ = try await Mock.Route(baseUrl: "base",
                                  session: NetworkingSession(urlSession: Mock.UrlSession(mockUrlResponse: HTTPURLResponse())),
                                  responseSerializer: Mock.ResponseSerializer(.success("success")),
                                  repeater: { result, response, repeatCount in
-            XCTAssertEqual(try result.get(), "success")
+            XCTAssertEqual(try? result.get(), "success")
             XCTAssertNotNil(response)
             XCTAssertEqual(repeatCount, 0)
             return .doNotRetry
         }).result.get()
+    }
+
+    func testRepeaterCancellation() async throws {
+        let routeTask = Route(baseUrl: "www.thisRequestWillBeCancelled.com",
+                              responseSerializer: NetworkingResponseSerializers.DataResponseSerializer(),
+                              repeater: { result, response, repeatCount in
+            XCTAssertEqual((result.error as? NSError)?.code, URLError.cancelled.rawValue)
+            return .doNotRetry
+        }).task()
+
+        routeTask.cancel()
+
+        do {
+            _ = try await routeTask.value
+            XCTFail("routeTask.value should throw a cancellation error")
+        } catch {
+            XCTAssertEqual((error as NSError).code, URLError.cancelled.rawValue)
+        }
     }
 }

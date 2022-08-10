@@ -42,13 +42,14 @@ extension NetworkingSession {
 
         func executeResponseSerializer(result: Result<Data, Error>,
                                        response: HTTPURLResponse?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-            return route.responseSerializer.serialize(result: result, urlResponse: response)
+            return route.responseSerializer.serialize(result: result,
+                                                      urlResponse: response)
         }
 
         func executeRetrier(retrier: NetworkingRequestRetrier?,
                             serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
                             urlRequest: URLRequest?,
-                            response: HTTPURLResponse?) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+                            response: HTTPURLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
                 let retrier = retrier,
                 let networkingSessionDelegate = networkingSessionDelegate,
@@ -61,11 +62,11 @@ extension NetworkingSession {
                                        retryCount: retryCount) {
                 case .retry:
                     retryCount.increment()
-                    return try await networkingSessionDelegate.retry(self, delay: nil)
+                    return await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
                     retryCount.increment()
-                    return try await networkingSessionDelegate.retry(self, delay: delay)
+                    return await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
                     return serializedResult
@@ -73,20 +74,20 @@ extension NetworkingSession {
         }
 
         func executeRepeater(serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                             response: HTTPURLResponse?) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+                             response: HTTPURLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
                 let routeRetrier = route.repeater,
                 let networkingSessionDelegate = networkingSessionDelegate
             else { return serializedResult }
 
-            switch try await routeRetrier(serializedResult, response, repeatCount) {
+            switch await routeRetrier(serializedResult, response, repeatCount) {
                 case .retry:
                     repeatCount.increment()
-                    return try await networkingSessionDelegate.retry(self, delay: nil)
+                    return await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
                     repeatCount.increment()
-                    return try await networkingSessionDelegate.retry(self, delay: delay)
+                    return await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
                     return serializedResult
