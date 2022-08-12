@@ -44,6 +44,17 @@ public protocol NetworkingRoute {
     var responseSerializer: ResponseSerializer { get }
 
     /// A `Repeater` allows you to retry the entire request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
+    ///
+    /// ```swift
+    /// // example usage
+    /// let response = try await SomeNetworkingRoute(repeater: { result, response, repeatCount in
+    ///     if repeatCount < 2 && response?.statusCode == 500 {
+    ///         return .retryWithDelay(1) // repeats the request if the server returns a 500
+    ///     } else {
+    ///         return .doNotRetry
+    ///     }
+    /// }).run
+    /// ```
     var repeater: Repeater? { get }
 
     /// <doc:/documentation/PopNetworking/NetworkingRoute/urlRequest-5u991>'s default implementation will use <doc:/documentation/PopNetworking/NetworkingRoute/timeoutInterval-9db54> when instantiating a `URLRequest(url: timeoutInterval:)`.
@@ -57,7 +68,23 @@ public protocol NetworkingRoute {
 
 public extension NetworkingRoute {
 
-    /// Default implementation. Feel free to implement your own version if needed.
+    /// Default implementation provided. Feel free to implement your own version if needed.
+    ///
+    /// ```swift
+    /// var urlRequest: URLRequest {
+    ///     get throws {
+    ///         guard let url = URL(string: baseUrl.appending(path)) else {
+    ///             throw URLError(.badURL, userInfo: ["baseUrl": baseUrl, "path": path])
+    ///         }
+    ///
+    ///         var mutableRequest = URLRequest(url: url, timeoutInterval: timeoutInterval ?? 60.0)
+    ///         mutableRequest.httpMethod = method.rawValue
+    ///         try parameterEncoding?.encodeParams(into: &mutableRequest)
+    ///         headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
+    ///         return mutableRequest
+    ///     }
+    /// }
+    /// ```
     var urlRequest: URLRequest {
         get throws {
             guard let url = URL(string: baseUrl.appending(path)) else {
@@ -72,24 +99,80 @@ public extension NetworkingRoute {
         }
     }
 
+    /// Runs the `NetworkingRoute`
+    ///
+    /// Default implementation provided. Feel free to implement your own version if needed.
+    ///
+    /// ```swift
+    /// var run: ResponseSerializer.SerializedObject {
+    ///     get async throws {
+    ///         try await session.execute(route: self)
+    ///     }
+    /// }
+    /// ```
+    /// - Returns: Returns your network response
     var run: ResponseSerializer.SerializedObject {
         get async throws {
             try await session.execute(route: self)
         }
     }
 
+    /// Runs the `NetworkingRoute`
+    ///
+    /// Default implementation provided. Feel free to implement your own version if needed.
+    ///
+    /// ```swift
+    /// func task(priority: TaskPriority? = nil) -> Task<ResponseSerializer.SerializedObject, Error> {
+    ///     Task(priority: priority) {
+    ///         try await run
+    ///     }
+    /// }
+    /// ```
+    /// - Returns: A Task that contains your network response
     func task(priority: TaskPriority? = nil) -> Task<ResponseSerializer.SerializedObject, Error> {
         Task(priority: priority) {
             try await run
         }
     }
 
+    /// Runs the `NetworkingRoute`
+    ///
+    /// Default implementation provided. Feel free to implement your own version if needed.
+    ///
+    /// ```swift
+    /// var result: Result<ResponseSerializer.SerializedObject, Error> {
+    ///     get async {
+    ///         await Result { try await run }
+    ///     }
+    /// }
+    /// ```
+    /// - Returns: A Result type that contains your network response
     var result: Result<ResponseSerializer.SerializedObject, Error> {
         get async {
             await Result { try await run }
         }
     }
 
+    /// Runs the `NetworkingRoute`
+    ///
+    /// Default implementation provided. Feel free to implement your own version if needed.
+    ///
+    /// ```swift
+    /// func request(priority: TaskPriority? = nil,
+    ///              completeOn queue: DispatchQueue = .main,
+    ///              completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
+    ///     let requestTask = task(priority: priority)
+    ///     Task(priority: priority) {
+    ///         let result = await requestTask.result
+    ///         queue.async { completion(result) }
+    ///     }
+    ///     return requestTask
+    /// }
+    /// ```
+    /// - Parameters:
+    ///   - priority: Sets a `TaskPriority` for your request. Defaults to nil
+    ///   - queue: The queue your `completion` will be exectued on. The default is the main thread.
+    ///   - completion: Block that contains your network response
     @discardableResult
     func request(priority: TaskPriority? = nil,
                  completeOn queue: DispatchQueue = .main,
