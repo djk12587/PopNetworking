@@ -3,8 +3,8 @@
 PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for protocol-oriented programming.
 
 ## Requirements 
+- Xcode 14.0+
 - Swift 5.7+
-- Xcode 14.0+ 
 - iOS 13.0+ / watchOS 6+ / tvOS 13+ / macOS 10.15+
 
 ## Documentation
