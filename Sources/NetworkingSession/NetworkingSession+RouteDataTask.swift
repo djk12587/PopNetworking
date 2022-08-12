@@ -8,96 +8,86 @@
 import Foundation
 
 extension NetworkingSession {
-    internal class RouteDataTask<Route: NetworkingRoute> {
+    internal actor RouteDataTask<Route: NetworkingRoute> {
 
         private let route: Route
-        private var dataTask: URLSessionDataTask?
-        private var sessionRetryCount = 0
-        private var responseRetryCount = 0
+        private var retryCount = 0
+        private var repeatCount = 0
         private weak var networkingSessionDelegate: NetworkingSessionDelegate?
 
-        init(route: Route, networkingSessionDelegate: NetworkingSessionDelegate) {
+        init(route: Route,
+             networkingSessionDelegate: NetworkingSessionDelegate) {
             self.route = route
             self.networkingSessionDelegate = networkingSessionDelegate
         }
 
-        func executeRoute(urlSession: URLSessionProtocol,
-                          requestAdapter: NetworkingRequestAdapter?) async -> (URLRequest?, Data?, HTTPURLResponse?, Error?) {
+        func execute(on urlSession: URLSessionProtocol,
+                     adapter: NetworkingRequestAdapter?) async -> (Result<Data, Error>, HTTPURLResponse?, URLRequest?) {
+
+            let urlRequestResult = await Result {
+                let urlRequest = try route.urlRequest
+                let adaptedUrlRequest = try await adapter?.adapt(urlRequest: urlRequest)
+                return adaptedUrlRequest ?? urlRequest
+            }
+
             do {
-                let urlRequestToRun = try await getUrlRequest(requestAdapter: requestAdapter)
-                let routeResponse: (URLRequest?, Data?, HTTPURLResponse?, Error?) = await withCheckedContinuation { continuation in
-                    dataTask = urlSession.dataTask(with: urlRequestToRun) { data, response, error in
-                        continuation.resume(returning: (urlRequestToRun,
-                                                        data,
-                                                        response as? HTTPURLResponse,
-                                                        error))
-                    }
-                    Task.isCancelled ? dataTask?.cancel() : dataTask?.resume()
-                }
-                return routeResponse
+                let urlRequest = try urlRequestResult.get()
+                let (responseData, response) = try await urlSession.data(for: urlRequest)
+                return (.success(responseData), response as? HTTPURLResponse, urlRequest)
             }
             catch {
-                return (nil, nil, nil, error)
+                return (.failure(error), nil, try? urlRequestResult.get())
             }
         }
 
-        func executeResponseSerializer(responseData: Data?,
-                                       response: HTTPURLResponse?,
-                                       responseError: Error?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-            return route.responseSerializer.serialize(responseData: responseData,
-                                                      urlResponse: response,
-                                                      responseError: responseError)
+        func executeResponseSerializer(result: Result<Data, Error>,
+                                       response: HTTPURLResponse?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+            return route.responseSerializer.serialize(result: result,
+                                                      urlResponse: response)
         }
 
-        func executeSessionRetrier(retrier: NetworkingRequestRetrier?,
-                                   serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                                   request: URLRequest?,
-                                   response: HTTPURLResponse?,
-                                   responseError: Error?) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        func executeRetrier(retrier: NetworkingRequestRetrier?,
+                            serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
+                            urlRequest: URLRequest?,
+                            response: HTTPURLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
                 let retrier = retrier,
                 let networkingSessionDelegate = networkingSessionDelegate,
-                let error = responseError ?? serializedResult.error
-            else {
-                return serializedResult
-            }
+                let error = serializedResult.error
+            else { return serializedResult }
 
-            switch await retrier.retry(urlRequest: request,
+            switch await retrier.retry(urlRequest: urlRequest,
                                        dueTo: error,
                                        urlResponse: response,
-                                       retryCount: sessionRetryCount) {
+                                       retryCount: retryCount) {
                 case .retry:
-                    incrementSessionRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    retryCount.increment()
+                    return await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
-                    incrementSessionRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    retryCount.increment()
+                    return await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
                     return serializedResult
             }
         }
 
-        func executeRouteRetrier(serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                                 response: HTTPURLResponse?) async throws -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        func executeRepeater(serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
+                             response: HTTPURLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
-                let routeRetrier = route.retrier,
+                let routeRetrier = route.repeater,
                 let networkingSessionDelegate = networkingSessionDelegate
-            else {
-                return serializedResult
-            }
+            else { return serializedResult }
 
-            switch try await routeRetrier(serializedResult, response, responseRetryCount) {
+            switch await routeRetrier(serializedResult, response, repeatCount) {
                 case .retry:
-                    incrementResponseRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    repeatCount.increment()
+                    return await networkingSessionDelegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
-                    incrementResponseRetryCount()
-                    return try await networkingSessionDelegate.retry(self)
+                    repeatCount.increment()
+                    return await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
                     return serializedResult
@@ -106,26 +96,26 @@ extension NetworkingSession {
     }
 }
 
-private extension NetworkingSession.RouteDataTask {
-
-    func getUrlRequest(requestAdapter: NetworkingRequestAdapter?) async throws -> URLRequest {
-        let urlRequest = try route.urlRequest
-        let adaptedUrlRequest = try await requestAdapter?.adapt(urlRequest: urlRequest)
-        return adaptedUrlRequest ?? urlRequest
-    }
-
-    func incrementSessionRetryCount() {
-        sessionRetryCount += 1
-    }
-
-    func incrementResponseRetryCount() {
-        responseRetryCount += 1
+private extension Int {
+    mutating func increment() {
+        self += 1
     }
 }
 
-private extension Result {
+internal extension Result {
     var error: Error? {
         guard case let .failure(error) = self else { return nil }
         return error
+    }
+}
+
+internal extension Result where Failure == Error {
+    init(asyncCatching: () async throws -> Success) async {
+        do {
+            let success = try await asyncCatching()
+            self = .success(success)
+        } catch {
+            self = .failure(error)
+        }
     }
 }

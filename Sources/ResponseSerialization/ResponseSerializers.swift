@@ -30,12 +30,10 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
-            if let error = responseError { return .failure(error) }
-            guard let data = responseData else {
-                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
+            return result.flatMap { data in
+                Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
             }
-            return Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
         }
     }
 
@@ -62,24 +60,20 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SuccessType, Error> {
-
-            if let error = responseError { return .failure(error) }
-            guard let data = responseData else {
-                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
-            }
-
-            do {
-                let serializedOjbect = try jsonDecoder.decode(SerializedObject.self, from: data)
-                return .success(serializedOjbect)
-            }
-            catch let serializedObjectError {
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
+            return result.flatMap { data in
                 do {
-                    let serializedError = try jsonDecoder.decode(SerializedErrorObject.self, from: data)
-                    return .failure(serializedError)
+                    let serializedOjbect = try jsonDecoder.decode(SerializedObject.self, from: data)
+                    return .success(serializedOjbect)
                 }
-                catch let errorSerializerError {
-                    return .failure([serializedObjectError, errorSerializerError])
+                catch let serializedObjectError {
+                    do {
+                        let serializedError = try jsonDecoder.decode(SerializedErrorObject.self, from: data)
+                        return .failure(serializedError)
+                    }
+                    catch let errorSerializerError {
+                        return .failure([serializedObjectError, errorSerializerError])
+                    }
                 }
             }
         }
@@ -91,10 +85,11 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
-            if let error = responseError { return .failure(error) }
-            guard let response = urlResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
-            return .success(response.statusCode)
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<Int, Error> {
+            return result.flatMap { _ in
+                guard let response = urlResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
+                return .success(response.statusCode)
+            }
         }
     }
 
@@ -104,12 +99,6 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(responseData: Data?, urlResponse: HTTPURLResponse?, responseError: Error?) -> Result<SerializedObject, Error> {
-            if let error = responseError { return .failure(error) }
-            guard let data = responseData else {
-                return .failure(URLError(.cannotParseResponse, userInfo: ["Reason": "Response data was nil"]))
-            }
-            return .success(data)
-        }
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<Data, Error> { result }
     }
 }
