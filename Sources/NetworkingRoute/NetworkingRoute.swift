@@ -46,7 +46,7 @@ public protocol NetworkingRoute {
     /// A `Repeater` allows you to retry the entire request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
     var repeater: Repeater? { get }
 
-    /// ``urlRequest-5u991``'s default implementation will use ``timeoutInterval-9db54`` when instantiating a `URLRequest(url: timeoutInterval:)`.
+    /// <doc:/documentation/PopNetworking/NetworkingRoute/urlRequest-5u991>'s default implementation will use <doc:/documentation/PopNetworking/NetworkingRoute/timeoutInterval-9db54> when instantiating a `URLRequest(url: timeoutInterval:)`.
     ///
     /// - Note: If nil, the default, 60 seconds is used.
     var timeoutInterval: TimeInterval? { get }
