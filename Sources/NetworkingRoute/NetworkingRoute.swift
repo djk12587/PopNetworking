@@ -71,17 +71,20 @@ public extension NetworkingRoute {
     /// Default implementation provided. Feel free to implement your own version if needed.
     ///
     /// ```swift
-    /// var urlRequest: URLRequest {
-    ///     get throws {
-    ///         guard let url = URL(string: baseUrl.appending(path)) else {
-    ///             throw URLError(.badURL, userInfo: ["baseUrl": baseUrl, "path": path])
-    ///         }
+    /// extension NetworkingRoute {
     ///
-    ///         var mutableRequest = URLRequest(url: url, timeoutInterval: timeoutInterval ?? 60.0)
-    ///         mutableRequest.httpMethod = method.rawValue
-    ///         try parameterEncoding?.encodeParams(into: &mutableRequest)
-    ///         headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
-    ///         return mutableRequest
+    ///     var urlRequest: URLRequest {
+    ///         get throws {
+    ///             guard let url = URL(string: self.baseUrl.appending(self.path)) else {
+    ///                 throw URLError(.badURL, userInfo: ["baseUrl": baseUrl, "path": path])
+    ///             }
+    ///
+    ///             var mutableRequest = URLRequest(url: url, timeoutInterval: self.timeoutInterval ?? 60.0)
+    ///             mutableRequest.httpMethod = self.method.rawValue
+    ///             try self.parameterEncoding?.encodeParams(into: &mutableRequest)
+    ///             self.headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
+    ///             return mutableRequest
+    ///         }
     ///     }
     /// }
     /// ```
@@ -104,9 +107,12 @@ public extension NetworkingRoute {
     /// Default implementation provided. Feel free to implement your own version if needed.
     ///
     /// ```swift
-    /// var run: ResponseSerializer.SerializedObject {
-    ///     get async throws {
-    ///         try await session.execute(route: self)
+    /// extension NetworkingRoute {
+    ///
+    ///     var run: ResponseSerializer.SerializedObject {
+    ///         get async throws {
+    ///             try await self.session.execute(route: self)
+    ///         }
     ///     }
     /// }
     /// ```
@@ -122,9 +128,12 @@ public extension NetworkingRoute {
     /// Default implementation provided. Feel free to implement your own version if needed.
     ///
     /// ```swift
-    /// func task(priority: TaskPriority? = nil) -> Task<ResponseSerializer.SerializedObject, Error> {
-    ///     Task(priority: priority) {
-    ///         try await run
+    /// extension NetworkingRoute {
+    ///
+    ///     func task(priority: TaskPriority? = nil) -> Task<ResponseSerializer.SerializedObject, Error> {
+    ///         Task(priority: priority) {
+    ///             try await self.run
+    ///         }
     ///     }
     /// }
     /// ```
@@ -140,9 +149,12 @@ public extension NetworkingRoute {
     /// Default implementation provided. Feel free to implement your own version if needed.
     ///
     /// ```swift
-    /// var result: Result<ResponseSerializer.SerializedObject, Error> {
-    ///     get async {
-    ///         await Result { try await run }
+    /// extension NetworkingRoute {
+    ///
+    ///     var result: Result<ResponseSerializer.SerializedObject, Error> {
+    ///         get async {
+    ///             await Result { try await self.run }
+    ///         }
     ///     }
     /// }
     /// ```
@@ -158,15 +170,18 @@ public extension NetworkingRoute {
     /// Default implementation provided. Feel free to implement your own version if needed.
     ///
     /// ```swift
-    /// func request(priority: TaskPriority? = nil,
-    ///              completeOn queue: DispatchQueue = .main,
-    ///              completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
-    ///     let requestTask = task(priority: priority)
-    ///     Task(priority: priority) {
-    ///         let result = await requestTask.result
-    ///         queue.async { completion(result) }
+    /// extension NetworkingRoute {
+    ///
+    ///     func request(priority: TaskPriority? = nil,
+    ///                  completeOn queue: DispatchQueue = .main,
+    ///                  completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
+    ///         let requestTask = self.task(priority: priority)
+    ///         Task(priority: priority) {
+    ///             let result = await requestTask.result
+    ///             queue.async { completion(result) }
+    ///         }
+    ///         return requestTask
     ///     }
-    ///     return requestTask
     /// }
     /// ```
     /// - Parameters:
