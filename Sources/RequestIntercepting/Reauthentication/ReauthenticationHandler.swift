@@ -7,7 +7,16 @@
 
 import Foundation
 
-internal class ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
+/**
+ A class that helps ensure a `URLRequest`'s authorization is always up to date. See ``AccessTokenVerification`` for more details.
+
+ ```
+ // example usage
+ let reauthenticationHandler = ReauthenticationHandler(accessTokenVerifier: yourAccessTokenVerifier())
+ let networkingSession = NetworkingSession(requestInterceptor: reauthenticationHandler)
+ ```
+ */
+public actor ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerification>: NetworkingRequestInterceptor {
 
     private var activeReauthenticationTask: Task<NetworkingRequestRetrierResult, Never>?
     private let accessTokenVerifier: AccessTokenVerifier

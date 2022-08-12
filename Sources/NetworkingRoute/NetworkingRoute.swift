@@ -43,8 +43,13 @@ public protocol NetworkingRoute {
     /// Prebuilt `ResponseSerializer`s can be found here: ``NetworkingResponseSerializers``.
     var responseSerializer: ResponseSerializer { get }
 
-    /// A `Retrier` allows you to retry the request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
-    var retrier: Retrier? { get }
+    /// A `Repeater` allows you to retry the entire request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
+    var repeater: Repeater? { get }
+
+    /// <doc:/documentation/PopNetworking/NetworkingRoute/urlRequest-5u991>'s default implementation will use <doc:/documentation/PopNetworking/NetworkingRoute/timeoutInterval-9db54> when instantiating a `URLRequest(url: timeoutInterval:)`.
+    ///
+    /// - Note: If nil, the default, 60 seconds is used.
+    var timeoutInterval: TimeInterval? { get }
 
     /// Allows you to mock a response. Mainly used for testing purposes.
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { get }
@@ -52,19 +57,14 @@ public protocol NetworkingRoute {
 
 public extension NetworkingRoute {
 
-    var session: NetworkingSession { .shared }
-    var headers: NetworkingRouteHttpHeaders? { nil }
-    var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
-    var retrier: Retrier? { nil }
-    var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
-
     /// Default implementation. Feel free to implement your own version if needed.
     var urlRequest: URLRequest {
         get throws {
             guard let url = URL(string: baseUrl.appending(path)) else {
                 throw URLError(.badURL, userInfo: ["baseUrl": baseUrl, "path": path])
             }
-            var mutableRequest = URLRequest(url: url)
+
+            var mutableRequest = URLRequest(url: url, timeoutInterval: timeoutInterval ?? 60.0)
             mutableRequest.httpMethod = method.rawValue
             try parameterEncoding?.encodeParams(into: &mutableRequest)
             headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
@@ -101,21 +101,17 @@ public extension NetworkingRoute {
         }
         return requestTask
     }
+
+    var session: NetworkingSession { .shared }
+    var headers: NetworkingRouteHttpHeaders? { nil }
+    var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
+    var timeoutInterval: TimeInterval? { nil }
+    var repeater: Repeater? { nil }
+    var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
 }
 
 public extension NetworkingRoute {
-    typealias Retrier = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
-                         _ response: HTTPURLResponse?,
-                         _ retryCount: Int) async throws -> NetworkingRequestRetrierResult
-}
-
-private extension Result where Failure == Error {
-    init(asyncCatching: () async throws -> Success) async {
-        do {
-            let success = try await asyncCatching()
-            self = .success(success)
-        } catch {
-            self = .failure(error)
-        }
-    }
+    typealias Repeater = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
+                          _ response: HTTPURLResponse?,
+                          _ repeatCount: Int) async -> NetworkingRequestRetrierResult
 }
