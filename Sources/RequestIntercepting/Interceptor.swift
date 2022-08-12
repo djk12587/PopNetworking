@@ -12,8 +12,8 @@ import Foundation
 /// - Attention: All ``NetworkingRequestAdapter``'s will run until one fails. ``NetworkingRequestRetrier``'s will run until a retry results in a successful response.
 public struct Interceptor: NetworkingRequestInterceptor {
 
-    let adapters: [NetworkingRequestAdapter]
-    let retriers: [NetworkingRequestRetrier]
+    private let adapters: [NetworkingRequestAdapter]
+    private let retriers: [NetworkingRequestRetrier]
 
     public init(requestInterceptors: [NetworkingRequestInterceptor]) {
         self.adapters = requestInterceptors
