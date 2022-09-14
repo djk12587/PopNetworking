@@ -61,6 +61,10 @@ enum Mock {
             try? await Task.sleep(nanoseconds: UInt64(mockDelay ?? 0) * 1_000_000_000)
             return (try mockResult.get(), self.mockUrlResponse ?? URLResponse())
         }
+
+        func data(for request: URLRequest, delegate: URLSessionTaskDelegate?) async throws -> (Data, URLResponse) {
+            try await data(for: request)
+        }
     }
 
     class ResponseSerializer<SuccessType>: NetworkingResponseSerializer {
