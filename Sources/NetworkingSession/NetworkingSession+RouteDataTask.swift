@@ -24,7 +24,7 @@ extension NetworkingSession {
         func execute(on urlSession: URLSessionProtocol,
                      adapter: NetworkingRequestAdapter?) async -> (Result<Data, Error>, HTTPURLResponse?, URLRequest?) {
 
-            let urlRequestResult = await Result {
+            let urlRequestResult: Result<URLRequest, Error> = await Result {
                 let urlRequest = try route.urlRequest
                 let adaptedUrlRequest = try await adapter?.adapt(urlRequest: urlRequest)
                 return adaptedUrlRequest ?? urlRequest
