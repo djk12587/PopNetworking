@@ -7,6 +7,17 @@
 
 import Foundation
 
+public enum ReauthorizationMethod {
+    /// Your access token is invalid and needs to be refreshed. Once reauthorization is complete your request will be retried
+    case refreshAuthorization
+
+    /// Your access token is valid, retry the request
+    case retryRequest
+
+    /// Do nothing and let the request fail
+    case doNothing
+}
+
 /**
  A protocol that helps ensure a `URLRequest`'s authorization is always up to date. ``AccessTokenVerification`` can be applied to a ``NetworkingSession``. Initialize a ``ReauthenticationHandler`` and set the instance of ``ReauthenticationHandler`` to a ``NetworkingSession``'s ``NetworkingRequestAdapter`` & ``NetworkingRequestRetrier``
 
@@ -73,7 +84,7 @@ public protocol AccessTokenVerification {
     /// - Returns: A `Bool` indicating if the request requires reauthentication. If `true` the ``reauthenticationRoute-swift.property`` will be executed. Once the ``reauthenticationRoute-swift.property`` successfully finishes, the `URLRequest` will be retried.
     ///
     /// - Attention: If you never return `false` there is chance your `URLRequest` will attempt to retry in an infinite loop.
-    func shouldReauthenticate(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) -> Bool
+    func determineReauthorizationMethod(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) -> ReauthorizationMethod
 
     /// Informs you of the result of ``reauthenticationRoute-swift.property``. Use this function to save your updated authorization data.
     ///

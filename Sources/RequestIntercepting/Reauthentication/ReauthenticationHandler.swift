@@ -47,12 +47,18 @@ public actor ReauthenticationHandler<AccessTokenVerifier: AccessTokenVerificatio
                       dueTo error: Error,
                       urlResponse: HTTPURLResponse?,
                       retryCount: Int) async -> NetworkingRequestRetrierResult {
-
-        let shouldReauthenticate = accessTokenVerifier.shouldReauthenticate(urlRequest: urlRequest,
-                                                                            dueTo: error,
-                                                                            urlResponse: urlResponse,
-                                                                            retryCount: retryCount)
-        return shouldReauthenticate ? await reauthenticate() : .doNotRetry
+        let reauthorizationResult = accessTokenVerifier.determineReauthorizationMethod(urlRequest: urlRequest,
+                                                                                       dueTo: error,
+                                                                                       urlResponse: urlResponse,
+                                                                                       retryCount: retryCount)
+        switch reauthorizationResult {
+            case .refreshAuthorization:
+                return await reauthenticate()
+            case .retryRequest:
+                return .retry
+            case .doNothing:
+                return .doNotRetry
+        }
     }
 
     private func reauthenticate() async -> NetworkingRequestRetrierResult {
