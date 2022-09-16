@@ -36,7 +36,7 @@ final class ReauthenticationTests: XCTestCase {
                                                                        requestRetrier: reauthenticationHandler),
                                             responseSerializer: Mock.ResponseSerializer<Void>()).result
         XCTAssertThrowsError(try reauthResult.get()) { error in
-            XCTAssertEqual(error as? Mock.TokenVerifier.AccessTokenError, .tokenIsInvalid)
+            XCTAssertEqual(error as? Mock.TokenVerifier.AccessTokenError, .tokenIsMissing)
         }
         XCTAssertTrue(mockTokenVerifier.reauthorizationResult?.isFailure == true)
         XCTAssertFalse(mockTokenVerifier.accessTokenIsValid)
@@ -81,7 +81,7 @@ private extension Mock {
     class TokenVerifier: AccessTokenVerification {
 
         enum AccessTokenError: Error {
-            case tokenIsInvalid
+            case tokenIsMissing
         }
 
         private(set) var accessToken: String = ""
@@ -105,7 +105,7 @@ private extension Mock {
 
         func validateAccessToken() throws {
             guard accessToken.isEmpty else { return }
-            throw AccessTokenError.tokenIsInvalid
+            throw AccessTokenError.tokenIsMissing
         }
 
         func isAuthorizationValid(for urlRequest: URLRequest) -> Bool {
@@ -116,10 +116,10 @@ private extension Mock {
             urlRequest.allHTTPHeaderFields?["Authorization"] = accessToken
         }
 
-        func shouldReauthenticate(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) -> Bool {
-            guard retryCount <= maxNumberOfRetries && ((error as? AccessTokenError) == .tokenIsInvalid || urlResponse?.statusCode == 401) else { return false }
+        func determineReauthorizationMethod(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) -> ReauthorizationMethod {
+            guard retryCount <= maxNumberOfRetries && ((error as? AccessTokenError) == .tokenIsMissing || urlResponse?.statusCode == 401) else { return .doNothing }
             self.retryCount += 1
-            return true
+            return .refreshAuthorization
         }
 
         func saveReauthentication(result: Result<Void, Error>) async -> Bool {
