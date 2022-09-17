@@ -6,7 +6,6 @@ import PackageDescription
 let package = Package(
     name: "PopNetworking",
     platforms: [
-        .macOS(.v12),
         .iOS(.v13),
         .tvOS(.v13),
         .watchOS(.v6)
