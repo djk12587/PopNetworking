@@ -17,6 +17,7 @@ enum Mock {
         var method: NetworkingRouteHttpMethod
         var parameterEncoding: NetworkingRequestParameterEncoding?
         var session: NetworkingSession
+        var responseValidator: NetworkingResponseValidator?
         var responseSerializer: ResponseSerializer
         var timeoutInterval: TimeInterval?
         var repeater: Repeater?
@@ -26,6 +27,7 @@ enum Mock {
              method: NetworkingRouteHttpMethod = .get,
              parameterEncoding: NetworkingRequestParameterEncoding? = nil,
              session: NetworkingSession = NetworkingSession(urlSession: Mock.UrlSession()),
+             responseValidator: NetworkingResponseValidator? = nil,
              responseSerializer: ResponseSerializer,
              timeoutInterval: TimeInterval? = nil,
              repeater: Repeater? = nil) {
@@ -34,6 +36,7 @@ enum Mock {
             self.method = method
             self.parameterEncoding = parameterEncoding
             self.session = session
+            self.responseValidator = responseValidator
             self.responseSerializer = responseSerializer
             self.timeoutInterval = timeoutInterval
             self.repeater = repeater
@@ -99,6 +102,19 @@ enum Mock {
             else {
                 return .failure(NSError(domain: "Missing a mocked serialized response", code: 0))
             }
+        }
+    }
+
+    class ResponseValidator: NetworkingResponseValidator {
+        let mockValidationError: Error?
+
+        init(mockValidationError: Error?) {
+            self.mockValidationError = mockValidationError
+        }
+        
+        func validate(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) throws {
+            guard let mockValidationError = mockValidationError else { return }
+            throw mockValidationError
         }
     }
 

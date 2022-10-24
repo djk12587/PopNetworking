@@ -84,7 +84,10 @@ private extension NetworkingSession {
         let (responseDataResult, urlResponse, urlRequest) = await routeDataTask.execute(on: urlSession,
                                                                                         adapter: requestAdapter)
 
-        var serializedResult = await routeDataTask.executeResponseSerializer(result: responseDataResult,
+        let validatedResponseDataResult = await routeDataTask.executeResponseValdiator(result: responseDataResult,
+                                                                                       response: urlResponse)
+
+        var serializedResult = await routeDataTask.executeResponseSerializer(result: validatedResponseDataResult,
                                                                              response: urlResponse)
 
         serializedResult = await routeDataTask.executeRetrier(retrier: requestRetrier,
