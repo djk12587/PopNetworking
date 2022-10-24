@@ -81,8 +81,11 @@ extension NetworkingSession: NetworkingSessionDelegate {
 private extension NetworkingSession {
 
     func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        let (responseDataResult, urlResponse, urlRequest) = await routeDataTask.execute(on: urlSession,
+        var (responseDataResult, urlResponse, urlRequest) = await routeDataTask.execute(on: urlSession,
                                                                                         adapter: requestAdapter)
+
+        responseDataResult = await routeDataTask.executeResponseValdiator(result: responseDataResult,
+                                                                          response: urlResponse)
 
         var serializedResult = await routeDataTask.executeResponseSerializer(result: responseDataResult,
                                                                              response: urlResponse)
