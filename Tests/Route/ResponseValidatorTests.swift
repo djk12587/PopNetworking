@@ -12,7 +12,7 @@ class ResponseValidatorTests: XCTestCase {
 
     func testResponseValidatorFailsRequest() async throws {
         let mockError = NSError(domain: "failed validation", code: 0)
-        let result = await Mock.Route(responseValidator: Mock.ResponseValidator(mockValidation: .failure(mockError)),
+        let result = await Mock.Route(responseValidator: Mock.ResponseValidator(mockValidationError: mockError),
                                       responseSerializer: Mock.ResponseSerializer(.success("mock_success_response"))).result
 
         XCTAssertThrowsError(try result.get()) { error in
@@ -21,7 +21,8 @@ class ResponseValidatorTests: XCTestCase {
     }
 
     func testResponseValidatorValidatesRequest() async throws {
-        let result = await Mock.Route(responseSerializer: Mock.ResponseSerializer<Void>(.success(Void()))).result
+        let result = await Mock.Route(responseValidator: Mock.ResponseValidator(mockValidationError: nil),
+                                      responseSerializer: Mock.ResponseSerializer<Void>(.success(Void()))).result
         XCTAssertNoThrow(try result.get())
     }
 }

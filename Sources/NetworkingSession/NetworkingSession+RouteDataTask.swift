@@ -42,8 +42,8 @@ extension NetworkingSession {
 
         func executeResponseValdiator(result: Result<Data, Error>,
                                       response: HTTPURLResponse?) -> Result<Data, Error> {
-            return route.responseValidator?.validate(result: result,
-                                                     urlResponse: response) ?? result
+            guard let validationError = route.responseValidator?.validate(result: result, urlResponse: response) else { return result }
+            return .failure(validationError)
         }
 
         func executeResponseSerializer(result: Result<Data, Error>,
