@@ -106,14 +106,14 @@ enum Mock {
     }
 
     class ResponseValidator: NetworkingResponseValidator {
-        let mockValidation: Result<Data, Error>
+        let mockValidationError: Error?
 
-        init(mockValidation: Result<Data, Error>) {
-            self.mockValidation = mockValidation
+        init(mockValidationError: Error?) {
+            self.mockValidationError = mockValidationError
         }
         
-        func validate(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<Data, Error> {
-            return mockValidation
+        func validate(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Error? {
+            return mockValidationError
         }
     }
 
