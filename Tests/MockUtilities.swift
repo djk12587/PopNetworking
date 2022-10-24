@@ -112,8 +112,9 @@ enum Mock {
             self.mockValidationError = mockValidationError
         }
         
-        func validate(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Error? {
-            return mockValidationError
+        func validate(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) throws {
+            guard let mockValidationError = mockValidationError else { return }
+            throw mockValidationError
         }
     }
 
