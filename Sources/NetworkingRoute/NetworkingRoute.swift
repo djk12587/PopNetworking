@@ -43,6 +43,8 @@ public protocol NetworkingRoute {
     /// Prebuilt `ResponseSerializer`s can be found here: ``NetworkingResponseSerializers``.
     var responseSerializer: ResponseSerializer { get }
 
+    var responseValidator: NetworkingResponseValidator? { get }
+
     /// A `Repeater` allows you to retry the entire request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
     ///
     /// ```swift
@@ -206,6 +208,7 @@ public extension NetworkingRoute {
     var timeoutInterval: TimeInterval? { nil }
     var repeater: Repeater? { nil }
     var mockResponse: Result<ResponseSerializer.SerializedObject, Error>? { nil }
+    var responseValidator: NetworkingResponseValidator? { nil }
 }
 
 public extension NetworkingRoute {

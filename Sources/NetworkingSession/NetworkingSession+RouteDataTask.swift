@@ -40,6 +40,12 @@ extension NetworkingSession {
             }
         }
 
+        func executeResponseValdiator(result: Result<Data, Error>,
+                                      response: HTTPURLResponse?) -> Result<Data, Error> {
+            return route.responseValidator?.validate(result: result,
+                                                     urlResponse: response) ?? result
+        }
+
         func executeResponseSerializer(result: Result<Data, Error>,
                                        response: HTTPURLResponse?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             return route.responseSerializer.serialize(result: result,
