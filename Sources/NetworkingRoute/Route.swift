@@ -29,6 +29,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
     public var headers: NetworkingRouteHttpHeaders?
     public var parameterEncoding: NetworkingRequestParameterEncoding?
     public var session: NetworkingSession
+    public var responseValidator: NetworkingResponseValidator?
     public var responseSerializer: ResponseSerializer
     public var timeoutInterval: TimeInterval?
     public var repeater: Repeater?
@@ -39,6 +40,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
                 headers: NetworkingRouteHttpHeaders? = nil,
                 parameterEncoding: NetworkingRequestParameterEncoding? = nil,
                 session: NetworkingSession = .shared,
+                responseValidator: NetworkingResponseValidator? = nil,
                 responseSerializer: ResponseSerializer,
                 timeoutInterval: TimeInterval? = nil,
                 repeater: Repeater? = nil) {
@@ -48,6 +50,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
         self.headers = headers
         self.parameterEncoding = parameterEncoding
         self.session = session
+        self.responseValidator = responseValidator
         self.responseSerializer = responseSerializer
         self.timeoutInterval = timeoutInterval
         self.repeater = repeater
