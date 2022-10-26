@@ -79,6 +79,7 @@ extension NetworkingSession {
                     return await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
+                    retryCount.reset()
                     return serializedResult
             }
         }
@@ -100,6 +101,7 @@ extension NetworkingSession {
                     return await networkingSessionDelegate.retry(self, delay: delay)
 
                 case .doNotRetry:
+                    repeatCount.reset()
                     return serializedResult
             }
         }
@@ -109,6 +111,10 @@ extension NetworkingSession {
 private extension Int {
     mutating func increment() {
         self += 1
+    }
+
+    mutating func reset() {
+        self = 0
     }
 }
 
