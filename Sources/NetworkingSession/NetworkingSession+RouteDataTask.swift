@@ -64,7 +64,10 @@ extension NetworkingSession {
                 let retrier = retrier,
                 let networkingSessionDelegate = networkingSessionDelegate,
                 let error = serializedResult.error
-            else { return serializedResult }
+            else {
+                retryCount.reset()
+                return serializedResult
+            }
 
             switch await retrier.retry(urlRequest: urlRequest,
                                        dueTo: error,
@@ -89,7 +92,10 @@ extension NetworkingSession {
             guard
                 let routeRetrier = route.repeater,
                 let networkingSessionDelegate = networkingSessionDelegate
-            else { return serializedResult }
+            else {
+                repeatCount.reset()
+                return serializedResult
+            }
 
             switch await routeRetrier(serializedResult, response, repeatCount) {
                 case .retry:
