@@ -40,7 +40,7 @@ extension NetworkingSession {
             }
         }
 
-        func executeResponseValdiator(result: Result<Data, Error>,
+        func executeResponseValidator(result: Result<Data, Error>,
                                       response: HTTPURLResponse?) -> Result<Data, Error> {
             do {
                 try route.responseValidator?.validate(result: result, urlResponse: response)
