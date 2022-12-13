@@ -41,34 +41,46 @@ public enum NetworkingResponseSerializers {
     public struct DecodableResponseWithErrorSerializer<SuccessType: Decodable,
                                                        FailureType: Decodable & Error>: NetworkingResponseSerializer {
 
-        /// The ``SerializedObject`` must adhere to `Decodeable`.
+        /// The ``SerializedObject`` must adhere to `Decodable`.
         ///
         /// - Note: Typically this would be one of your existing Model objects. That existing model must already adhere to `Decodable`
         public typealias SerializedObject = SuccessType
 
-        /// The ``SerializedErrorObject`` must adhere to `Decodeable` & `Error`.
+        /// The ``SerializedErrorObject`` must adhere to `Decodable` & `Error`.
         ///
         /// - Note: Typically this would be one of your existing API Error models. That existing error model must already adheres to `Decodable` & `Codable`
         public typealias SerializedErrorObject = FailureType
 
-        private let jsonDecoder: JSONDecoder
+        private let successTypeJsonDecoder: JSONDecoder
+        private let failureTypeJsonDecoder: JSONDecoder
 
         /// Initializes an instance of `DecodableResponseWithErrorSerializer`
         /// - Parameters:
         ///   - jsonDecoder: The `JSONDecoder` that will be used to parse json data
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
-            self.jsonDecoder = jsonDecoder
+            successTypeJsonDecoder = jsonDecoder
+            failureTypeJsonDecoder = jsonDecoder
+        }
+
+        /// Initializes an instance of `DecodableResponseWithErrorSerializer`
+        /// - Parameters:
+        ///   - successTypeJsonDecoder: The `JSONDecoder` that will be used to parse the `Decodable` `SuccessType`
+        ///   - failureTypeJsonDecoder: The `JSONDecoder` that will be used to parse the `Decodable` `FailureType`
+        public init(successTypeJsonDecoder: JSONDecoder = JSONDecoder(),
+                    failureTypeJsonDecoder: JSONDecoder = JSONDecoder()) {
+            self.successTypeJsonDecoder = successTypeJsonDecoder
+            self.failureTypeJsonDecoder = failureTypeJsonDecoder
         }
 
         public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
             return result.flatMap { data in
                 do {
-                    let serializedOjbect = try jsonDecoder.decode(SerializedObject.self, from: data)
-                    return .success(serializedOjbect)
+                    let serializedObject = try successTypeJsonDecoder.decode(SerializedObject.self, from: data)
+                    return .success(serializedObject)
                 }
                 catch let serializedObjectError {
                     do {
-                        let serializedError = try jsonDecoder.decode(SerializedErrorObject.self, from: data)
+                        let serializedError = try failureTypeJsonDecoder.decode(SerializedErrorObject.self, from: data)
                         return .failure(serializedError)
                     }
                     catch let errorSerializerError {
