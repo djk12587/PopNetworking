@@ -189,7 +189,7 @@ public extension NetworkingRoute {
     /// ```
     /// - Parameters:
     ///   - priority: Sets a `TaskPriority` for your request. Defaults to nil
-    ///   - queue: The queue your `completion` will be exectued on. The default is the main thread.
+    ///   - queue: The queue your `completion` will be executed on. The default is the main thread.
     ///   - completion: Block that contains your network response
     @discardableResult
     func request(priority: TaskPriority? = nil,
