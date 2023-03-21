@@ -12,6 +12,7 @@ import Foundation
 public protocol NetworkingRoute {
 
     typealias NetworkingRouteHttpHeaders = [String : String]
+    typealias StreamResponse = (response: Result<ResponseSerializer.SerializedObject, Error>, task: URLSessionWebSocketTask?)
 
     /// The ``NetworkingSession`` used to execute the HTTP request
     var session: NetworkingSession { get }
@@ -123,6 +124,14 @@ public extension NetworkingRoute {
     var run: ResponseSerializer.SerializedObject {
         get async throws {
             try await session.execute(route: self)
+        }
+    }
+
+    func stream(priority: TaskPriority? = nil) -> AsyncStream<StreamResponse> {
+        return AsyncStream { streamContinuation in
+            Task(priority: priority) {
+                await session.stream(route: self, streamContinuation: streamContinuation)
+            }
         }
     }
 

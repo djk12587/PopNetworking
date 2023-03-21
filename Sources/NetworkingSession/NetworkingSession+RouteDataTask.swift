@@ -114,7 +114,7 @@ extension NetworkingSession {
     }
 }
 
-private extension Int {
+internal extension Int {
     mutating func increment() {
         self += 1
     }

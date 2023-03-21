@@ -12,6 +12,8 @@ import Foundation
 /// - Note: `URLSession` adheres to ``URLSessionProtocol``
 public protocol URLSessionProtocol {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
+    func webSocketTask(with: URLRequest) -> URLSessionWebSocketTask
+    var configuration: URLSessionConfiguration { get }
 }
 
 extension URLSession: URLSessionProtocol {}

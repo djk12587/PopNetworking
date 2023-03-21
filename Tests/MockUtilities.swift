@@ -45,6 +45,8 @@ enum Mock {
 
     class UrlSession: URLSessionProtocol {
 
+
+        var configuration: URLSessionConfiguration = .default
         var mockResult: Result<Data, Error>
         var mockUrlResponse: URLResponse?
         var mockDelay: TimeInterval?
@@ -67,6 +69,10 @@ enum Mock {
 
         func data(for request: URLRequest, delegate: URLSessionTaskDelegate?) async throws -> (Data, URLResponse) {
             try await data(for: request)
+        }
+
+        func webSocketTask(with: URLRequest) -> URLSessionWebSocketTask {
+            fatalError()
         }
     }
 

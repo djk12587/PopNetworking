@@ -14,6 +14,9 @@ internal protocol NetworkingSessionDelegate: AnyObject {
 
     func retry<Route: NetworkingRoute>(_ routeDataTask: NetworkingSession.RouteDataTask<Route>,
                                        delay: TimeInterval?) async -> Result<Route.ResponseSerializer.SerializedObject, Error>
+    func reconnect<Route: NetworkingRoute>(to routeWebSocketTask: NetworkingSession.RouteWebSocketTask<Route>,
+                                           streamContinuation: AsyncStream<Route.StreamResponse>.Continuation,
+                                           delay: TimeInterval?) async
 }
 
 public extension NetworkingSession {
@@ -66,6 +69,18 @@ public class NetworkingSession {
             return try await execute(routeDataTask).get()
         }
     }
+
+    public func stream<Route: NetworkingRoute>(route: Route, streamContinuation: AsyncStream<Route.StreamResponse>.Continuation) async {
+        if let mockResult = route.mockResponse {
+            streamContinuation.yield((mockResult, nil))
+            streamContinuation.finish()
+        } else {
+            let routeWebSocketTask = RouteWebSocketTask(route: route,
+                                                        urlSessionConfiguration: urlSession.configuration,
+                                                        networkingSessionDelegate: self)
+            await stream(routeWebSocketTask, streamContinuation: streamContinuation)
+        }
+    }
 }
 
 extension NetworkingSession: NetworkingSessionDelegate {
@@ -75,6 +90,13 @@ extension NetworkingSession: NetworkingSessionDelegate {
             try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
         }
         return await execute(routeDataTask)
+    }
+
+    func reconnect<Route: NetworkingRoute>(to routeWebSocketTask: RouteWebSocketTask<Route>, streamContinuation: AsyncStream<Route.StreamResponse>.Continuation, delay: TimeInterval?) async {
+        if let delay = delay {
+            try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+        }
+        await stream(routeWebSocketTask, streamContinuation: streamContinuation)
     }
 }
 
@@ -99,5 +121,20 @@ private extension NetworkingSession {
                                                                response: urlResponse)
 
         return serializedResult
+    }
+
+    func stream<Route: NetworkingRoute>(_ routeWebSocketTask: RouteWebSocketTask<Route>, streamContinuation: AsyncStream<Route.StreamResponse>.Continuation) async {
+        let (webSocketCreationResult, urlRequest) = await routeWebSocketTask.createWebSocketTask(adapter: requestAdapter)
+        do {
+            let webSocketUrlTask = try await routeWebSocketTask.open(webSocketCreationResult)
+            await routeWebSocketTask.startListening(to: webSocketUrlTask, streamContinuation: streamContinuation)
+        }
+        catch {
+            await routeWebSocketTask.executeRetrier(retrier: requestRetrier,
+                                                    error: error,
+                                                    streamContinuation: streamContinuation,
+                                                    urlRequest: urlRequest,
+                                                    response: (try? webSocketCreationResult.get().0.response as? HTTPURLResponse))
+        }
     }
 }
