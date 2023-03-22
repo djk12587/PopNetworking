@@ -53,27 +53,28 @@ extension NetworkingSession {
             return webSocketTask
         }
 
-        func startListening(to webSocketTask: URLSessionWebSocketTask, streamContinuation: AsyncStream<Route.StreamResponse>.Continuation) async {
-            do {
-                let webSocketMessage = try await withCheckedThrowingContinuation { continuation in
-                    self.webSocketResponseContinuation = continuation
-                    webSocketTask.receive { webSocketResult in
-                        continuation.resume(with: webSocketResult)
-                    }
+        func startListening(to webSocketTask: URLSessionWebSocketTask, streamContinuation: AsyncStream<Route.StreamResponse>.Continuation) async throws {
+
+            let webSocketMessage = try await withCheckedThrowingContinuation { continuation in
+                self.webSocketResponseContinuation = continuation
+                webSocketTask.receive { webSocketResult in
+                    continuation.resume(with: webSocketResult)
                 }
+            }
+
+            do {
                 let responseData = try webSocketMessage.convertToData
                 try route.responseValidator?.validate(result: .success(responseData),
                                                       urlResponse: webSocketTask.response as? HTTPURLResponse)
                 let serializedResponse = route.responseSerializer.serialize(result: .success(responseData),
                                                                             urlResponse: webSocketTask.response as? HTTPURLResponse)
                 streamContinuation.yield((response: serializedResponse, task: webSocketTask))
-                await startListening(to: webSocketTask, streamContinuation: streamContinuation)
-                streamContinuation.finish()
             }
             catch {
                 streamContinuation.yield((response: .failure(error), task: webSocketTask))
-                streamContinuation.finish()
             }
+
+            try await startListening(to: webSocketTask, streamContinuation: streamContinuation)
         }
 
         func executeRetrier(retrier: NetworkingRequestRetrier?,
@@ -107,6 +108,8 @@ extension NetworkingSession {
                                                               delay: delay)
                 case .doNotRetry:
                     retryCount.reset()
+                    streamContinuation.yield((.failure(error), nil))
+                    streamContinuation.finish()
             }
         }
 

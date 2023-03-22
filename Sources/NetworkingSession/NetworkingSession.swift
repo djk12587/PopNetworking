@@ -127,7 +127,7 @@ private extension NetworkingSession {
         let (webSocketCreationResult, urlRequest) = await routeWebSocketTask.createWebSocketTask(adapter: requestAdapter)
         do {
             let webSocketUrlTask = try await routeWebSocketTask.open(webSocketCreationResult)
-            await routeWebSocketTask.startListening(to: webSocketUrlTask, streamContinuation: streamContinuation)
+            try await routeWebSocketTask.startListening(to: webSocketUrlTask, streamContinuation: streamContinuation)
         }
         catch {
             await routeWebSocketTask.executeRetrier(retrier: requestRetrier,
