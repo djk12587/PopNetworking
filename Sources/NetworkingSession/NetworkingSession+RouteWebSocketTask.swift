@@ -14,8 +14,8 @@ extension NetworkingSession {
         private var retryCount = 0
         private let urlSessionConfig: URLSessionConfiguration
         private weak var networkingSessionDelegate: NetworkingSessionDelegate?
-        private var webSocketOpenedContinuation: CheckedContinuation<Void, Error>?
-        private var webSocketResponseContinuation: CheckedContinuation<URLSessionWebSocketTask.Message, Error>?
+        private var webSocketConnectionOpenedContinuation: CheckedContinuation<Void, Error>?
+        private var webSocketConnectionClosedContinuation: CheckedContinuation<Void, Error>?
 
         init(route: Route,
              urlSessionConfiguration: URLSessionConfiguration,
@@ -46,23 +46,16 @@ extension NetworkingSession {
         func open(_ webSocketCreationResult: Result<(URLSessionWebSocketTask, URLSession), Error>) async throws -> URLSessionWebSocketTask {
             let (webSocketTask, urlSession) = try webSocketCreationResult.get()
             try await withCheckedThrowingContinuation { continuation in
-                self.webSocketOpenedContinuation = continuation
+                webSocketConnectionOpenedContinuation = continuation
                 webSocketTask.resume()
                 urlSession.finishTasksAndInvalidate()
             }
             return webSocketTask
         }
 
-        func startListening(to webSocketTask: URLSessionWebSocketTask, streamContinuation: AsyncStream<Route.StreamResponse>.Continuation) async throws {
-
-            let webSocketMessage = try await withCheckedThrowingContinuation { continuation in
-                self.webSocketResponseContinuation = continuation
-                webSocketTask.receive { webSocketResult in
-                    continuation.resume(with: webSocketResult)
-                }
-            }
-
+        func startListening(to webSocketTask: URLSessionWebSocketTask, streamContinuation: AsyncStream<Route.StreamResponse>.Continuation) async {
             do {
+                let webSocketMessage = try await webSocketTask.receive()
                 let responseData = try webSocketMessage.convertToData
                 try route.responseValidator?.validate(result: .success(responseData),
                                                       urlResponse: webSocketTask.response as? HTTPURLResponse)
@@ -74,7 +67,16 @@ extension NetworkingSession {
                 streamContinuation.yield((response: .failure(error), task: webSocketTask))
             }
 
-            try await startListening(to: webSocketTask, streamContinuation: streamContinuation)
+            // .invalid means the websocketTask is still open
+            if webSocketTask.closeCode == .invalid {
+                await startListening(to: webSocketTask, streamContinuation: streamContinuation)
+            }
+        }
+
+        func connectionClosed() async throws {
+            try await withCheckedThrowingContinuation { continuation in
+                webSocketConnectionClosedContinuation = continuation
+            }
         }
 
         func executeRetrier(retrier: NetworkingRequestRetrier?,
@@ -114,25 +116,36 @@ extension NetworkingSession {
         }
 
         func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-            webSocketOpenedContinuation?.resume()
-            webSocketOpenedContinuation = nil
+            webSocketConnectionOpenedContinuation?.resume()
+            webSocketConnectionOpenedContinuation = nil
         }
 
         func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
             let webSocketClosedError = NSError(domain: "Web socket connection was closed",
                                                code: closeCode.rawValue,
                                                userInfo: ["Reason": reason ?? "No reason was given".data(using: .utf8) ?? Data()])
-            webSocketOpenedContinuation?.resume(throwing: webSocketClosedError)
-            webSocketOpenedContinuation = nil
-            webSocketResponseContinuation?.resume(throwing: webSocketClosedError)
-            webSocketResponseContinuation = nil
+            webSocketConnectionOpenedContinuation?.resume(throwing: webSocketClosedError)
+            webSocketConnectionOpenedContinuation = nil
+            webSocketConnectionClosedContinuation?.resume(throwing: webSocketClosedError)
+            webSocketConnectionClosedContinuation = nil
         }
 
         func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
             if let error = error {
-                webSocketOpenedContinuation?.resume(throwing: error)
-                webSocketOpenedContinuation = nil
+                webSocketConnectionOpenedContinuation?.resume(throwing: error)
+                webSocketConnectionOpenedContinuation = nil
+                webSocketConnectionClosedContinuation?.resume(throwing: error)
+                webSocketConnectionClosedContinuation = nil
+            } else {
+                webSocketConnectionClosedContinuation?.resume()
+                webSocketConnectionClosedContinuation = nil
             }
+        }
+
+        //Temporary solution to work with invalid ssl certs, maybe don't use this in prod?
+        func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+            guard let serverTrust = challenge.protectionSpace.serverTrust else { return (.performDefaultHandling, nil) }
+            return (.useCredential, URLCredential(trust: serverTrust))
         }
     }
 }
