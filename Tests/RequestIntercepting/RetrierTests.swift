@@ -15,9 +15,10 @@ class RetrierTests: XCTestCase {
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .doNotRetry)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
-                             responseSerializer: Mock.ResponseSerializer<Void>(.success(()))).result
+                             responseSerializer: Mock.ResponseSerializer<Void>()).result
 
-        XCTAssertFalse(mockRetrier.retrierDidRun)
+        let retrierDidRun = await mockRetrier.retrierDidRun
+        XCTAssertFalse(retrierDidRun)
     }
 
     func testRetrierRunsWhenRequestFails() async throws {
@@ -27,7 +28,8 @@ class RetrierTests: XCTestCase {
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
                                       responseSerializer: Mock.ResponseSerializer<Void>(.failure(NSError(domain: "", code: 0)))).result
 
-        XCTAssertTrue(mockRetrier.retrierDidRun)
+        let retrierDidRun = await mockRetrier.retrierDidRun
+        XCTAssertTrue(retrierDidRun)
         XCTAssertThrowsError(try result.get())
     }
 
@@ -36,10 +38,12 @@ class RetrierTests: XCTestCase {
         let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                   retrierResult: .retryWithDelay(0))
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
-                                      responseSerializer: Mock.ResponseSerializer<Void>([.failure(NSError(domain: "", code: 0)), .success(())])).result
+                                      responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "", code: 0)), .success(())])).result
 
-        XCTAssertTrue(mockRetrier.retrierDidRun)
-        XCTAssertEqual(mockRetrier.retryCounter, 1)
+        let retrierDidRun = await mockRetrier.retrierDidRun
+        let retrierCount = await mockRetrier.retryCounter
+        XCTAssertTrue(retrierDidRun)
+        XCTAssertEqual(retrierCount, 1)
         XCTAssertNoThrow(try result.get())
     }
 }

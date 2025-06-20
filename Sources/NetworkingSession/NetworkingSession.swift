@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - NetworkingSession
 
-internal protocol NetworkingSessionDelegate: AnyObject {
+internal protocol NetworkingSessionDelegate: AnyObject, Sendable {
 
     func retry<Route: NetworkingRoute>(_ routeDataTask: NetworkingSession.RouteDataTask<Route>,
                                        delay: TimeInterval?) async -> Result<Route.ResponseSerializer.SerializedObject, Error>
@@ -24,7 +24,7 @@ public extension NetworkingSession {
 }
 
 /// Is  a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and kicks off the HTTP request.
-public class NetworkingSession {
+public actor NetworkingSession {
 
     private let urlSession: URLSessionProtocol
     private let requestAdapter: NetworkingRequestAdapter?

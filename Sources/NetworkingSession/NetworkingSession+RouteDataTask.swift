@@ -16,7 +16,7 @@ extension NetworkingSession {
         private weak var networkingSessionDelegate: NetworkingSessionDelegate?
 
         init(route: Route,
-             networkingSessionDelegate: NetworkingSessionDelegate) {
+             networkingSessionDelegate: NetworkingSessionDelegate?) {
             self.route = route
             self.networkingSessionDelegate = networkingSessionDelegate
         }
@@ -51,9 +51,9 @@ extension NetworkingSession {
         }
 
         func executeResponseSerializer(result: Result<Data, Error>,
-                                       response: HTTPURLResponse?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-            return route.responseSerializer.serialize(result: result,
-                                                      urlResponse: response)
+                                       response: HTTPURLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+            return await route.responseSerializer.serialize(result: result,
+                                                            urlResponse: response)
         }
 
         func executeRetrier(retrier: NetworkingRequestRetrier?,
@@ -132,7 +132,7 @@ internal extension Result {
 }
 
 internal extension Result where Failure == Error {
-    init(asyncCatching: () async throws -> Success) async {
+    init(asyncCatching: @Sendable () async throws -> Success) async {
         do {
             let success = try await asyncCatching()
             self = .success(success)

@@ -8,7 +8,7 @@
 
 import Foundation
 
-extension Array: Error where Element: Error {}
+extension Array: @retroactive Error where Element: Error {}
 
 /// Contains default implementations of ``NetworkingResponseSerializer``. Such as ``DecodableResponseSerializer``, etc.
 public enum NetworkingResponseSerializers {
@@ -30,7 +30,7 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
             return result.flatMap { data in
                 Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
             }
@@ -72,7 +72,7 @@ public enum NetworkingResponseSerializers {
             self.failureTypeJsonDecoder = failureTypeJsonDecoder
         }
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
             return result.flatMap { data in
                 do {
                     let serializedObject = try successTypeJsonDecoder.decode(SerializedObject.self, from: data)
@@ -97,7 +97,7 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<Int, Error> {
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<Int, Error> {
             return result.flatMap { _ in
                 guard let response = urlResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
                 return .success(response.statusCode)
@@ -106,11 +106,11 @@ public enum NetworkingResponseSerializers {
     }
 
     /// The `DataResponseSerializer` returns the raw networking `Data` from an HTTP response
-    public struct DataResponseSerializer: NetworkingResponseSerializer {
+    public struct DataResponseSerializer: NetworkingResponseSerializer, Sendable {
         public typealias SerializedObject = Data
 
         public init() {}
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<Data, Error> { result }
+        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<Data, Error> { result }
     }
 }

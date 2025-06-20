@@ -29,13 +29,16 @@ public struct NetworkingRoutePublisher<Route: NetworkingRoute>: Publisher {
         self.route = route
     }
 
-    public func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, Output == S.Input {
+    public func receive<S>(subscriber: S) where S: Subscriber,
+                                                S: Sendable,
+                                                Failure == S.Failure,
+                                                Output == S.Input {
         subscriber.receive(subscription: Inner(route: route, downstream: subscriber))
     }
 }
 
 private extension NetworkingRoutePublisher {
-    final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output {
+    final class Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output {
 
         private var downstream: Downstream?
         private let route: Route
@@ -66,7 +69,7 @@ private extension NetworkingRoutePublisher {
 }
 
 /// A Combine Publisher for a ``NetworkingRoute``. This publisher can fail, and the failure is whatever error comes back from running the ``NetworkingRoute``. The successful `Output` is the `NetworkingRoute.ResponseSerializer.SerializedObject`
-public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute>: Publisher {
+public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute & Sendable>: Publisher {
 
     public typealias Output = Route.ResponseSerializer.SerializedObject
     public typealias Failure = Error
@@ -77,14 +80,18 @@ public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute>: Publishe
         self.route = route
     }
 
-    public func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, Output == S.Input {
+    public func receive<S>(subscriber: S) where S: Subscriber,
+                                                S: Sendable,
+                                                Failure == S.Failure,
+                                                Output == S.Input,
+                                                S.Input: Sendable {
         subscriber.receive(subscription: Inner(route: route, downstream: subscriber))
     }
 }
 
 private extension NetworkingRouteFailablePublisher {
-    final class Inner<Downstream: Subscriber>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRouteFailablePublisher.Output,
-                                                                                       Downstream.Failure == NetworkingRouteFailablePublisher.Failure {
+    final class Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRouteFailablePublisher.Output,
+                                                                                                  Downstream.Failure == NetworkingRouteFailablePublisher.Failure {
 
         private var downstream: Downstream?
         private let route: Route

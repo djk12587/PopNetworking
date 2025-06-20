@@ -9,7 +9,7 @@
 import Foundation
 
 /// ``NetworkingRoute`` is a protocol that is responsible for declaring everything needed to create `URLRequest`s and parse the response into any desired custom type.
-public protocol NetworkingRoute {
+public protocol NetworkingRoute: Sendable {
 
     typealias NetworkingRouteHttpHeaders = [String : String]
 
@@ -36,7 +36,7 @@ public protocol NetworkingRoute {
     /// `ResponseSerializer` allows for plug and play networking response serialization.
     ///
     /// For examples of prebuilt `NetworkingResponseSerializer`'s see ``NetworkingResponseSerializers``
-    associatedtype ResponseSerializer: NetworkingResponseSerializer
+    associatedtype ResponseSerializer: NetworkingResponseSerializer where ResponseSerializer.SerializedObject: Sendable
 
     /// A `ResponseSerializer` is responsible for parsing the raw response of an HTTP request into a more usable object, like a Model object. The `ResponseSerializer` must adhere to ``NetworkingResponseSerializer``
     ///
@@ -194,11 +194,11 @@ public extension NetworkingRoute {
     @discardableResult
     func request(priority: TaskPriority? = nil,
                  completeOn queue: DispatchQueue = .main,
-                 completion: @escaping (Result<ResponseSerializer.SerializedObject, Error>) -> Void) -> Task<ResponseSerializer.SerializedObject, Error> {
-        let requestTask = task(priority: priority)
+                 completion: (@Sendable (Result<ResponseSerializer.SerializedObject, Error>) -> Void)?) -> Task<ResponseSerializer.SerializedObject, Error> {
+        let requestTask = self.task(priority: priority)
         Task(priority: priority) {
             let result = await requestTask.result
-            queue.async { completion(result) }
+            queue.async { completion?(result) }
         }
         return requestTask
     }
@@ -213,7 +213,7 @@ public extension NetworkingRoute {
 }
 
 public extension NetworkingRoute {
-    typealias Repeater = (_ result: Result<ResponseSerializer.SerializedObject, Error>,
-                          _ response: HTTPURLResponse?,
-                          _ repeatCount: Int) async -> NetworkingRequestRetrierResult
+    typealias Repeater = @Sendable (_ result: Result<ResponseSerializer.SerializedObject, Error>,
+                                    _ response: HTTPURLResponse?,
+                                    _ repeatCount: Int) async -> NetworkingRequestRetrierResult
 }

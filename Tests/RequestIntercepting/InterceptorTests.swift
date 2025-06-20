@@ -20,12 +20,16 @@ class InterceptorTests: XCTestCase {
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).result
+                             responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "error", code: 1))])).result
 
-        XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
-        XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
-        XCTAssertTrue(mockRequestInterceptor2.adapterDidRun)
-        XCTAssertTrue(mockRequestInterceptor2.retrierDidRun)
+        let interceptor1AdapterDidRun = await mockRequestInterceptor1.adapterDidRun
+        let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
+        let interceptor2AdapterDidRun = await mockRequestInterceptor2.adapterDidRun
+        let interceptor2RetrierDidRun = await mockRequestInterceptor2.retrierDidRun
+        XCTAssertTrue(interceptor1AdapterDidRun)
+        XCTAssertTrue(interceptor1RetrierDidRun)
+        XCTAssertTrue(interceptor2AdapterDidRun)
+        XCTAssertTrue(interceptor2RetrierDidRun)
     }
 
     func testAdaptersDoNotRunAfterFirstFailure() async throws {
@@ -40,8 +44,10 @@ class InterceptorTests: XCTestCase {
                                                         requestRetrier: interceptor),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
-        XCTAssertTrue(mockRequestInterceptor1.adapterDidRun)
-        XCTAssertFalse(mockRequestInterceptor2.adapterDidRun)
+        let interceptor1AdapterDidRun = await mockRequestInterceptor1.adapterDidRun
+        let interceptor2AdapterDidRun = await mockRequestInterceptor2.adapterDidRun
+        XCTAssertTrue(interceptor1AdapterDidRun)
+        XCTAssertFalse(interceptor2AdapterDidRun)
     }
 
     func testStopRetryingAfterFirstSuccessfulRetry() async throws {
@@ -54,9 +60,12 @@ class InterceptorTests: XCTestCase {
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializer([.failure(NSError(domain: "", code: 0)), .success(())])).result
-        XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
-        XCTAssertFalse(mockRequestInterceptor2.retrierDidRun)
+                             responseSerializer: Mock.ResponseSerializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
+
+        let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
+        let interceptor2RetrierDidRun = await mockRequestInterceptor2.retrierDidRun
+        XCTAssertTrue(interceptor1RetrierDidRun)
+        XCTAssertFalse(interceptor2RetrierDidRun)
     }
 
     func testStopRetryingAfterFirstSuccessfulRetryWithDelay() async throws {
@@ -69,8 +78,11 @@ class InterceptorTests: XCTestCase {
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializer([.failure(NSError(domain: "", code: 0)), .success(())])).result
-        XCTAssertTrue(mockRequestInterceptor1.retrierDidRun)
-        XCTAssertFalse(mockRequestInterceptor2.retrierDidRun)
+                             responseSerializer: Mock.ResponseSerializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
+
+        let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
+        let interceptor2RetrierDidRun = await mockRequestInterceptor2.retrierDidRun
+        XCTAssertTrue(interceptor1RetrierDidRun)
+        XCTAssertFalse(interceptor2RetrierDidRun)
     }
 }

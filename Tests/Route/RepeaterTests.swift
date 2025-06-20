@@ -11,39 +11,47 @@ import XCTest
 class RepeaterTests: XCTestCase {
 
     func testRepeaterRetry() async {
-        var numberOfRetries = 0
+        let expectation = expectation(description: "wait for repeater to finish")
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
                              repeater: { _, _, repeatCount in
-            numberOfRetries = repeatCount
-            return repeatCount > 1 ? .doNotRetry : .retry
+            let retrierResult: NetworkingRequestRetrierResult = repeatCount > 1 ? .doNotRetry : .retry
+            if case .doNotRetry = retrierResult, repeatCount == 2 {
+                expectation.fulfill()
+            }
+            return retrierResult
         }).result
 
-        XCTAssertEqual(numberOfRetries, 2)
+        await fulfillment(of: [expectation], timeout: 1.0)
     }
 
     func testRepeaterRetryWithDelay() async {
-        var numberOfRetries = 0
+        let expectation = expectation(description: "wait for repeater to finish")
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
                              repeater: { _, _, repeatCount in
-            numberOfRetries = repeatCount
-            return repeatCount > 0 ? .doNotRetry : .retryWithDelay(0)
+            let retrierResult: NetworkingRequestRetrierResult = repeatCount > 0 ? .doNotRetry : .retryWithDelay(0)
+            if case .doNotRetry = retrierResult, repeatCount == 1 {
+                expectation.fulfill()
+            }
+            return retrierResult
         }).result
 
-        XCTAssertEqual(numberOfRetries, 1)
+        await fulfillment(of: [expectation], timeout: 1.0)
     }
 
     func testRepeaterDoNotRetry() async {
-        var numberOfRetries = 0
+        let expectation = expectation(description: "wait for repeater to finish")
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
                              repeater: { _, _, repeatCount in
-            numberOfRetries = repeatCount
+            if repeatCount == 0 {
+                expectation.fulfill()
+            }
             return .doNotRetry
         }).result
 
-        XCTAssertEqual(numberOfRetries, 0)
+        await fulfillment(of: [expectation], timeout: 1.0)
     }
 
     func testRepeaterParameters() async throws {

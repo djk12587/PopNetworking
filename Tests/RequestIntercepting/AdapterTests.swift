@@ -17,7 +17,8 @@ class AdapterTests: XCTestCase {
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestAdapter: mockAdapter),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
-        XCTAssertTrue(mockAdapter.adapterDidRun)
+        let adapterDidRun = await mockAdapter.adapterDidRun
+        XCTAssertTrue(adapterDidRun)
     }
 
     func testAdapterModifiesUrlRequest() async throws {
@@ -28,11 +29,13 @@ class AdapterTests: XCTestCase {
         let mockUrlSession = Mock.UrlSession()
         _ = await Mock.Route(baseUrl: "https://originalRequest.com",
                              session: NetworkingSession(urlSession: mockUrlSession, requestAdapter: mockAdapter),
-                             responseSerializer: Mock.ResponseSerializer<Void>(.success(()))).result
+                             responseSerializer: Mock.ResponseSerializer<Void>()).result
 
-        XCTAssertTrue(mockAdapter.adapterDidRun)
-        XCTAssertNotNil(mockUrlSession.lastRequest?.url)
-        XCTAssertEqual(mockUrlSession.lastRequest?.url, adaptedUrlRequest.url)
+        let adapterDidRun = await mockAdapter.adapterDidRun
+        XCTAssertTrue(adapterDidRun)
+        let lastRequest = await mockUrlSession.lastRequest
+        XCTAssertNotNil(lastRequest?.url)
+        XCTAssertEqual(lastRequest?.url, adaptedUrlRequest.url)
     }
 
     func testAdapterThrowingFailsTheUrlRequest() async throws {
@@ -46,6 +49,7 @@ class AdapterTests: XCTestCase {
         XCTAssertThrowsError(try result.get()) { error in
             XCTAssertEqual(error as NSError, mockAdapterError)
         }
-        XCTAssertTrue(mockAdapter.adapterDidRun)
+        let adapterDidRun = await mockAdapter.adapterDidRun
+        XCTAssertTrue(adapterDidRun)
     }
 }

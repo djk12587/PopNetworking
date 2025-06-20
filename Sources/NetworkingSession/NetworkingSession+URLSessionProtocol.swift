@@ -10,7 +10,7 @@ import Foundation
 /// URLSession cannot be subclassed, so instead we utilize this protocol.
 ///
 /// - Note: `URLSession` adheres to ``URLSessionProtocol``
-public protocol URLSessionProtocol {
+public protocol URLSessionProtocol: Sendable {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 

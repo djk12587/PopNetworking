@@ -22,7 +22,7 @@ class ResponseValidatorTests: XCTestCase {
 
     func testResponseValidatorValidatesRequest() async throws {
         let result = await Mock.Route(responseValidator: Mock.ResponseValidator(mockValidationError: nil),
-                                      responseSerializer: Mock.ResponseSerializer<Void>(.success(Void()))).result
+                                      responseSerializer: Mock.ResponseSerializer<Void>()).result
         XCTAssertNoThrow(try result.get())
     }
 }

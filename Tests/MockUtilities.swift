@@ -10,7 +10,7 @@ import Foundation
 
 enum Mock {
 
-    struct Route<ResponseSerializer: NetworkingResponseSerializer>: NetworkingRoute {
+    struct Route<ResponseSerializer: NetworkingResponseSerializer & Sendable>: NetworkingRoute {
 
         var baseUrl: String
         var path: String
@@ -43,11 +43,11 @@ enum Mock {
         }
     }
 
-    class UrlSession: URLSessionProtocol {
+    final actor UrlSession: URLSessionProtocol {
 
-        var mockResult: Result<Data, Error>
-        var mockUrlResponse: URLResponse?
-        var mockDelay: TimeInterval?
+        let mockResult: Result<Data, Error>
+        let mockUrlResponse: URLResponse?
+        let mockDelay: TimeInterval?
 
         private(set) var lastRequest: URLRequest?
 
@@ -70,42 +70,55 @@ enum Mock {
         }
     }
 
-    class ResponseSerializer<SuccessType>: NetworkingResponseSerializer {
+    struct ResponseSerializer<SuccessType: Sendable>: NetworkingResponseSerializer {
 
-        var serializedResult: Result<SuccessType, Error>?
-        var sequentialResults: [Result<SuccessType, Error>]
-        var payload: (result: Result<Data, Error>, urlResponse: HTTPURLResponse?)?
+        let serializedResult: Result<SuccessType, Error>
 
-        init(_ serializedResult: Result<SuccessType, Error>) {
+        init(_ serializedResult: Result<SuccessType, Error> = .success(())) {
             self.serializedResult = serializedResult
-            sequentialResults = []
         }
 
-        init(_ sequentialResults: [Result<SuccessType, Error>] = []) {
-            self.sequentialResults = sequentialResults
-            serializedResult = nil
-        }
-
-        func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
-            defer { payload = (result, urlResponse) }
-
-            if let responseError = result.error {
-                return .failure(responseError)
-            }
-            else if let serializedResult = serializedResult {
-                return serializedResult
-            }
-            else if let sequentialResult = sequentialResults.first {
-                sequentialResults.removeFirst()
-                return sequentialResult
-            }
-            else {
-                return .failure(NSError(domain: "Missing a mocked serialized response", code: 0))
+        func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
+            switch result {
+            case .success:
+                return self.serializedResult
+            case .failure(let failure):
+                return .failure(failure)
             }
         }
     }
 
-    class ResponseValidator: NetworkingResponseValidator {
+    struct ResponseSerializers<SuccessType: Sendable>: NetworkingResponseSerializer {
+
+        private actor Index {
+            var value = 0
+
+            func updateIndex() {
+                self.value += 1
+            }
+        }
+
+        let serializedResults: [Result<SuccessType, Error>]
+        private let index = Index()
+
+        init(_ serializedResults: [Result<SuccessType, Error>] = [.success(())]) {
+            self.serializedResults = serializedResults
+        }
+
+        func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
+            let index = await self.index.value
+            await self.index.updateIndex()
+            guard index < self.serializedResults.count else { fatalError("out of bounds: index > serializedResults.count") }
+            switch result {
+            case .success:
+                return self.serializedResults[index]
+            case .failure(let failure):
+                return .failure(failure)
+            }
+        }
+    }
+
+    struct ResponseValidator: NetworkingResponseValidator {
         let mockValidationError: Error?
 
         init(mockValidationError: Error?) {
@@ -118,7 +131,7 @@ enum Mock {
         }
     }
 
-    class RequestInterceptor: NetworkingRequestInterceptor {
+    actor RequestInterceptor: NetworkingRequestInterceptor {
 
         enum AdapterResult {
             case doNotAdapt
