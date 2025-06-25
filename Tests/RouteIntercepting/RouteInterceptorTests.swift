@@ -8,15 +8,15 @@
 import XCTest
 @testable import PopNetworking
 
-class InterceptorTests: XCTestCase {
+class RouteInterceptorTests: XCTestCase {
 
     func testAllRequestInterceptorsRun() async throws {
         let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
-        let interceptor = Interceptor(adapters: [mockRequestInterceptor1, mockRequestInterceptor2],
-                                      retriers: [mockRequestInterceptor1, mockRequestInterceptor2])
+        let interceptor = RouteInterceptor(adapters: [mockRequestInterceptor1, mockRequestInterceptor2],
+                                           retriers: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
@@ -38,7 +38,7 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .doNotRetry)
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
-        let interceptor = Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
+        let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
@@ -56,7 +56,7 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .retry)
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
-        let interceptor = Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
+        let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),
@@ -74,7 +74,7 @@ class InterceptorTests: XCTestCase {
                                                               retrierResult: .retryWithDelay(0))
         let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
                                                               retrierResult: .doNotRetry)
-        let interceptor = Interceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
+        let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         requestAdapter: interceptor,
                                                         requestRetrier: interceptor),

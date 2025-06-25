@@ -38,32 +38,55 @@ public struct NetworkingRoutePublisher<Route: NetworkingRoute>: Publisher {
 }
 
 private extension NetworkingRoutePublisher {
-    final class Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRoutePublisher.Output {
+    struct Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable, Sendable where Downstream.Input == NetworkingRoutePublisher.Output {
 
-        private var downstream: Downstream?
+        private actor SafeMutableProperties {
+
+            private(set) var downstream: Downstream?
+            private(set) var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
+
+            init(downstream: Downstream?) {
+                self.downstream = downstream
+            }
+
+            func clearDownstream() {
+                self.downstream = nil
+            }
+
+            func set(routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?) {
+                self.routeTask = routeTask
+            }
+
+            func cancelRouteTask() {
+                self.routeTask?.cancel()
+            }
+        }
+
+        let combineIdentifier = CombineIdentifier()
         private let route: Route
-        private var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
+        private let mutableProperties: SafeMutableProperties
 
         init(route: Route, downstream: Downstream) {
             self.route = route
-            self.downstream = downstream
+            self.mutableProperties = SafeMutableProperties(downstream: downstream)
         }
 
         func request(_ demand: Subscribers.Demand) {
-
-            guard let downstream = downstream else { return }
-
-            self.downstream = nil
-
-            routeTask = route.request { result in
-                _ = downstream.receive(result)
-                downstream.receive(completion: .finished)
+            Task {
+                guard let downstream = await self.mutableProperties.downstream else { return }
+                await self.mutableProperties.clearDownstream()
+                await self.mutableProperties.set(routeTask: self.route.request { result in
+                    _ = downstream.receive(result)
+                    downstream.receive(completion: .finished)
+                })
             }
         }
 
         func cancel() {
-            routeTask?.cancel()
-            downstream = nil
+            Task {
+                await self.mutableProperties.cancelRouteTask()
+                await self.mutableProperties.clearDownstream()
+            }
         }
     }
 }
@@ -90,37 +113,62 @@ public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute & Sendable
 }
 
 private extension NetworkingRouteFailablePublisher {
-    final class Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRouteFailablePublisher.Output,
-                                                                                                  Downstream.Failure == NetworkingRouteFailablePublisher.Failure {
+    struct Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable where Downstream.Input == NetworkingRouteFailablePublisher.Output,
+                                                                                             Downstream.Failure == NetworkingRouteFailablePublisher.Failure {
+        private actor SafeMutableProperties {
 
-        private var downstream: Downstream?
+            private(set) var downstream: Downstream?
+            private(set) var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
+
+            init(downstream: Downstream?) {
+                self.downstream = downstream
+            }
+
+            func clearDownstream() {
+                self.downstream = nil
+            }
+
+            func set(routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?) {
+                self.routeTask = routeTask
+            }
+
+            func cancelRouteTask() {
+                self.routeTask?.cancel()
+            }
+        }
+
+        let combineIdentifier = CombineIdentifier()
         private let route: Route
-        private var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
+        private let mutableProperties: SafeMutableProperties
 
         init(route: Route, downstream: Downstream) {
             self.route = route
-            self.downstream = downstream
+            self.mutableProperties = SafeMutableProperties(downstream: downstream)
         }
 
         func request(_ demand: Subscribers.Demand) {
-
-            guard let downstream = downstream else { return }
-            self.downstream = nil
-
-            routeTask = route.request { result in
-                switch result {
-                    case .success(let responseModel):
-                        _ = downstream.receive(responseModel)
-                        downstream.receive(completion: .finished)
-                    case .failure(let error):
-                        downstream.receive(completion: .failure(error))
-                }
+            Task {
+                guard let downstream = await self.mutableProperties.downstream else { return }
+                await self.mutableProperties.clearDownstream()
+                await self.mutableProperties.set(routeTask: self.route.request { result in
+                    switch result {
+                        case .success(let responseModel):
+                            _ = downstream.receive(responseModel)
+                            downstream.receive(completion: .finished)
+                        case .failure(let error):
+                            downstream.receive(completion: .failure(error))
+                    }
+                })
             }
         }
 
         func cancel() {
-            routeTask?.cancel()
-            downstream = nil
+            Task {
+                await self.mutableProperties.routeTask?.cancel()
+                await self.mutableProperties.clearDownstream()
+            }
         }
     }
 }
+
+extension CombineIdentifier: @unchecked @retroactive Sendable {}

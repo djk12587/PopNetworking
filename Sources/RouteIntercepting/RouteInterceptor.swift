@@ -7,21 +7,21 @@
 
 import Foundation
 
-/// An `Interceptor` allows you to utilize multiple ``NetworkingRequestInterceptor``'s for a request.
+/// An `Interceptor` allows you to utilize multiple ``NetworkingRouteInterceptor``'s for a request.
 ///
-/// - Attention: All ``NetworkingRequestAdapter``'s will run until one fails. ``NetworkingRequestRetrier``'s will run until a retry results in a successful response.
-public struct Interceptor: NetworkingRequestInterceptor {
+/// - Attention: All ``NetworkingRouteAdapter``'s will run until one fails. ``NetworkingRouteRetrier``'s will run until a retry results in a successful response.
+public struct RouteInterceptor: Sendable, NetworkingRouteInterceptor {
 
-    private let adapters: [NetworkingRequestAdapter]
-    private let retriers: [NetworkingRequestRetrier]
+    private let adapters: [NetworkingRouteAdapter]
+    private let retriers: [NetworkingRouteRetrier]
 
-    public init(requestInterceptors: [NetworkingRequestInterceptor]) {
+    public init(requestInterceptors: [NetworkingRouteInterceptor]) {
         self.adapters = requestInterceptors
         self.retriers = requestInterceptors
     }
 
-    public init(adapters: [NetworkingRequestAdapter] = [],
-                retriers: [NetworkingRequestRetrier] = []) {
+    public init(adapters: [NetworkingRouteAdapter] = [],
+                retriers: [NetworkingRouteRetrier] = []) {
         self.adapters = adapters
         self.retriers = retriers
     }
@@ -30,7 +30,7 @@ public struct Interceptor: NetworkingRequestInterceptor {
         return try await adapt(urlRequest: urlRequest, with: adapters)
     }
 
-    private func adapt(urlRequest: URLRequest, with adapters: [NetworkingRequestAdapter]) async throws -> URLRequest {
+    private func adapt(urlRequest: URLRequest, with adapters: [NetworkingRouteAdapter]) async throws -> URLRequest {
         var pendingAdapters = adapters
         guard let adapter = pendingAdapters.first else { return urlRequest }
         pendingAdapters.removeFirst()
@@ -38,15 +38,15 @@ public struct Interceptor: NetworkingRequestInterceptor {
         return try await adapt(urlRequest: adaptedRequest, with: pendingAdapters)
     }
 
-    public func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) async -> NetworkingRequestRetrierResult {
+    public func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRouteRetrierResult {
         return await retry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount, retriers: retriers)
     }
 
     private func retry(urlRequest: URLRequest?,
                        dueTo error: Error,
-                       urlResponse: HTTPURLResponse?,
+                       urlResponse: URLResponse?,
                        retryCount: Int,
-                       retriers: [NetworkingRequestRetrier]) async -> NetworkingRequestRetrierResult {
+                       retriers: [NetworkingRouteRetrier]) async -> NetworkingRouteRetrierResult {
         var pendingRetriers = retriers
         guard let retrier = pendingRetriers.first else { return .doNotRetry }
         pendingRetriers.removeFirst()

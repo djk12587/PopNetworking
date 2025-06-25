@@ -8,22 +8,24 @@
 
 import Foundation
 
-/// Allows you the ability to mutate a request before it gets sent, and retry `URLRequest`'s that failed.
-public protocol NetworkingRequestInterceptor: NetworkingRequestAdapter & NetworkingRequestRetrier & Sendable {}
+/// Allows you to mutate a request before it gets sent, and retry `URLRequest`'s that failed.
+/// - Note:
+///   Common use case: refreshing authorization tokens
+public protocol NetworkingRouteInterceptor: NetworkingRouteAdapter & NetworkingRouteRetrier {}
 
 /// Allows you to adapt, or modify, the `URLRequest` before it gets executed as an HTTP request.
-public protocol NetworkingRequestAdapter: Sendable {
+public protocol NetworkingRouteAdapter: Sendable {
 
-    /// A throwable function that accepts a `URLRequest` and will return a potentially modifed `URLRequest` or throw an `Error`
+    /// A throwable function that accepts a `URLRequest` and will return a potentially modified `URLRequest` or throw an `Error`
     /// - Parameters:
     ///   - urlRequest: Modify this `URLRequest` object if necessary. If no modifications are required simply return the `urlRequest`.
     ///
-    /// - Returns: The `URLRequest` that is returned is what will be sent over the wire. Any errors thrown here will attempt to call the `NetworkingRequestRetrier` `retry()` function
+    /// - Returns: The adapted or modified `URLRequest`.
     func adapt(urlRequest: URLRequest) async throws -> URLRequest
 }
 
 /// Allows you to retry a failed `URLRequest`. IE, if the `URLRequest` failed due to a 401 Unauthorized error.
-public protocol NetworkingRequestRetrier: Sendable {
+public protocol NetworkingRouteRetrier: Sendable {
     /// A function that will determine if a `URLRequest` should be retried or not.
     ///
     /// - Parameters:
@@ -32,15 +34,15 @@ public protocol NetworkingRequestRetrier: Sendable {
     ///   - urlResponse: The failed `URLRequest`'s response.
     ///   - retryCount: The number of times this `URLRequest` has been retried.
     ///
-    ///   - Returns: An instance of ``NetworkingRequestRetrierResult`` which indicates if the request should be retried or not
+    ///   - Returns: An instance of ``NetworkingRouteRetrierResult`` which indicates if the request should be retried or not
     func retry(urlRequest: URLRequest?,
                dueTo error: Error,
-               urlResponse: HTTPURLResponse?,
-               retryCount: Int) async -> NetworkingRequestRetrierResult
+               urlResponse: URLResponse?,
+               retryCount: Int) async -> NetworkingRouteRetrierResult
 }
 
-/// `NetworkingRequestRetrierResult`indicates if a request should be retried or not. `NetworkingRequestRetrierResult` is returned from ``NetworkingRequestRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
-public enum NetworkingRequestRetrierResult: Sendable {
+/// `NetworkingRouteRetrierResult`indicates if a request should be retried or not. `NetworkingRouteRetrierResult` is returned from ``NetworkingRouteRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
+public enum NetworkingRouteRetrierResult: Sendable {
     case retry
     case retryWithDelay(TimeInterval)
     case doNotRetry

@@ -30,9 +30,9 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
-            return result.flatMap { data in
-                Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SuccessType, Error> {
+            return responseResult.flatMap { (responseData, _) in
+                Result { try jsonDecoder.decode(SerializedObject.self, from: responseData) }
             }
         }
     }
@@ -72,15 +72,15 @@ public enum NetworkingResponseSerializers {
             self.failureTypeJsonDecoder = failureTypeJsonDecoder
         }
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
-            return result.flatMap { data in
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SuccessType, Error> {
+            return responseResult.flatMap { (responseData, _) in
                 do {
-                    let serializedObject = try successTypeJsonDecoder.decode(SerializedObject.self, from: data)
+                    let serializedObject = try successTypeJsonDecoder.decode(SerializedObject.self, from: responseData)
                     return .success(serializedObject)
                 }
                 catch let serializedObjectError {
                     do {
-                        let serializedError = try failureTypeJsonDecoder.decode(SerializedErrorObject.self, from: data)
+                        let serializedError = try failureTypeJsonDecoder.decode(SerializedErrorObject.self, from: responseData)
                         return .failure(serializedError)
                     }
                     catch let errorSerializerError {
@@ -97,10 +97,10 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<Int, Error> {
-            return result.flatMap { _ in
-                guard let response = urlResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
-                return .success(response.statusCode)
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<Int, Error> {
+            return responseResult.flatMap { (_, urlResponse) in
+                guard let httpUrlResponse = urlResponse as? HTTPURLResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
+                return .success(httpUrlResponse.statusCode)
             }
         }
     }
@@ -111,6 +111,6 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<Data, Error> { result }
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<Data, Error> { responseResult.map({ $0.0 }) }
     }
 }

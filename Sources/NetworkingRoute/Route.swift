@@ -31,6 +31,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
     public var session: NetworkingSession
     public var responseValidator: NetworkingResponseValidator?
     public var responseSerializer: ResponseSerializer
+    public var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>?
     public var timeoutInterval: TimeInterval?
     public var repeater: Repeater?
 
@@ -42,6 +43,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
                 session: NetworkingSession = .shared,
                 responseValidator: NetworkingResponseValidator? = nil,
                 responseSerializer: ResponseSerializer,
+                mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? = nil,
                 timeoutInterval: TimeInterval? = nil,
                 repeater: Repeater? = nil) {
         self.baseUrl = baseUrl
@@ -52,6 +54,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
         self.session = session
         self.responseValidator = responseValidator
         self.responseSerializer = responseSerializer
+        self.mockSerializedResult = mockSerializedResult
         self.timeoutInterval = timeoutInterval
         self.repeater = repeater
     }

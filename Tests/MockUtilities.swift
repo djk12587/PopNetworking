@@ -10,7 +10,7 @@ import Foundation
 
 enum Mock {
 
-    struct Route<ResponseSerializer: NetworkingResponseSerializer & Sendable>: NetworkingRoute {
+    struct Route<ResponseSerializer: NetworkingResponseSerializer>: NetworkingRoute {
 
         var baseUrl: String
         var path: String
@@ -19,6 +19,7 @@ enum Mock {
         var session: NetworkingSession
         var responseValidator: NetworkingResponseValidator?
         var responseSerializer: ResponseSerializer
+        var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>?
         var timeoutInterval: TimeInterval?
         var repeater: Repeater?
 
@@ -30,6 +31,7 @@ enum Mock {
              responseValidator: NetworkingResponseValidator? = nil,
              responseSerializer: ResponseSerializer,
              timeoutInterval: TimeInterval? = nil,
+             mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? = nil,
              repeater: Repeater? = nil) {
             self.baseUrl = baseUrl
             self.path = path
@@ -38,18 +40,29 @@ enum Mock {
             self.session = session
             self.responseValidator = responseValidator
             self.responseSerializer = responseSerializer
+            self.mockSerializedResult = mockSerializedResult
             self.timeoutInterval = timeoutInterval
             self.repeater = repeater
         }
     }
 
-    final actor UrlSession: URLSessionProtocol {
+    struct UrlSession: URLSessionProtocol {
 
+        private actor SafeMutableData {
+            private(set) var lastRequest: URLRequest?
+
+            func set(lastRequest: URLRequest?) {
+                self.lastRequest = lastRequest
+            }
+        }
+
+        private let mutableData = SafeMutableData()
         let mockResult: Result<Data, Error>
         let mockUrlResponse: URLResponse?
         let mockDelay: TimeInterval?
-
-        private(set) var lastRequest: URLRequest?
+        var lastRequest: URLRequest? {
+            get async { await self.mutableData.lastRequest }
+        }
 
         init(mockResult: Result<Data, Error> = .success(Data()),
              mockUrlResponse: URLResponse? = nil,
@@ -60,8 +73,8 @@ enum Mock {
         }
 
         func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-            defer { lastRequest = request }
             try? await Task.sleep(nanoseconds: UInt64(mockDelay ?? 0) * 1_000_000_000)
+            await self.mutableData.set(lastRequest: request)
             return (try mockResult.get(), self.mockUrlResponse ?? URLResponse())
         }
 
@@ -78,8 +91,8 @@ enum Mock {
             self.serializedResult = serializedResult
         }
 
-        func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
-            switch result {
+        func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SuccessType, Error> {
+            switch responseResult {
             case .success:
                 return self.serializedResult
             case .failure(let failure):
@@ -105,11 +118,11 @@ enum Mock {
             self.serializedResults = serializedResults
         }
 
-        func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) async -> Result<SuccessType, Error> {
+        func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SuccessType, Error> {
             let index = await self.index.value
             await self.index.updateIndex()
             guard index < self.serializedResults.count else { fatalError("out of bounds: index > serializedResults.count") }
-            switch result {
+            switch responseResult {
             case .success:
                 return self.serializedResults[index]
             case .failure(let failure):
@@ -125,13 +138,13 @@ enum Mock {
             self.mockValidationError = mockValidationError
         }
         
-        func validate(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) throws {
+        func validate(responseResult: Result<(Data, URLResponse), Error>) throws {
             guard let mockValidationError = mockValidationError else { return }
             throw mockValidationError
         }
     }
 
-    actor RequestInterceptor: NetworkingRequestInterceptor {
+    struct RequestInterceptor: NetworkingRouteInterceptor {
 
         enum AdapterResult {
             case doNotAdapt
@@ -139,19 +152,60 @@ enum Mock {
             case failure(error: Error)
         }
 
-        init(adapterResult: AdapterResult,
-             retrierResult: NetworkingRequestRetrierResult) {
-            self.adapterResult = adapterResult
-            self.retrierResult = retrierResult
+        private actor SafeMutableData {
+
+            var adapterDidRun = false
+            var adapterResult: AdapterResult
+            var retrierDidRun = false
+            var retrierResult: NetworkingRouteRetrierResult
+            var retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: URLResponse?, retryCount: Int)?
+            var retryCounter = 0
+
+            init(adapterDidRun: Bool = false, adapterResult: AdapterResult, retrierDidRun: Bool = false, retrierResult: NetworkingRouteRetrierResult, retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: HTTPURLResponse?, retryCount: Int)? = nil, retryCounter: Int = 0) {
+                self.adapterDidRun = adapterDidRun
+                self.adapterResult = adapterResult
+                self.retrierDidRun = retrierDidRun
+                self.retrierResult = retrierResult
+                self.retrierPayload = retrierPayload
+                self.retryCounter = retryCounter
+            }
+
+            func set(adapterDidRun: Bool) {
+                self.adapterDidRun = adapterDidRun
+            }
+
+            func set(adapterResult: AdapterResult) {
+                self.adapterResult = adapterResult
+            }
+
+            func set(retrierDidRun: Bool) {
+                self.retrierDidRun = retrierDidRun
+            }
+
+            func set(retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: URLResponse?, retryCount: Int)?) {
+                self.retrierPayload = retrierPayload
+            }
+
+            func set(retryCounter: Int) {
+                self.retryCounter = retryCounter
+            }
         }
 
-        var adapterDidRun = false
-        var adapterResult: AdapterResult
+        private let mutableData: SafeMutableData
+
+        var adapterDidRun: Bool { get async { await self.mutableData.adapterDidRun } }
+        var retrierDidRun: Bool { get async { await self.mutableData.retrierDidRun } }
+        var retryCounter: Int { get async { await self.mutableData.retryCounter } }
+
+        init(adapterResult: AdapterResult,
+             retrierResult: NetworkingRouteRetrierResult) {
+            self.mutableData = SafeMutableData(adapterResult: adapterResult, retrierResult: retrierResult)
+        }
 
         func adapt(urlRequest: URLRequest) async throws -> URLRequest {
-            defer { adapterDidRun = true }
+            await self.mutableData.set(adapterDidRun: true)
 
-            switch adapterResult {
+            switch await self.mutableData.adapterResult {
                 case .doNotAdapt:
                     return urlRequest
                 case .adapt(let adaptedUrlRequest):
@@ -161,18 +215,12 @@ enum Mock {
             }
         }
 
-        var retrierDidRun = false
-        var retrierResult: NetworkingRequestRetrierResult
-        var retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: HTTPURLResponse?, retryCount: Int)?
-        var retryCounter = 0
-
-        func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: HTTPURLResponse?, retryCount: Int) async -> NetworkingRequestRetrierResult {
-            defer {
-                retrierPayload = (urlRequest, error, urlResponse, retryCount)
-                retrierDidRun = true
-                retryCounter += 1
-            }
-            return retrierResult
+        func retry(urlRequest: URLRequest?, dueTo error: any Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRouteRetrierResult {
+            await mutableData.set(retrierPayload: (urlRequest, error, urlResponse, retryCount))
+            await mutableData.set(retrierDidRun: true)
+            await mutableData.set(retryCounter: await mutableData.retryCounter + 1)
+            return await mutableData.retrierResult
         }
+
     }
 }

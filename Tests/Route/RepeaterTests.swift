@@ -15,7 +15,7 @@ class RepeaterTests: XCTestCase {
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
                              repeater: { _, _, repeatCount in
-            let retrierResult: NetworkingRequestRetrierResult = repeatCount > 1 ? .doNotRetry : .retry
+            let retrierResult: NetworkingRouteRetrierResult = repeatCount > 1 ? .doNotRetry : .retry
             if case .doNotRetry = retrierResult, repeatCount == 2 {
                 expectation.fulfill()
             }
@@ -30,7 +30,7 @@ class RepeaterTests: XCTestCase {
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
                              repeater: { _, _, repeatCount in
-            let retrierResult: NetworkingRequestRetrierResult = repeatCount > 0 ? .doNotRetry : .retryWithDelay(0)
+            let retrierResult: NetworkingRouteRetrierResult = repeatCount > 0 ? .doNotRetry : .retryWithDelay(0)
             if case .doNotRetry = retrierResult, repeatCount == 1 {
                 expectation.fulfill()
             }
