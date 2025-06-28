@@ -9,7 +9,7 @@ import Foundation
 
 /// A `Route` is a basic implementation of a ``NetworkingRoute``. Use `Route` as a quick and dirty way to get an endpoint up and running
 ///
-/// ```
+/// ```swift
 /// //Example usage
 /// Route(baseUrl: "https://www.baseUrl.com",
 ///       responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).request { result in

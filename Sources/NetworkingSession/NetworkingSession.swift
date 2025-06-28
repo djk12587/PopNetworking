@@ -13,7 +13,7 @@ import Foundation
 public extension NetworkingSession {
     /// A singleton ``NetworkingSession`` object.
     ///
-    /// The ``NetworkingSession`` class provides a shared singleton session object that utilizes ``URLSession`` with a ``URLSessionConfiguration.default`` configuration.
+    /// The ``NetworkingSession`` class provides a shared singleton session object that utilizes `URLSession` with a `URLSessionConfiguration.default` configuration.
     static let shared = NetworkingSession()
 }
 

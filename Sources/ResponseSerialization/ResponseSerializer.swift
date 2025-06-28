@@ -17,8 +17,8 @@ public protocol NetworkingResponseSerializer: Sendable {
 
     /// Responsible for serializing the HTTP response data into whatever type ``SerializedObject`` is set to.
     ///
-    /// - Parameter result: A `Result` type that returns the response `Data` or an `Error`
-    /// - Parameter urlResponse: The `HTTPURLResponse` of the request
+    /// - Parameters:
+    ///     - responseResult: A `Result` type that returns the response `Data` and `URLResponse` or an `Error`
     /// - Returns: A `Result` type that contains the ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
     func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SerializedObject, Error>
 }

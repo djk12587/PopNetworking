@@ -79,7 +79,7 @@ enum Mock {
         }
 
         func data(for request: URLRequest, delegate: URLSessionTaskDelegate?) async throws -> (Data, URLResponse) {
-            try await data(for: request)
+            try await self.data(for: request)
         }
     }
 
@@ -192,7 +192,6 @@ enum Mock {
         }
 
         private let mutableData: SafeMutableData
-
         var adapterDidRun: Bool { get async { await self.mutableData.adapterDidRun } }
         var retrierDidRun: Bool { get async { await self.mutableData.retrierDidRun } }
         var retryCounter: Int { get async { await self.mutableData.retryCounter } }
@@ -216,10 +215,10 @@ enum Mock {
         }
 
         func retry(urlRequest: URLRequest?, dueTo error: any Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRouteRetrierResult {
-            await mutableData.set(retrierPayload: (urlRequest, error, urlResponse, retryCount))
-            await mutableData.set(retrierDidRun: true)
-            await mutableData.set(retryCounter: await mutableData.retryCounter + 1)
-            return await mutableData.retrierResult
+            await self.mutableData.set(retrierPayload: (urlRequest, error, urlResponse, retryCount))
+            await self.mutableData.set(retrierDidRun: true)
+            await self.mutableData.set(retryCounter: await self.mutableData.retryCounter + 1)
+            return await self.mutableData.retrierResult
         }
 
     }

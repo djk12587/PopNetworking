@@ -15,7 +15,7 @@ public enum NetworkingResponseSerializers {
 
     /// The `DecodableResponseSerializer` will attempt to parse response `Data` into a the generic `SuccessType`. `SuccessType` must adhere to `Decodable`.
     ///
-    /// - Note: `DecodableResponseSerializer` cannot handle API's errors. To handle custom API errors see ``DecodableResponseWithErrorSerializer``
+    /// - Note: `DecodableResponseSerializer` cannot handle API's errors. To handle custom API errors see ``DecodableResponseAndErrorSerializer``
     public struct DecodableResponseSerializer<SuccessType: Decodable>: NetworkingResponseSerializer {
 
         /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
@@ -32,14 +32,14 @@ public enum NetworkingResponseSerializers {
 
         public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SuccessType, Error> {
             return responseResult.flatMap { (responseData, _) in
-                Result { try jsonDecoder.decode(SerializedObject.self, from: responseData) }
+                Result { try self.jsonDecoder.decode(SerializedObject.self, from: responseData) }
             }
         }
     }
 
     /// The `DecodableResponseWithErrorSerializer` will attempt to parse response `Data` into a the generic `SuccessType`.  If your networking request failed, the `DecodableResponseWithErrorSerializer` will also attempt to parse response `Data` into the generic `FailureType`. `FailureType` & `SuccessType` must adhere to  `Decodable`. In addition, `FailureType` must aslo adhere to `Error`.
-    public struct DecodableResponseWithErrorSerializer<SuccessType: Decodable,
-                                                       FailureType: Decodable & Error>: NetworkingResponseSerializer {
+    public struct DecodableResponseAndErrorSerializer<SuccessType: Decodable,
+                                                      FailureType: Decodable & Error>: NetworkingResponseSerializer {
 
         /// The ``SerializedObject`` must adhere to `Decodable`.
         ///
@@ -58,8 +58,8 @@ public enum NetworkingResponseSerializers {
         /// - Parameters:
         ///   - jsonDecoder: The `JSONDecoder` that will be used to parse json data
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
-            successTypeJsonDecoder = jsonDecoder
-            failureTypeJsonDecoder = jsonDecoder
+            self.successTypeJsonDecoder = jsonDecoder
+            self.failureTypeJsonDecoder = jsonDecoder
         }
 
         /// Initializes an instance of `DecodableResponseWithErrorSerializer`

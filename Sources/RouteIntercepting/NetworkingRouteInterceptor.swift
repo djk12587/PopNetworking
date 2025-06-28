@@ -34,14 +34,14 @@ public protocol NetworkingRouteRetrier: Sendable {
     ///   - urlResponse: The failed `URLRequest`'s response.
     ///   - retryCount: The number of times this `URLRequest` has been retried.
     ///
-    ///   - Returns: An instance of ``NetworkingRouteRetrierResult`` which indicates if the request should be retried or not
+    /// - Returns: An instance of ``NetworkingRouteRetrierResult`` which indicates if the request should be retried or not
     func retry(urlRequest: URLRequest?,
                dueTo error: Error,
                urlResponse: URLResponse?,
                retryCount: Int) async -> NetworkingRouteRetrierResult
 }
 
-/// `NetworkingRouteRetrierResult`indicates if a request should be retried or not. `NetworkingRouteRetrierResult` is returned from ``NetworkingRouteRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
+/// `NetworkingRouteRetrierResult` indicates if a request should be retried or not. `NetworkingRouteRetrierResult` is returned from ``NetworkingRouteRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
 public enum NetworkingRouteRetrierResult: Sendable {
     case retry
     case retryWithDelay(TimeInterval)

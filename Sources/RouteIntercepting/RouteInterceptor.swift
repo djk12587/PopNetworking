@@ -27,19 +27,25 @@ public struct RouteInterceptor: Sendable, NetworkingRouteInterceptor {
     }
 
     public func adapt(urlRequest: URLRequest) async throws -> URLRequest {
-        return try await adapt(urlRequest: urlRequest, with: adapters)
+        return try await self.adapt(urlRequest: urlRequest, with: self.adapters)
     }
 
     private func adapt(urlRequest: URLRequest, with adapters: [NetworkingRouteAdapter]) async throws -> URLRequest {
-        var pendingAdapters = adapters
-        guard let adapter = pendingAdapters.first else { return urlRequest }
-        pendingAdapters.removeFirst()
+
+        var adapters = adapters
+        guard !adapters.isEmpty else { return urlRequest }
+
+        let adapter = adapters.removeFirst()
         let adaptedRequest = try await adapter.adapt(urlRequest: urlRequest)
-        return try await adapt(urlRequest: adaptedRequest, with: pendingAdapters)
+        return try await self.adapt(urlRequest: adaptedRequest, with: adapters)
     }
 
     public func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRouteRetrierResult {
-        return await retry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount, retriers: retriers)
+        return await self.retry(urlRequest: urlRequest,
+                                dueTo: error,
+                                urlResponse: urlResponse,
+                                retryCount: retryCount,
+                                retriers: self.retriers)
     }
 
     private func retry(urlRequest: URLRequest?,
@@ -47,11 +53,15 @@ public struct RouteInterceptor: Sendable, NetworkingRouteInterceptor {
                        urlResponse: URLResponse?,
                        retryCount: Int,
                        retriers: [NetworkingRouteRetrier]) async -> NetworkingRouteRetrierResult {
-        var pendingRetriers = retriers
-        guard let retrier = pendingRetriers.first else { return .doNotRetry }
-        pendingRetriers.removeFirst()
 
-        let retryResult = await retrier.retry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount)
+        var retriers = retriers
+        guard !retriers.isEmpty else { return .doNotRetry }
+
+        let retrier = retriers.removeFirst()
+        let retryResult = await retrier.retry(urlRequest: urlRequest,
+                                              dueTo: error,
+                                              urlResponse: urlResponse,
+                                              retryCount: retryCount)
         switch retryResult {
             case .retry:
                 return retryResult
@@ -59,7 +69,11 @@ public struct RouteInterceptor: Sendable, NetworkingRouteInterceptor {
                 try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
                 return retryResult
             case .doNotRetry:
-                return await retry(urlRequest: urlRequest, dueTo: error, urlResponse: urlResponse, retryCount: retryCount, retriers: pendingRetriers)
+                return await self.retry(urlRequest: urlRequest,
+                                        dueTo: error,
+                                        urlResponse: urlResponse,
+                                        retryCount: retryCount,
+                                        retriers: retriers)
         }
     }
 }
