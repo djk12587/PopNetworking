@@ -18,7 +18,9 @@ public protocol NetworkingRoute: Sendable {
     /// For examples of prebuilt `NetworkingResponseSerializer`'s see ``NetworkingResponseSerializers``
     associatedtype ResponseSerializer: NetworkingResponseSerializer where ResponseSerializer.SerializedObject: Sendable
 
-    /// The ``NetworkingSession`` used to execute the route
+    /// The ``NetworkingSessionProtocol`` is used to execute the route and return the serialized object.
+    ///
+    /// ``NetworkingSession`` is the a default implementation of ``NetworkingSessionProtocol``.
     var session: NetworkingSessionProtocol { get }
 
     /// Declares the base URL
@@ -157,7 +159,7 @@ public extension NetworkingRoute {
         return requestTask
     }
 
-    var session: NetworkingSession { .shared }
+    var session: NetworkingSessionProtocol { NetworkingSession.shared }
     var headers: NetworkingRouteHttpHeaders? { nil }
     var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
     var timeoutInterval: TimeInterval? { nil }
