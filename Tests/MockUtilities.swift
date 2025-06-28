@@ -16,7 +16,7 @@ enum Mock {
         var path: String
         var method: NetworkingRouteHttpMethod
         var parameterEncoding: NetworkingRequestParameterEncoding?
-        var session: NetworkingSession
+        var session: NetworkingSessionProtocol
         var responseValidator: NetworkingResponseValidator?
         var responseSerializer: ResponseSerializer
         var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>?
@@ -27,7 +27,7 @@ enum Mock {
              path: String = "",
              method: NetworkingRouteHttpMethod = .get,
              parameterEncoding: NetworkingRequestParameterEncoding? = nil,
-             session: NetworkingSession = NetworkingSession(urlSession: Mock.UrlSession()),
+             session: NetworkingSessionProtocol = NetworkingSession(urlSession: Mock.UrlSession()),
              responseValidator: NetworkingResponseValidator? = nil,
              responseSerializer: ResponseSerializer,
              timeoutInterval: TimeInterval? = nil,
@@ -55,7 +55,7 @@ enum Mock {
                 self.lastRequest = lastRequest
             }
         }
-
+        var session: URLSession { URLSession(configuration: .default) }
         private let mutableData = SafeMutableData()
         let mockResult: Result<Data, Error>
         let mockUrlResponse: URLResponse?

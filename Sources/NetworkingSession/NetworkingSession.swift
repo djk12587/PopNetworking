@@ -8,7 +8,12 @@
 
 import Foundation
 
-// MARK: - NetworkingSession
+public protocol NetworkingSessionProtocol: Sendable {
+
+    var urlSession: URLSession { get }
+    func execute<Route: NetworkingRoute>(route: Route) async throws -> Route.ResponseSerializer.SerializedObject
+
+}
 
 public extension NetworkingSession {
     /// A singleton ``NetworkingSession`` object.
@@ -17,34 +22,36 @@ public extension NetworkingSession {
     static let shared = NetworkingSession()
 }
 
-/// Is  a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and kicks off the HTTP request.
-public final class NetworkingSession: Sendable {
+/// ``NetworkingSession`` a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and returns the ``NetworkingRoute``'s serialized object.
+public final class NetworkingSession: NetworkingSessionProtocol {
 
-    private let urlSession: URLSessionProtocol
+    public var urlSession: URLSession { self._urlSession.session }
+
+    private let _urlSession: URLSessionProtocol
     private let requestAdapter: NetworkingRouteAdapter?
     private let requestRetrier: NetworkingRouteRetrier?
 
     public init(urlSession: URLSession = URLSession(configuration: .default),
                 requestAdapter: NetworkingRouteAdapter? = nil,
                 requestRetrier: NetworkingRouteRetrier? = nil) {
-        self.urlSession = urlSession
         self.requestAdapter = requestAdapter
         self.requestRetrier = requestRetrier
+        self._urlSession = urlSession
     }
 
     public init(urlSession: URLSession = URLSession(configuration: .default),
                 requestInterceptor: NetworkingRouteInterceptor? = nil) {
-        self.urlSession = urlSession
         self.requestAdapter = requestInterceptor
         self.requestRetrier = requestInterceptor
+        self._urlSession = urlSession
     }
 
-    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+    public init(urlSession: URLSessionProtocol,
                 requestAdapter: NetworkingRouteAdapter? = nil,
                 requestRetrier: NetworkingRouteRetrier? = nil) {
-        self.urlSession = urlSession
         self.requestAdapter = requestAdapter
         self.requestRetrier = requestRetrier
+        self._urlSession = urlSession
     }
 
     /// Performs an HTTP request and parses the HTTP response into the `Route.ResponseSerializer.SerializedObject`
@@ -71,7 +78,8 @@ private extension NetworkingSession {
     func start<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
         let urlRequestResult = await routeDataTask.buildURLRequest(adapter: self.requestAdapter)
 
-        var (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult, on: self.urlSession)
+        var (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult,
+                                                                        on: self._urlSession)
 
         serializedResult = await routeDataTask.executeRetrier(retrier: self.requestRetrier,
                                                               serializedResult: serializedResult,

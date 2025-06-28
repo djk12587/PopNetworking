@@ -28,7 +28,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
     public var method: NetworkingRouteHttpMethod
     public var headers: NetworkingRouteHttpHeaders?
     public var parameterEncoding: NetworkingRequestParameterEncoding?
-    public var session: NetworkingSession
+    public var session: NetworkingSessionProtocol
     public var responseValidator: NetworkingResponseValidator?
     public var responseSerializer: ResponseSerializer
     public var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>?
@@ -40,7 +40,7 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
                 method: NetworkingRouteHttpMethod = .get,
                 headers: NetworkingRouteHttpHeaders? = nil,
                 parameterEncoding: NetworkingRequestParameterEncoding? = nil,
-                session: NetworkingSession = .shared,
+                session: NetworkingSessionProtocol = NetworkingSession.shared,
                 responseValidator: NetworkingResponseValidator? = nil,
                 responseSerializer: ResponseSerializer,
                 mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? = nil,

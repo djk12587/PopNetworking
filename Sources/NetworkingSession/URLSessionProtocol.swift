@@ -11,7 +11,14 @@ import Foundation
 ///
 /// - Note: `URLSession` adheres to ``URLSessionProtocol``
 public protocol URLSessionProtocol: Sendable {
+
+    var session: URLSession { get }
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
+
 }
 
-extension URLSession: URLSessionProtocol {}
+extension URLSession: URLSessionProtocol {
+
+    public var session: URLSession { self }
+
+}

@@ -19,7 +19,7 @@ public protocol NetworkingRoute: Sendable {
     associatedtype ResponseSerializer: NetworkingResponseSerializer where ResponseSerializer.SerializedObject: Sendable
 
     /// The ``NetworkingSession`` used to execute the route
-    var session: NetworkingSession { get }
+    var session: NetworkingSessionProtocol { get }
 
     /// Declares the base URL
     var baseUrl: String { get }
