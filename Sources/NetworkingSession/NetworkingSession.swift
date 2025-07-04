@@ -28,29 +28,43 @@ public final class NetworkingSession: NetworkingSessionProtocol {
     public var urlSession: URLSession { self._urlSession.session }
 
     private let _urlSession: URLSessionProtocol
-    private let requestAdapter: NetworkingRouteAdapter?
-    private let requestRetrier: NetworkingRouteRetrier?
-
+    private let adapter: NetworkingAdapter?
+    private let retrier: NetworkingRetrier?
+    
+    /// Creates an instance of a ``NetworkingSession`` with a `URLSession`.
+    /// - Parameters:
+    ///   - urlSession: The ``URLSession`` that executes the HTTP requests.
+    ///   - adapter: The ``NetworkingAdapter`` that is ran for every ``NetworkingRoute``
+    ///   - retrier: The ``NetworkingRetrier`` that is ran for every ``NetworkingRoute``
     public init(urlSession: URLSession = URLSession(configuration: .default),
-                requestAdapter: NetworkingRouteAdapter? = nil,
-                requestRetrier: NetworkingRouteRetrier? = nil) {
-        self.requestAdapter = requestAdapter
-        self.requestRetrier = requestRetrier
+                adapter: NetworkingAdapter? = nil,
+                retrier: NetworkingRetrier? = nil) {
+        self.adapter = adapter
+        self.retrier = retrier
         self._urlSession = urlSession
     }
 
+    /// Creates an instance of a ``NetworkingSession`` with a `URLSession`.
+    /// - Parameters:
+    ///   - urlSession: The ``URLSession`` that executes the HTTP requests.
+    ///   - interceptor: The ``NetworkingInterceptor`` that is ran for every ``NetworkingRoute``
     public init(urlSession: URLSession = URLSession(configuration: .default),
-                requestInterceptor: NetworkingRouteInterceptor? = nil) {
-        self.requestAdapter = requestInterceptor
-        self.requestRetrier = requestInterceptor
+                interceptor: NetworkingInterceptor? = nil) {
+        self.adapter = interceptor
+        self.retrier = interceptor
         self._urlSession = urlSession
     }
 
+    /// Creates an instance of a ``NetworkingSession`` with a ``URLSessionProtocol``.
+    /// - Parameters:
+    ///   - urlSession: The ``URLSessionProtocol`` that executes the HTTP requests.
+    ///   - adapter: The ``NetworkingAdapter`` that is ran for every ``NetworkingRoute``
+    ///   - retrier: The ``NetworkingRetrier`` that is ran for every ``NetworkingRoute``
     public init(urlSession: URLSessionProtocol,
-                requestAdapter: NetworkingRouteAdapter? = nil,
-                requestRetrier: NetworkingRouteRetrier? = nil) {
-        self.requestAdapter = requestAdapter
-        self.requestRetrier = requestRetrier
+                adapter: NetworkingAdapter? = nil,
+                retrier: NetworkingRetrier? = nil) {
+        self.adapter = adapter
+        self.retrier = retrier
         self._urlSession = urlSession
     }
 
@@ -76,18 +90,27 @@ extension NetworkingSession: RouteDataTaskDelegate {
 private extension NetworkingSession {
 
     func start<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        let urlRequestResult = await routeDataTask.buildURLRequest(adapter: self.requestAdapter)
+        var urlRequestResult = await routeDataTask.urlRequestResult
+
+        for adapter in [self.adapter, routeDataTask.adapter, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority {
+            urlRequestResult = await routeDataTask.execute(adapter: adapter,
+                                                           on: urlRequestResult)
+        }
 
         var (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult,
                                                                         on: self._urlSession)
 
-        serializedResult = await routeDataTask.executeRetrier(retrier: self.requestRetrier,
-                                                              serializedResult: serializedResult,
-                                                              urlRequest: try? urlRequestResult.get(),
-                                                              response: urlResponse)
+        for retrier in [self.retrier, routeDataTask.retrier, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority {
+            serializedResult = await routeDataTask.execute(retrier: retrier,
+                                                           serializedResult: serializedResult,
+                                                           urlRequest: try? urlRequestResult.get(),
+                                                           urlResponse: urlResponse)
+        }
 
         serializedResult = await routeDataTask.executeRepeater(serializedResult: serializedResult,
-                                                               response: urlResponse)
+                                                               urlRequest: try? urlRequestResult.get(),
+                                                               urlResponse: urlResponse)
+
         return serializedResult
     }
 }

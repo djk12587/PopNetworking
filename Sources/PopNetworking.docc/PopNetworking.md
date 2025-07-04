@@ -6,7 +6,7 @@ A summary
 
 an overview 1
 sdfasfasf
-![A sloth hanging off a tree.](somePicture)
+@Image(source: pop, alt: "An illustration of a sleeping sloth, hanging from a tree branch.")
 
 ## Topics
 

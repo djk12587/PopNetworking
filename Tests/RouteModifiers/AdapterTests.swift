@@ -12,11 +12,11 @@ class AdapterTests: XCTestCase {
 
     func testAdapterRuns() async throws {
 
-        let mockAdapter = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                  retrierResult: .doNotRetry)
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestAdapter: mockAdapter),
+        let mockAdapter = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                           retrierResult: .doNotRetry)
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), adapter: mockAdapter),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
-
+        
         let adapterDidRun = await mockAdapter.adapterDidRun
         XCTAssertTrue(adapterDidRun)
     }
@@ -24,11 +24,11 @@ class AdapterTests: XCTestCase {
     func testAdapterModifiesUrlRequest() async throws {
 
         let adaptedUrlRequest = URLRequest(url: URL(string: "https://adaptedRequest.com")!)
-        let mockAdapter = Mock.RequestInterceptor(adapterResult: .adapt(adaptedUrlRequest: adaptedUrlRequest),
-                                                  retrierResult: .doNotRetry)
+        let mockAdapter = Mock.Interceptor(adapterResult: .adapt(adaptedUrlRequest: adaptedUrlRequest),
+                                           retrierResult: .doNotRetry)
         let mockUrlSession = Mock.UrlSession()
         _ = await Mock.Route(baseUrl: "https://originalRequest.com",
-                             session: NetworkingSession(urlSession: mockUrlSession, requestAdapter: mockAdapter),
+                             session: NetworkingSession(urlSession: mockUrlSession, adapter: mockAdapter),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         let adapterDidRun = await mockAdapter.adapterDidRun
@@ -41,9 +41,9 @@ class AdapterTests: XCTestCase {
     func testAdapterThrowingFailsTheUrlRequest() async throws {
 
         let mockAdapterError = NSError(domain: "adapter failed", code: 0)
-        let mockAdapter = Mock.RequestInterceptor(adapterResult: .failure(error: mockAdapterError),
-                                                  retrierResult: .doNotRetry)
-        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestAdapter: mockAdapter),
+        let mockAdapter = Mock.Interceptor(adapterResult: .failure(error: mockAdapterError),
+                                           retrierResult: .doNotRetry)
+        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), adapter: mockAdapter),
                                       responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         XCTAssertThrowsError(try result.get()) { error in
@@ -52,4 +52,5 @@ class AdapterTests: XCTestCase {
         let adapterDidRun = await mockAdapter.adapterDidRun
         XCTAssertTrue(adapterDidRun)
     }
+
 }

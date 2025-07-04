@@ -12,9 +12,9 @@ class RetrierTests: XCTestCase {
 
     func testRetrierDoesNotRunWhenRequestSucceeds() async throws {
 
-        let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                  retrierResult: .doNotRetry)
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
+        let mockRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                           retrierResult: .doNotRetry)
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         let retrierDidRun = await mockRetrier.retrierDidRun
@@ -23,9 +23,9 @@ class RetrierTests: XCTestCase {
 
     func testRetrierRunsWhenRequestFails() async throws {
 
-        let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                  retrierResult: .doNotRetry)
-        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
+        let mockRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                           retrierResult: .doNotRetry)
+        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
                                       responseSerializer: Mock.ResponseSerializer<Void>(.failure(NSError(domain: "", code: 0)))).result
 
         let retrierDidRun = await mockRetrier.retrierDidRun
@@ -35,9 +35,9 @@ class RetrierTests: XCTestCase {
 
     func testRetrierRunsMultipleTimesWhenRequestFailsAgain() async throws {
 
-        let mockRetrier = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                  retrierResult: .retryWithDelay(0))
-        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), requestRetrier: mockRetrier),
+        let mockRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                           retrierResult: .retryWithDelay(0))
+        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
                                       responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "", code: 0)), .success(())])).result
 
         let retrierDidRun = await mockRetrier.retrierDidRun

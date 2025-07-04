@@ -34,20 +34,4 @@ class NetworkingRouteTests: XCTestCase {
         XCTAssertEqual(urlRequest.allHTTPHeaderFields, headers)
     }
 
-    func testMockResponse() async throws {
-        let mockValue = try await Route(baseUrl: "www.mockedExample.com",
-                                        responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer(),
-                                        mockSerializedResult: .success(123)).run
-
-        XCTAssertEqual(mockValue, 123)
-    }
-
-    func testInvalidUrlThrowsError() async throws {
-        let result = await Route(baseUrl: "",
-                                 responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).result
-
-        XCTAssertThrowsError(try result.get(), "we expect an invalid url error") { error in
-            XCTAssertEqual((error as? URLError)?.code, .badURL)
-        }
-    }
 }

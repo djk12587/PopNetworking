@@ -18,10 +18,11 @@ extension NetworkingSession {
 
     internal struct RouteDataTask<Route: NetworkingRoute>: Sendable {
 
-        private actor SafeCounters {
+        private actor SafeMutableData {
 
             private(set) var retryCount = 0
             private(set) var repeatCount = 0
+            private(set) var currentUrlRequest: URLRequest?
 
             func incrementRetryCount() {
                 self.retryCount.increment()
@@ -38,22 +39,45 @@ extension NetworkingSession {
             func resetRepeatCount() {
                 self.repeatCount.reset()
             }
+
+            func set(currentUrlRequest: URLRequest) {
+                self.currentUrlRequest = currentUrlRequest
+            }
         }
 
         private let route: Route
-        private let counters = SafeCounters()
+        private let mutableData = SafeMutableData()
         private weak var delegate: RouteDataTaskDelegate?
+        internal var adapter: NetworkingAdapter? { self.route.adapter }
+        internal var retrier: NetworkingRetrier? { self.route.retrier }
+        internal var interceptor: NetworkingInterceptor? { self.route.interceptor }
 
         init(route: Route, delegate: RouteDataTaskDelegate?) {
             self.route = route
             self.delegate = delegate
         }
 
-        func buildURLRequest(adapter: NetworkingRouteAdapter?) async -> Result<URLRequest, Error> {
+        var urlRequestResult: Result<URLRequest, Error> {
+            get async {
+                return await Result {
+                    let currentUrlRequest = await self.mutableData.currentUrlRequest
+                    let urlRequest = try currentUrlRequest ?? self.route.urlRequest
+                    await self.mutableData.set(currentUrlRequest: urlRequest)
+                    return urlRequest
+                }
+            }
+        }
+
+        func execute(adapter: NetworkingAdapter,
+                     on urlRequestResult: Result<URLRequest, Error>) async -> Result<URLRequest, Error> {
+            guard
+                let urlRequest = try? urlRequestResult.get()
+            else { return urlRequestResult }
+
             return await Result {
-                let urlRequest = try self.route.urlRequest
-                let adaptedUrlRequest = try await adapter?.adapt(urlRequest: urlRequest)
-                return adaptedUrlRequest ?? urlRequest
+                let adaptedUrlRequest = try await adapter.adapt(urlRequest: urlRequest)
+                await self.mutableData.set(currentUrlRequest: adaptedUrlRequest)
+                return adaptedUrlRequest
             }
         }
 
@@ -74,58 +98,61 @@ extension NetworkingSession {
             }
         }
 
-        func executeRetrier(retrier: NetworkingRouteRetrier?,
-                            serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                            urlRequest: URLRequest?,
-                            response: URLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        func execute(retrier: NetworkingRetrier,
+                     serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
+                     urlRequest: URLRequest?,
+                     urlResponse: URLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
-                let retrier = retrier,
                 let delegate = self.delegate,
                 let error = serializedResult.error
             else {
-                await self.counters.resetRetryCount()
+                await self.mutableData.resetRetryCount()
                 return serializedResult
             }
 
             switch await retrier.retry(urlRequest: urlRequest,
                                        dueTo: error,
-                                       urlResponse: response,
-                                       retryCount: self.counters.retryCount) {
+                                       urlResponse: urlResponse,
+                                       retryCount: self.mutableData.retryCount) {
                 case .retry:
-                    await self.counters.incrementRetryCount()
+                    await self.mutableData.incrementRetryCount()
                     return await delegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    await self.counters.incrementRetryCount()
+                    await self.mutableData.incrementRetryCount()
                     return await delegate.retry(self, delay: delay)
 
                 case .doNotRetry:
-                    await self.counters.resetRetryCount()
-                    return serializedResult
+                    await self.mutableData.resetRetryCount()
+                return serializedResult
             }
         }
 
         func executeRepeater(serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                             response: URLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+                             urlRequest: URLRequest?,
+                             urlResponse: URLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
-                let routeRetrier = self.route.repeater,
+                let repeater = self.route.repeater,
                 let delegate = self.delegate
             else {
-                await self.counters.resetRepeatCount()
+                await self.mutableData.resetRepeatCount()
                 return serializedResult
             }
 
-            switch await routeRetrier(serializedResult, response, self.counters.repeatCount) {
+            switch await repeater(serializedResult,
+                                  urlRequest,
+                                  urlResponse,
+                                  self.mutableData.repeatCount) {
                 case .retry:
-                    await self.counters.incrementRepeatCount()
+                    await self.mutableData.incrementRepeatCount()
                     return await delegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    await self.counters.incrementRepeatCount()
+                    await self.mutableData.incrementRepeatCount()
                     return await delegate.retry(self, delay: delay)
 
                 case .doNotRetry:
-                    await self.counters.incrementRepeatCount()
+                    await self.mutableData.resetRepeatCount()
                     return serializedResult
             }
         }

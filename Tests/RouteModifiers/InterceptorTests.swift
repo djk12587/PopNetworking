@@ -8,18 +8,18 @@
 import XCTest
 @testable import PopNetworking
 
-class RouteInterceptorTests: XCTestCase {
+class InterceptorTests: XCTestCase {
 
     func testAllRequestInterceptorsRun() async throws {
-        let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                              retrierResult: .doNotRetry)
-        let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                              retrierResult: .doNotRetry)
+        let mockRequestInterceptor1 = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                                       retrierResult: .doNotRetry)
+        let mockRequestInterceptor2 = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                                       retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(adapters: [mockRequestInterceptor1, mockRequestInterceptor2],
                                            retriers: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        requestAdapter: interceptor,
-                                                        requestRetrier: interceptor),
+                                                        adapter: interceptor,
+                                                        retrier: interceptor),
                              responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "error", code: 1))])).result
 
         let interceptor1AdapterDidRun = await mockRequestInterceptor1.adapterDidRun
@@ -34,14 +34,14 @@ class RouteInterceptorTests: XCTestCase {
 
     func testAdaptersDoNotRunAfterFirstFailure() async throws {
 
-        let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .failure(error: NSError(domain: "adapterFailure", code: 0)),
-                                                              retrierResult: .doNotRetry)
-        let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                              retrierResult: .doNotRetry)
+        let mockRequestInterceptor1 = Mock.Interceptor(adapterResult: .failure(error: NSError(domain: "adapterFailure", code: 0)),
+                                                       retrierResult: .doNotRetry)
+        let mockRequestInterceptor2 = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                                       retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        requestAdapter: interceptor,
-                                                        requestRetrier: interceptor),
+                                                        adapter: interceptor,
+                                                        retrier: interceptor),
                              responseSerializer: Mock.ResponseSerializer<Void>()).result
 
         let interceptor1AdapterDidRun = await mockRequestInterceptor1.adapterDidRun
@@ -52,14 +52,14 @@ class RouteInterceptorTests: XCTestCase {
 
     func testStopRetryingAfterFirstSuccessfulRetry() async throws {
 
-        let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                              retrierResult: .retry)
-        let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                              retrierResult: .doNotRetry)
+        let mockRequestInterceptor1 = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                                       retrierResult: .retry)
+        let mockRequestInterceptor2 = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                                       retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        requestAdapter: interceptor,
-                                                        requestRetrier: interceptor),
+                                                        adapter: interceptor,
+                                                        retrier: interceptor),
                              responseSerializer: Mock.ResponseSerializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
 
         let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
@@ -70,14 +70,14 @@ class RouteInterceptorTests: XCTestCase {
 
     func testStopRetryingAfterFirstSuccessfulRetryWithDelay() async throws {
 
-        let mockRequestInterceptor1 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                              retrierResult: .retryWithDelay(0))
-        let mockRequestInterceptor2 = Mock.RequestInterceptor(adapterResult: .doNotAdapt,
-                                                              retrierResult: .doNotRetry)
+        let mockRequestInterceptor1 = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                                       retrierResult: .retryWithDelay(0))
+        let mockRequestInterceptor2 = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                                       retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        requestAdapter: interceptor,
-                                                        requestRetrier: interceptor),
+                                                        adapter: interceptor,
+                                                        retrier: interceptor),
                              responseSerializer: Mock.ResponseSerializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
 
         let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
@@ -85,4 +85,18 @@ class RouteInterceptorTests: XCTestCase {
         XCTAssertTrue(interceptor1RetrierDidRun)
         XCTAssertFalse(interceptor2RetrierDidRun)
     }
+
+    func testRouteInterceptor() async throws {
+        let mockInterceptor = Mock.Interceptor(adapterResult: .doNotAdapt,
+                                               retrierResult: .doNotRetry)
+        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession()),
+                             responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "", code: 0))]),
+                             interceptor: mockInterceptor).result
+
+        let interceptorAdapterDidRun = await mockInterceptor.adapterDidRun
+        let interceptorRetrierDidRun = await mockInterceptor.retrierDidRun
+        XCTAssertTrue(interceptorAdapterDidRun)
+        XCTAssertTrue(interceptorRetrierDidRun)
+    }
+
 }

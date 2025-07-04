@@ -22,6 +22,9 @@ enum Mock {
         var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>?
         var timeoutInterval: TimeInterval?
         var repeater: Repeater?
+        var adapter: NetworkingAdapter?
+        var retrier: NetworkingRetrier?
+        var interceptor: NetworkingInterceptor?
 
         init(baseUrl: String = "https://mockUrl.com",
              path: String = "",
@@ -32,6 +35,9 @@ enum Mock {
              responseSerializer: ResponseSerializer,
              timeoutInterval: TimeInterval? = nil,
              mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? = nil,
+             adapter: NetworkingAdapter? = nil,
+             retrier: NetworkingRetrier? = nil,
+             interceptor: NetworkingInterceptor? = nil,
              repeater: Repeater? = nil) {
             self.baseUrl = baseUrl
             self.path = path
@@ -42,6 +48,9 @@ enum Mock {
             self.responseSerializer = responseSerializer
             self.mockSerializedResult = mockSerializedResult
             self.timeoutInterval = timeoutInterval
+            self.adapter = adapter
+            self.retrier = retrier
+            self.interceptor = interceptor
             self.repeater = repeater
         }
     }
@@ -144,7 +153,7 @@ enum Mock {
         }
     }
 
-    struct RequestInterceptor: NetworkingRouteInterceptor {
+    struct Interceptor: NetworkingInterceptor {
 
         enum AdapterResult {
             case doNotAdapt
@@ -155,27 +164,32 @@ enum Mock {
         private actor SafeMutableData {
 
             var adapterDidRun = false
-            var adapterResult: AdapterResult
+            var adapterResults: [AdapterResult]
             var retrierDidRun = false
-            var retrierResult: NetworkingRouteRetrierResult
+            var retrierResults: [NetworkingRetrierResult]
             var retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: URLResponse?, retryCount: Int)?
             var retryCounter = 0
+            var ranDate: Date?
 
-            init(adapterDidRun: Bool = false, adapterResult: AdapterResult, retrierDidRun: Bool = false, retrierResult: NetworkingRouteRetrierResult, retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: HTTPURLResponse?, retryCount: Int)? = nil, retryCounter: Int = 0) {
+            init(adapterDidRun: Bool = false,
+                 adapterResult: AdapterResult?,
+                 adapterResults: [AdapterResult],
+                 retrierDidRun: Bool = false,
+                 retrierResult: NetworkingRetrierResult?,
+                 retrierResults: [NetworkingRetrierResult],
+                 retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: HTTPURLResponse?, retryCount: Int)? = nil,
+                 retryCounter: Int = 0,
+                 ranDate: Date? = nil) {
                 self.adapterDidRun = adapterDidRun
-                self.adapterResult = adapterResult
+                self.adapterResults = [adapterResult].compactMap({ $0 }) + adapterResults
                 self.retrierDidRun = retrierDidRun
-                self.retrierResult = retrierResult
+                self.retrierResults = [retrierResult].compactMap({ $0 }) + retrierResults
                 self.retrierPayload = retrierPayload
                 self.retryCounter = retryCounter
             }
 
             func set(adapterDidRun: Bool) {
                 self.adapterDidRun = adapterDidRun
-            }
-
-            func set(adapterResult: AdapterResult) {
-                self.adapterResult = adapterResult
             }
 
             func set(retrierDidRun: Bool) {
@@ -189,36 +203,68 @@ enum Mock {
             func set(retryCounter: Int) {
                 self.retryCounter = retryCounter
             }
+
+            func set(ranDate: Date) {
+                self.ranDate = ranDate
+            }
+
+            var adapterResult: AdapterResult? {
+                guard !self.adapterResults.isEmpty else { return nil }
+                return self.adapterResults.removeFirst()
+            }
+
+            var retrierResult: NetworkingRetrierResult? {
+                guard !self.retrierResults.isEmpty else { return nil }
+                return self.retrierResults.removeFirst()
+            }
         }
 
         private let mutableData: SafeMutableData
         var adapterDidRun: Bool { get async { await self.mutableData.adapterDidRun } }
         var retrierDidRun: Bool { get async { await self.mutableData.retrierDidRun } }
         var retryCounter: Int { get async { await self.mutableData.retryCounter } }
+        var ranDate: Date? { get async { await self.mutableData.ranDate } }
+        let priority: NetworkingPriority
 
-        init(adapterResult: AdapterResult,
-             retrierResult: NetworkingRouteRetrierResult) {
-            self.mutableData = SafeMutableData(adapterResult: adapterResult, retrierResult: retrierResult)
+        init(adapterResult: AdapterResult? = nil,
+             retrierResult: NetworkingRetrierResult? = nil,
+             adapterResults: [AdapterResult] = [],
+             retrierResults: [NetworkingRetrierResult] = [],
+             priority: NetworkingPriority = .standard) {
+            self.mutableData = SafeMutableData(adapterResult: adapterResult,
+                                               adapterResults: adapterResults,
+                                               retrierResult: retrierResult,
+                                               retrierResults: retrierResults)
+            self.priority = priority
         }
 
         func adapt(urlRequest: URLRequest) async throws -> URLRequest {
+            let date = Date()
+            await self.mutableData.set(ranDate: date)
             await self.mutableData.set(adapterDidRun: true)
 
-            switch await self.mutableData.adapterResult {
-                case .doNotAdapt:
-                    return urlRequest
-                case .adapt(let adaptedUrlRequest):
-                    return adaptedUrlRequest
-                case .failure(let error):
-                    throw error
+            guard let adapterResult = await self.mutableData.adapterResult else { return urlRequest }
+
+            switch adapterResult {
+            case .doNotAdapt:
+                return urlRequest
+            case .adapt(let adaptedUrlRequest):
+                return adaptedUrlRequest
+            case .failure(let error):
+                throw error
             }
         }
 
-        func retry(urlRequest: URLRequest?, dueTo error: any Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRouteRetrierResult {
+        func retry(urlRequest: URLRequest?, dueTo error: any Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRetrierResult {
+            let date = Date()
+            await self.mutableData.set(ranDate: date)
             await self.mutableData.set(retrierPayload: (urlRequest, error, urlResponse, retryCount))
             await self.mutableData.set(retrierDidRun: true)
             await self.mutableData.set(retryCounter: await self.mutableData.retryCounter + 1)
-            return await self.mutableData.retrierResult
+
+            guard let retrierResult = await self.mutableData.retrierResult else { return .doNotRetry }
+
+            return retrierResult
         }
 
     }

@@ -16,7 +16,7 @@ public protocol NetworkingRoute: Sendable {
     /// `ResponseSerializer` allows for plug and play networking response serialization.
     ///
     /// For examples of prebuilt `NetworkingResponseSerializer`'s see ``NetworkingResponseSerializers``
-    associatedtype ResponseSerializer: NetworkingResponseSerializer where ResponseSerializer.SerializedObject: Sendable
+    associatedtype ResponseSerializer: NetworkingResponseSerializer
 
     /// The ``NetworkingSessionProtocol`` is used to execute the route and return the serialized object.
     ///
@@ -38,6 +38,11 @@ public protocol NetworkingRoute: Sendable {
     /// ``urlRequest-793sf`` is responsible for creating the `URLRequest` that will be ran on an instance of `URLSession`.
     var urlRequest: URLRequest { get throws }
 
+    /// ``NetworkingAdapter`` tied to the ``NetworkingRoute``.
+    ///
+    /// If ``NetworkingSession`` & ``NetworkingRoute`` have ``NetworkingAdapter``'s with the same ``NetworkingPriority``, the adapter tied to the ``NetworkingSession`` is ran first.
+    var adapter: NetworkingAdapter? { get }
+
     /// When not nil, the route will not run on URLSession and the responseValidator will not be invoked.
     var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? { get async }
 
@@ -49,12 +54,22 @@ public protocol NetworkingRoute: Sendable {
     /// Prebuilt `ResponseSerializer`s can be found here: ``NetworkingResponseSerializers``.
     var responseSerializer: ResponseSerializer { get }
 
+    /// ``NetworkingRetrier`` tied to the ``NetworkingRoute``.
+    ///
+    /// If ``NetworkingSession`` & ``NetworkingRoute`` have ``NetworkingRetrier``'s with the same ``NetworkingPriority``, the retrier tied to the ``NetworkingSession`` is ran first.
+    var retrier: NetworkingRetrier? { get }
+
+    /// ``NetworkingInterceptor`` tied to the ``NetworkingRoute``.
+    ///
+    /// If ``NetworkingSession`` & ``NetworkingRoute`` have ``NetworkingInterceptor``'s with the same ``NetworkingPriority``, the interceptor tied to the ``NetworkingSession`` is ran first. Additionally, assuming the same ``NetworkingPriority``, ``NetworkingAdapter``'s & ``NetworkingRetrier``'s will be ran before ``NetworkingInterceptor``'s.
+    var interceptor: NetworkingInterceptor? { get }
+
     /// A `Repeater` allows you to retry the entire request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
     ///
     /// ```swift
     /// // example usage
-    /// let response = try await SomeNetworkingRoute(repeater: { result, response, repeatCount in
-    ///     if repeatCount < 2 && response?.statusCode == 500 {
+    /// let response = try await SomeNetworkingRoute(repeater: { (result, request, response, repeatCount) in
+    ///     if repeatCount < 2 && (response as? HTTPURLResponse)?.statusCode == 500 {
     ///         return .retryWithDelay(1) // repeats the request if the server returns a 500
     ///     } else {
     ///         return .doNotRetry
@@ -163,13 +178,17 @@ public extension NetworkingRoute {
     var headers: NetworkingRouteHttpHeaders? { nil }
     var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
     var timeoutInterval: TimeInterval? { nil }
+    var adapter: NetworkingAdapter? { nil }
     var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? { nil }
     var responseValidator: NetworkingResponseValidator? { nil }
+    var retrier: NetworkingRetrier? { nil }
+    var interceptor: NetworkingInterceptor? { nil }
     var repeater: Repeater? { nil }
 }
 
 public extension NetworkingRoute {
     typealias Repeater = @Sendable (_ result: Result<ResponseSerializer.SerializedObject, Error>,
+                                    _ urlRequest: URLRequest?,
                                     _ response: URLResponse?,
-                                    _ repeatCount: Int) async -> NetworkingRouteRetrierResult
+                                    _ repeatCount: Int) async -> NetworkingRetrierResult
 }

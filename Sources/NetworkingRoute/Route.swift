@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// A `Route` is a basic implementation of a ``NetworkingRoute``. Use `Route` as a quick and dirty way to get an endpoint up and running
+/// A `Route` is a basic implementation of a ``NetworkingRoute``. Use `Route` as a way to explore ``PopNetworking``'s functionality.
 ///
 /// ```swift
 /// //Example usage
@@ -33,6 +33,9 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
     public var responseSerializer: ResponseSerializer
     public var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>?
     public var timeoutInterval: TimeInterval?
+    public var adapter: NetworkingAdapter?
+    public var retrier: NetworkingRetrier?
+    public var interceptor: NetworkingInterceptor?
     public var repeater: Repeater?
 
     public init(baseUrl: String,
@@ -45,6 +48,9 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
                 responseSerializer: ResponseSerializer,
                 mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? = nil,
                 timeoutInterval: TimeInterval? = nil,
+                adapter: NetworkingAdapter? = nil,
+                retrier: NetworkingRetrier? = nil,
+                interceptor: NetworkingInterceptor? = nil,
                 repeater: Repeater? = nil) {
         self.baseUrl = baseUrl
         self.path = path
@@ -56,6 +62,9 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
         self.responseSerializer = responseSerializer
         self.mockSerializedResult = mockSerializedResult
         self.timeoutInterval = timeoutInterval
+        self.adapter = adapter
+        self.retrier = retrier
+        self.interceptor = interceptor
         self.repeater = repeater
     }
 }
