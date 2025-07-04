@@ -22,7 +22,7 @@ public extension NetworkingSession {
     static let shared = NetworkingSession()
 }
 
-/// ``NetworkingSession`` a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and returns the ``NetworkingRoute``'s serialized object.
+/// ``NetworkingSession`` is a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and returns the ``NetworkingRoute``'s serialized object.
 public final class NetworkingSession: NetworkingSessionProtocol {
 
     public var urlSession: URLSession { self._urlSession.session }
