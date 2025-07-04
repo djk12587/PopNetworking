@@ -10,7 +10,7 @@ import Foundation
 /// Allows you to modify, the `URLRequest` before it is executed as an HTTP request.
 public protocol NetworkingAdapter: Sendable {
 
-    /// `priority` determines the order ``NetworkingAdapter``'s are ran. Higher priority adapters are ran first. Default priority is ``NetworkingPriority.standard``
+    /// `priority` determines the order ``NetworkingAdapter``'s are ran. Higher priority adapters are ran first. Default priority is `NetworkingPriority.standard`
     var priority: NetworkingPriority { get }
 
     /// A throwable function that accepts a `URLRequest` and will return a potentially modified `URLRequest` or throw an `Error`

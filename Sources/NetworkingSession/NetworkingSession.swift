@@ -33,7 +33,7 @@ public final class NetworkingSession: NetworkingSessionProtocol {
     
     /// Creates an instance of a ``NetworkingSession`` with a `URLSession`.
     /// - Parameters:
-    ///   - urlSession: The ``URLSession`` that executes the HTTP requests.
+    ///   - urlSession: The `URLSession` that executes the HTTP requests.
     ///   - adapter: The ``NetworkingAdapter`` that is ran for every ``NetworkingRoute``
     ///   - retrier: The ``NetworkingRetrier`` that is ran for every ``NetworkingRoute``
     public init(urlSession: URLSession = URLSession(configuration: .default),
@@ -46,7 +46,7 @@ public final class NetworkingSession: NetworkingSessionProtocol {
 
     /// Creates an instance of a ``NetworkingSession`` with a `URLSession`.
     /// - Parameters:
-    ///   - urlSession: The ``URLSession`` that executes the HTTP requests.
+    ///   - urlSession: The `URLSession` that executes the HTTP requests.
     ///   - interceptor: The ``NetworkingInterceptor`` that is ran for every ``NetworkingRoute``
     public init(urlSession: URLSession = URLSession(configuration: .default),
                 interceptor: NetworkingInterceptor? = nil) {

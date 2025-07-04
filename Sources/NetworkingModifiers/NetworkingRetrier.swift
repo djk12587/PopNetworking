@@ -10,7 +10,7 @@ import Foundation
 /// Allows you to retry a failed `URLRequest`. IE, if the `URLRequest` failed due to a 401 Unauthorized error.
 public protocol NetworkingRetrier: Sendable {
 
-    /// `priority` determines the order ``NetworkingRetrier``'s are ran. Higher priority retriers are ran first. Default priority is ``NetworkingPriority.standard``
+    /// `priority` determines the order ``NetworkingRetrier``'s are ran. Higher priority retriers are ran first. Default priority is `NetworkingPriority.standard`
     var priority: NetworkingPriority { get }
 
     /// A function that will determine if a `URLRequest` should be retried or not.

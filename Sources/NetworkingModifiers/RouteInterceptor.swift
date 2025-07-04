@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// A `RouteInterceptor` allows you to utilize multiple ``NetworkingRouteInterceptor``'s for a request.
+/// A `RouteInterceptor` allows you to utilize multiple ``NetworkingInterceptor``'s for a request.
 ///
 /// - Attention: All ``NetworkingAdapter``'s will run until one fails. ``NetworkingRetrier``'s will run until a retry results in a successful response.
 public struct RouteInterceptor: Sendable, NetworkingInterceptor {
