@@ -1,15 +1,19 @@
 # ``PopNetworking``
 
-A summary
+A protocol oriented HTTP CRUD networking layer. Built with Swift 6 and strict concurrency.
 
-## Overview
-
-an overview 1
-sdfasfasf
+## NetworkingRoute high level visualization
 @Image(source: pop, alt: "An illustration of a sleeping sloth, hanging from a tree branch.")
+
 
 ## Topics
 
-### group123
+### Key Protocols
 
 - ``NetworkingRoute``
+- ``NetworkingResponseSerializer``
+
+### Classes
+
+- ``NetworkingSession``
+
