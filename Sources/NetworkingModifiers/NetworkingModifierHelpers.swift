@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// `NetworkingRetrierResult` indicates if a request should be retried or not. `NetworkingRetrierResult` is returned from ``NetworkingRetrier/retry(urlRequest:dueTo:urlResponse:retryCount:)``.
+/// `NetworkingRetrierResult` indicates if a ``NetworkingRoute`` should be retried or not.
 public enum NetworkingRetrierResult: Sendable {
 
     case retry

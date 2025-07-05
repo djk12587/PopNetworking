@@ -8,6 +8,7 @@
 
 import Foundation
 
+/// `NetworkingSessionProtocol` is responsible for executing an instance of ``NetworkingRoute`` and returning the route's `SerializedObject`
 public protocol NetworkingSessionProtocol: Sendable {
 
     var urlSession: URLSession { get }
@@ -22,7 +23,17 @@ public extension NetworkingSession {
     static let shared = NetworkingSession()
 }
 
-/// ``NetworkingSession`` is a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and returns the ``NetworkingRoute``'s serialized object.
+/// ``NetworkingSession`` is a wrapper class for `URLSession`.
+///
+/// This class takes an instance of ``NetworkingRoute`` to perform the following actions.
+/// * build the `URLRequest`
+/// * adapt the `URLRequest` (``NetworkingAdapter``)
+/// * execute the HTTP request
+/// * validate the response (``NetworkingResponseValidator``)
+/// * serialize the response (``NetworkingResponseSerializer``)
+/// * retry the request, if an error occurred (``NetworkingRetrier``)
+/// * repeat the ``NetworkingRoute`` if needed
+/// * return the ``NetworkingRoute``'s `SerializedObject`
 public final class NetworkingSession: NetworkingSessionProtocol {
 
     public var urlSession: URLSession { self._urlSession.session }

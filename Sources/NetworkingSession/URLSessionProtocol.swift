@@ -7,9 +7,9 @@
 
 import Foundation
 
-/// URLSession cannot be subclassed, so instead we utilize this protocol.
+/// `URLSessionProtocol` is responsible for executing a `URLRequest` and returning the raw `Data` and `URLResponse`.
 ///
-/// - Note: `URLSession` adheres to ``URLSessionProtocol``
+/// - Note: PopNetworking extends `URLSession` and adheres it to ``URLSessionProtocol``
 public protocol URLSessionProtocol: Sendable {
 
     var session: URLSession { get }
