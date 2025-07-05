@@ -13,7 +13,7 @@ import Foundation
 ///   Common use case: refreshing authorization tokens
 public protocol NetworkingInterceptor: NetworkingAdapter & NetworkingRetrier {
 
-    /// `priority` determines the order ``NetworkingInterceptor``'s are ran. Higher priority interceptors are ran first. Default priority is `NetworkingPriority.standard`
+    /// `priority` determines the order ``NetworkingInterceptor``'s are ran. Higher priority interceptors run first. Default priority is `NetworkingPriority.standard`
     var priority: NetworkingPriority { get }
 
 }

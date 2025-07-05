@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// ``NetworkingRoute`` is responsible for declaring everything needed to create a networking request and outlines how to parse the networking response into a custom object.
+/// ``NetworkingRoute`` is responsible for declaring everything needed to create a networking request and how to parse the networking response into a generic `SerializedObject` object.
 public protocol NetworkingRoute: Sendable {
 
     typealias NetworkingRouteHttpHeaders = [String : String]

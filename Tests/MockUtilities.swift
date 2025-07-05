@@ -169,7 +169,8 @@ enum Mock {
             var retrierResults: [NetworkingRetrierResult]
             var retrierPayload: (urlRequest: URLRequest?, error: Error, urlResponse: URLResponse?, retryCount: Int)?
             var retryCounter = 0
-            var ranDate: Date?
+            var adapterRunDate: Date?
+            var retrierRunDate: Date?
 
             init(adapterDidRun: Bool = false,
                  adapterResult: AdapterResult?,
@@ -204,8 +205,12 @@ enum Mock {
                 self.retryCounter = retryCounter
             }
 
-            func set(ranDate: Date) {
-                self.ranDate = ranDate
+            func set(adapterRunDate: Date) {
+                self.adapterRunDate = adapterRunDate
+            }
+
+            func set(retrierRunDate: Date) {
+                self.retrierRunDate = retrierRunDate
             }
 
             var adapterResult: AdapterResult? {
@@ -223,7 +228,8 @@ enum Mock {
         var adapterDidRun: Bool { get async { await self.mutableData.adapterDidRun } }
         var retrierDidRun: Bool { get async { await self.mutableData.retrierDidRun } }
         var retryCounter: Int { get async { await self.mutableData.retryCounter } }
-        var ranDate: Date? { get async { await self.mutableData.ranDate } }
+        var adapterRunDate: Date? { get async { await self.mutableData.adapterRunDate } }
+        var retrierRunDate: Date? { get async { await self.mutableData.retrierRunDate } }
         let priority: NetworkingPriority
 
         init(adapterResult: AdapterResult? = nil,
@@ -239,8 +245,7 @@ enum Mock {
         }
 
         func adapt(urlRequest: URLRequest) async throws -> URLRequest {
-            let date = Date()
-            await self.mutableData.set(ranDate: date)
+            await self.mutableData.set(adapterRunDate: Date())
             await self.mutableData.set(adapterDidRun: true)
 
             guard let adapterResult = await self.mutableData.adapterResult else { return urlRequest }
@@ -256,8 +261,7 @@ enum Mock {
         }
 
         func retry(urlRequest: URLRequest?, dueTo error: any Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRetrierResult {
-            let date = Date()
-            await self.mutableData.set(ranDate: date)
+            await self.mutableData.set(retrierRunDate: Date())
             await self.mutableData.set(retrierPayload: (urlRequest, error, urlResponse, retryCount))
             await self.mutableData.set(retrierDidRun: true)
             await self.mutableData.set(retryCounter: await self.mutableData.retryCounter + 1)

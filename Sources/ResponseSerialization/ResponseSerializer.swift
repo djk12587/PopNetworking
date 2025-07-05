@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// The ``NetworkingResponseSerializer``'s job is to serialize/parse networking response data into whatever type you set for the ``SerializedObject``.
+/// The ``NetworkingResponseSerializer``'s job is to serialize/parse a networking response data into whatever type you set for the ``SerializedObject``.
 ///
 /// - Note: An example of a  NetworkingResponseSerializer sets the ``SerializedObject`` to be of type `Decodable`. With this, you can serialize networking response data into one of your preexisting `Decodable` Models. To see how check out ``NetworkingResponseSerializers/DecodableResponseSerializer``.
 public protocol NetworkingResponseSerializer: Sendable {

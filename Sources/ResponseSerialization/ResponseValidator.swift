@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// A `responseValidator` can be used to ensure a network response is valid before running your ``NetworkingResponseSerializer``. The `responseValidator` must adhere to ``NetworkingResponseValidator``
+/// A `responseValidator` can be used to ensure a network response is valid before running your ``NetworkingResponseSerializer``.
 public protocol NetworkingResponseValidator: Sendable {
     func validate(responseResult: Result<(Data, URLResponse), Error>) async throws
 }

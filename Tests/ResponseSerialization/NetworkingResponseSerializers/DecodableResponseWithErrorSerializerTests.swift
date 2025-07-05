@@ -1,6 +1,6 @@
 //
-//  DecodableResponseWithErrorSerializerTests.swift
-//  
+//  DecodableResponseAndErrorSerializer.swift
+//
 //
 //  Created by Dan_Koza on 12/2/21.
 //

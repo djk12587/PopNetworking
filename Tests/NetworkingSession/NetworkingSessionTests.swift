@@ -49,11 +49,9 @@ class NetworkingSessionTests: XCTestCase {
 
         let lowestPriorityAdapterError = NSError(domain: "lowest priority adapter failed", code: 0)
         let lowestPriorityAdapter = Mock.Interceptor(adapterResult: .failure(error: lowestPriorityAdapterError),
-                                                     retrierResult: .doNotRetry,
                                                      priority: .lowest)
         let highestPriorityAdapterError = NSError(domain: "highest priority adapter failed", code: 0)
         let highestPriorityAdapter = Mock.Interceptor(adapterResult: .failure(error: highestPriorityAdapterError),
-                                                      retrierResult: .doNotRetry,
                                                       priority: .highest)
         let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                                  adapter: lowestPriorityAdapter),
@@ -67,11 +65,9 @@ class NetworkingSessionTests: XCTestCase {
 
     func testRetriersPriority() async throws {
 
-        let lowestPriorityRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
-                                                     retrierResult: .doNotRetry,
+        let lowestPriorityRetrier = Mock.Interceptor(retrierResult: .doNotRetry,
                                                      priority: .lowest)
-        let highestPriorityRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
-                                                      retrierResult: .doNotRetry,
+        let highestPriorityRetrier = Mock.Interceptor(retrierResult: .doNotRetry,
                                                       priority: .highest)
         _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
                                                         retrier: lowestPriorityRetrier),
@@ -79,8 +75,8 @@ class NetworkingSessionTests: XCTestCase {
                              retrier: highestPriorityRetrier).result
 
         let now = Date.now
-        let highestPriorityRetrierRanDate = await highestPriorityRetrier.ranDate ?? now
-        let lowestPriorityRetrierRanDate = await lowestPriorityRetrier.ranDate ?? now
+        let highestPriorityRetrierRanDate = await highestPriorityRetrier.retrierRunDate ?? now
+        let lowestPriorityRetrierRanDate = await lowestPriorityRetrier.retrierRunDate ?? now
         XCTAssertTrue(highestPriorityRetrierRanDate < lowestPriorityRetrierRanDate)
     }
 
@@ -98,9 +94,12 @@ class NetworkingSessionTests: XCTestCase {
                              interceptor: mockInterceptorHighPriority).result
 
         let now = Date.now
-        let mockInterceptorLowPriorityRanDate = await mockInterceptorLowPriority.ranDate ?? now
-        let mockInterceptorHighPriorityRanDate = await mockInterceptorHighPriority.ranDate ?? now
-        XCTAssertTrue(mockInterceptorHighPriorityRanDate < mockInterceptorLowPriorityRanDate)
+        let mockInterceptorLowPriorityAdapterRanDate = await mockInterceptorLowPriority.adapterRunDate ?? now
+        let mockInterceptorHighPriorityAdapterRanDate = await mockInterceptorHighPriority.adapterRunDate ?? now
+        let mockInterceptorHighPriorityRetrierRanDate = await mockInterceptorHighPriority.retrierRunDate ?? now
+        let mockInterceptorLowPriorityRetrierRanDate = await mockInterceptorLowPriority.retrierRunDate ?? now
+        XCTAssertTrue(mockInterceptorHighPriorityAdapterRanDate < mockInterceptorLowPriorityAdapterRanDate)
+        XCTAssertTrue(mockInterceptorHighPriorityRetrierRanDate < mockInterceptorLowPriorityRetrierRanDate)
     }
 
     func testModifiersWithEqualPriority() async throws {
@@ -118,14 +117,16 @@ class NetworkingSessionTests: XCTestCase {
                              interceptor: mockRouteInterceptor).result
 
         let now = Date.now
-        let mockSessionAdapterRanDate = await mockSessionAdapter.ranDate ?? now
-        let mockSessionRetrierRanDate = await mockSessionRetrier.ranDate ?? now
-        let mockRouteAdapterRanDate = await mockRouteAdapter.ranDate ?? now
-        let mockRouteRetrierRanDate = await mockRouteRetrier.ranDate ?? now
-        let mockRouteInterceptorRanDate = await mockRouteInterceptor.ranDate ?? now
+        let mockSessionAdapterRanDate = await mockSessionAdapter.adapterRunDate ?? now
+        let mockSessionRetrierRanDate = await mockSessionRetrier.retrierRunDate ?? now
+        let mockRouteAdapterRanDate = await mockRouteAdapter.adapterRunDate ?? now
+        let mockRouteRetrierRanDate = await mockRouteRetrier.retrierRunDate ?? now
+        let mockRouteInterceptorAdapterRanDate = await mockRouteInterceptor.adapterRunDate ?? now
+        let mockRouteInterceptorRetrierRanDate = await mockRouteInterceptor.retrierRunDate ?? now
         XCTAssertTrue(mockSessionAdapterRanDate < mockRouteAdapterRanDate)
-        XCTAssertTrue(mockRouteAdapterRanDate < mockRouteInterceptorRanDate)
+        XCTAssertTrue(mockRouteAdapterRanDate < mockRouteInterceptorAdapterRanDate)
         XCTAssertTrue(mockSessionRetrierRanDate < mockRouteRetrierRanDate)
+        XCTAssertTrue(mockRouteRetrierRanDate < mockRouteInterceptorRetrierRanDate)
     }
 
 }

@@ -93,12 +93,10 @@ private extension NetworkingSession {
         var urlRequestResult = await routeDataTask.urlRequestResult
 
         for adapter in [self.adapter, routeDataTask.adapter, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority {
-            urlRequestResult = await routeDataTask.execute(adapter: adapter,
-                                                           on: urlRequestResult)
+            urlRequestResult = await routeDataTask.execute(adapter: adapter, on: urlRequestResult)
         }
 
-        var (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult,
-                                                                        on: self._urlSession)
+        var (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult, on: self._urlSession)
 
         for retrier in [self.retrier, routeDataTask.retrier, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority {
             serializedResult = await routeDataTask.execute(retrier: retrier,
