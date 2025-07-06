@@ -17,9 +17,6 @@ let package = Package(
             targets: ["PopNetworking"]
         ),
     ],
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.4"),
-    ],
     targets: [
         .target(
             name: "PopNetworking",
