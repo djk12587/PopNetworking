@@ -60,10 +60,13 @@ extension NetworkingSession {
         var urlRequestResult: Result<URLRequest, Error> {
             get async {
                 return await Result {
-                    let currentUrlRequest = await self.mutableData.currentUrlRequest
-                    let urlRequest = try currentUrlRequest ?? self.route.urlRequest
-                    await self.mutableData.set(currentUrlRequest: urlRequest)
-                    return urlRequest
+                    if let currentUrlRequest = await self.mutableData.currentUrlRequest {
+                        return currentUrlRequest
+                    } else {
+                        let routeRequest = try await self.route.urlRequest
+                        await self.mutableData.set(currentUrlRequest: routeRequest)
+                        return routeRequest
+                    }
                 }
             }
         }

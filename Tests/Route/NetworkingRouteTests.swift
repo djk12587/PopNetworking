@@ -27,9 +27,9 @@ class NetworkingRouteTests: XCTestCase {
     func testHeadersAddedToUrlRequest() async throws {
         let headers = ["headerKey1": "headerValue1",
                        "headerKey2": "headerValue2"]
-        let urlRequest = try Route(baseUrl: "www.mockedExample.com",
-                                   headers: headers,
-                                   responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).urlRequest
+        let urlRequest = try await Route(baseUrl: "www.mockedExample.com",
+                                         headers: headers,
+                                         responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).urlRequest
 
         XCTAssertEqual(urlRequest.allHTTPHeaderFields, headers)
     }
