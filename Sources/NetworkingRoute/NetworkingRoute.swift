@@ -21,19 +21,19 @@ public protocol NetworkingRoute: Sendable {
     /// The ``NetworkingSessionProtocol`` is used to execute the route and return the serialized object.
     ///
     /// ``NetworkingSession`` is the a default implementation of ``NetworkingSessionProtocol``.
-    var session: NetworkingSessionProtocol { get }
+    var session: NetworkingSessionProtocol { get async }
 
     /// Declares the base URL
-    var baseUrl: String { get }
+    var baseUrl: String { get async }
     /// Declares the path of the url
-    var path: String { get }
+    var path: String { get async }
     /// Declares the HTTP method
-    var method: NetworkingRouteHttpMethod { get }
+    var method: NetworkingRouteHttpMethod { get async }
     /// Declares the request headers
     var headers: NetworkingRouteHttpHeaders? { get async }
 
     /// <doc:/documentation/PopNetworking/NetworkingRoute/parameterEncoding-5o5po> is responsible for encoding all of your network request's parameters into a `URLRequest`.
-    var parameterEncoding: NetworkingRequestParameterEncoding? { get }
+    var parameterEncoding: NetworkingRequestParameterEncoding? { get async }
 
     /// ``urlRequest-793sf`` is responsible for creating the `URLRequest` that will be ran on an instance of `URLSession`.
     var urlRequest: URLRequest { get async throws }
@@ -90,13 +90,13 @@ public extension NetworkingRoute {
     /// Default implementation provided. Feel free to implement your own version if needed.
     var urlRequest: URLRequest {
         get async throws {
-            guard let url = URL(string: self.baseUrl.appending(self.path)) else {
-                throw URLError(.badURL, userInfo: ["baseUrl": self.baseUrl, "path": self.path])
+            guard let url = await URL(string: self.baseUrl.appending(self.path)) else {
+                throw await URLError(.badURL, userInfo: ["baseUrl": self.baseUrl, "path": self.path])
             }
 
             var mutableRequest = URLRequest(url: url, timeoutInterval: self.timeoutInterval ?? 60.0)
-            mutableRequest.httpMethod = self.method.rawValue
-            try self.parameterEncoding?.encodeParams(into: &mutableRequest)
+            mutableRequest.httpMethod = await self.method.rawValue
+            try await self.parameterEncoding?.encodeParams(into: &mutableRequest)
             await self.headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
             return mutableRequest
         }
