@@ -30,13 +30,13 @@ public protocol NetworkingRoute: Sendable {
     /// Declares the HTTP method
     var method: NetworkingRouteHttpMethod { get }
     /// Declares the request headers
-    var headers: NetworkingRouteHttpHeaders? { get }
+    var headers: NetworkingRouteHttpHeaders? { get async }
 
     /// <doc:/documentation/PopNetworking/NetworkingRoute/parameterEncoding-5o5po> is responsible for encoding all of your network request's parameters into a `URLRequest`.
     var parameterEncoding: NetworkingRequestParameterEncoding? { get }
 
     /// ``urlRequest-793sf`` is responsible for creating the `URLRequest` that will be ran on an instance of `URLSession`.
-    var urlRequest: URLRequest { get throws }
+    var urlRequest: URLRequest { get async throws }
 
     /// ``NetworkingAdapter`` tied to the ``NetworkingRoute``.
     ///
@@ -89,7 +89,7 @@ public extension NetworkingRoute {
 
     /// Default implementation provided. Feel free to implement your own version if needed.
     var urlRequest: URLRequest {
-        get throws {
+        get async throws {
             guard let url = URL(string: self.baseUrl.appending(self.path)) else {
                 throw URLError(.badURL, userInfo: ["baseUrl": self.baseUrl, "path": self.path])
             }
@@ -97,7 +97,7 @@ public extension NetworkingRoute {
             var mutableRequest = URLRequest(url: url, timeoutInterval: self.timeoutInterval ?? 60.0)
             mutableRequest.httpMethod = self.method.rawValue
             try self.parameterEncoding?.encodeParams(into: &mutableRequest)
-            self.headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
+            await self.headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
             return mutableRequest
         }
     }
