@@ -74,7 +74,7 @@ class NetworkingSessionTests: XCTestCase {
                              responseSerializer: Mock.ResponseSerializer<Void>(.failure(NSError(domain: "mock error", code: 0))),
                              retrier: highestPriorityRetrier).result
 
-        let now = Date.now
+        let now = Date()
         let highestPriorityRetrierRanDate = await highestPriorityRetrier.retrierRunDate ?? now
         let lowestPriorityRetrierRanDate = await lowestPriorityRetrier.retrierRunDate ?? now
         XCTAssertTrue(highestPriorityRetrierRanDate < lowestPriorityRetrierRanDate)
@@ -93,7 +93,7 @@ class NetworkingSessionTests: XCTestCase {
                              responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "", code: 0))]),
                              interceptor: mockInterceptorHighPriority).result
 
-        let now = Date.now
+        let now = Date()
         let mockInterceptorLowPriorityAdapterRanDate = await mockInterceptorLowPriority.adapterRunDate ?? now
         let mockInterceptorHighPriorityAdapterRanDate = await mockInterceptorHighPriority.adapterRunDate ?? now
         let mockInterceptorHighPriorityRetrierRanDate = await mockInterceptorHighPriority.retrierRunDate ?? now
@@ -116,7 +116,7 @@ class NetworkingSessionTests: XCTestCase {
                              retrier: mockRouteRetrier,
                              interceptor: mockRouteInterceptor).result
 
-        let now = Date.now
+        let now = Date()
         let mockSessionAdapterRanDate = await mockSessionAdapter.adapterRunDate ?? now
         let mockSessionRetrierRanDate = await mockSessionRetrier.retrierRunDate ?? now
         let mockRouteAdapterRanDate = await mockRouteAdapter.adapterRunDate ?? now
