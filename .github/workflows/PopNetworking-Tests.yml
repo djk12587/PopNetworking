@@ -46,20 +46,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: swift-build
-          path: .artifacts
+      # - name: Download build artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: swift-build
+      #     path: .artifacts
   
-      - name: Show .artifacts directory after download
-        run: ls -al .artifacts || echo ".artifacts does not exist"
+      # - name: Show .artifacts directory after download
+      #   run: ls -al .artifacts || echo ".artifacts does not exist"
   
-      - name: Extract build artifacts
-        run: tar -xzf .artifacts/build-artifacts.tar.gz
+      # - name: Extract build artifacts
+      #   run: tar -xzf .artifacts/build-artifacts.tar.gz
   
-      - name: Show .build directory after extraction
-        run: ls -al .build || echo ".build does not exist"
+      # - name: Show .build directory after extraction
+      #   run: ls -al .build || echo ".build does not exist"
 
       - name: Set up Swift
         uses: swift-actions/setup-swift@v2
