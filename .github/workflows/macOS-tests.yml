@@ -1,0 +1,27 @@
+name: PopNetworking macOS
+
+on:
+  push:
+    branches:
+      - swift-6-and-strict-concurrency
+  pull_request:
+    branches:
+      - swift-6-and-strict-concurrency
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build package
+        run: swift build --build-tests
+
+      - name: Run tests
+        run: swift test
