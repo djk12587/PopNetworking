@@ -30,12 +30,21 @@ jobs:
 
       - name: Show working directory before upload
         run: pwd
-          
+
+      - name: Archive .build directory
+        run: tar -czf build-artifacts.tar.gz .build
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: swift-build
-          path: .build/**/*
+          path: build-artifacts.tar.gz
+          
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: swift-build
+      #     path: .build/**/*
 
   # macOS:
   #   runs-on: macos-latest
