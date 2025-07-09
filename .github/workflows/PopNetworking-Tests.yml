@@ -35,13 +35,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: swift-build
-          path: .build
-          
-      - name: Upload build.db
-        uses: actions/upload-artifact@v4
-        with:
-          name: swift-build-db
-          path: .build/build.db
+          path: .build/**/*
 
   # macOS:
   #   runs-on: macos-latest
