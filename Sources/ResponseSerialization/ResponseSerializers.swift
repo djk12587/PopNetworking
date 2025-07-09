@@ -41,7 +41,7 @@ public enum NetworkingResponseSerializers {
     public struct DecodableResponseAndErrorSerializer<SuccessType: Decodable,
                                                       FailureType: Decodable & Error>: NetworkingResponseSerializer {
 
-        /// The ``SerializedObject`` must adhere to `Decodable`.
+        /// The ``NetworkingResponseSerializer/SerializedObject`` must adhere to `Decodable`.
         ///
         /// - Note: Typically this would be one of your existing Model objects. That existing model must already adhere to `Decodable`
         public typealias SerializedObject = SuccessType

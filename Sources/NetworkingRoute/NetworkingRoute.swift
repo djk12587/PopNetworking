@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// ``NetworkingRoute`` is responsible for declaring everything needed to create a networking request and how to parse the networking response into a generic `SerializedObject` object.
+/// ``NetworkingRoute`` is responsible for declaring everything needed to create a networking request and how to parse the networking response into a generic ``NetworkingResponseSerializer/SerializedObject`` object.
 public protocol NetworkingRoute: Sendable {
 
     typealias NetworkingRouteHttpHeaders = [String : String]
@@ -32,8 +32,8 @@ public protocol NetworkingRoute: Sendable {
     /// Declares the request headers
     var headers: NetworkingRouteHttpHeaders? { get async }
 
-    /// <doc:/documentation/PopNetworking/NetworkingRoute/parameterEncoding-5o5po> is responsible for encoding all of your network request's parameters into a `URLRequest`.
-    var parameterEncoding: NetworkingRequestParameterEncoding? { get async }
+    /// ``NetworkingRoute/parameterEncoding-16vgm`` is responsible for encoding all of your network request's parameters into a `URLRequest`.
+    var parameterEncoding: NetworkingRouteParameterEncoding? { get async }
 
     /// ``urlRequest-793sf`` is responsible for creating the `URLRequest` that will be ran on an instance of `URLSession`.
     var urlRequest: URLRequest { get async throws }
@@ -43,7 +43,7 @@ public protocol NetworkingRoute: Sendable {
     /// If ``NetworkingSession`` & ``NetworkingRoute`` have ``NetworkingAdapter``'s with the same ``NetworkingPriority``, the adapter tied to the ``NetworkingSession`` is ran first.
     var adapter: NetworkingAdapter? { get }
 
-    /// When not nil, the route will not run on URLSession and the responseValidator will not be invoked.
+    /// Used for testing, a <doc:/documentation/PopNetworking/NetworkingRoute/mockSerializedResult-96yhb> skips ``URLSessionProtocol/data(for:)``, <doc:/documentation/PopNetworking/NetworkingRoute/responseValidator-2fydu>, and ``NetworkingResponseSerializer/serialize(responseResult:)``.
     var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? { get async }
 
     /// A `responseValidator` allows you to inspect the raw networking data and URLResponse.
@@ -176,7 +176,7 @@ public extension NetworkingRoute {
 
     var session: NetworkingSessionProtocol { NetworkingSession.shared }
     var headers: NetworkingRouteHttpHeaders? { nil }
-    var parameterEncoding: NetworkingRequestParameterEncoding? { nil }
+    var parameterEncoding: NetworkingRouteParameterEncoding? { nil }
     var timeoutInterval: TimeInterval? { nil }
     var adapter: NetworkingAdapter? { nil }
     var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? { nil }
