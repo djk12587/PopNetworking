@@ -44,7 +44,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -scheme PopNetworking-watchOS \
+            -scheme PopNetworking \
             -destination 'platform=watchOS Simulator,name=Apple Watch Series 9 - 49mm,OS=11.2' \
             | xcpretty
             
@@ -52,6 +52,6 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -scheme PopNetworking-watchOS \
+            -scheme PopNetworking \
             -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=18.2' \
             | xcpretty
