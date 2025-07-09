@@ -45,7 +45,7 @@ jobs:
           set -o pipefail
           xcodebuild test \
             -scheme PopNetworking \
-            -destination 'platform=watchOS Simulator,name=Apple Watch Series 9 - 49mm,OS=11.2' \
+            -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 2 (49mm),OS=11.2' \
             | xcpretty
             
       - name: Run tests on tvOS Simulator
