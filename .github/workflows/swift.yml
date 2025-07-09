@@ -23,8 +23,8 @@ jobs:
       - name: Build package
         run: swift build --build-tests
 
-      # - name: Run tests
-      #   run: swift test
+      - name: Run tests
+        run: swift test
 
       - name: Set up Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.2.app
@@ -38,4 +38,20 @@ jobs:
           xcodebuild test \
             -scheme PopNetworking \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.2' \
+            | xcpretty
+            
+      - name: Run tests on watchOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme PopNetworking-watchOS \
+            -destination 'platform=watchOS Simulator,name=Apple Watch Series 9 - 49mm,OS=11.2' \
+            | xcpretty
+            
+      - name: Run tests on tvOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme PopNetworking-watchOS \
+            -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=18.2' \
             | xcpretty
