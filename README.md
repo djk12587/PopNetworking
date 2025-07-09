@@ -2,8 +2,9 @@
 
 PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for protocol-oriented programming.
 
+[![PopNetworking Tests](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml/badge.svg)](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml)
+
 ## Requirements
-- Swift 5.5+ 
 - Xcode 14.0+
 - iOS 13+ / watchOS 6+ / tvOS 13+ / macOS 10.15+
 
