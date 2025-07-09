@@ -1,0 +1,38 @@
+name: PopNetworking iOS
+
+on:
+  push:
+    branches:
+      - swift-6-and-strict-concurrency
+  pull_request:
+    branches:
+      - swift-6-and-strict-concurrency
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build package
+        run: swift build --build-tests
+
+      - name: Set up Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Show available simulators
+        run: xcrun simctl list
+
+      - name: Run tests on iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme PopNetworking \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.2' \
+            | xcpretty
