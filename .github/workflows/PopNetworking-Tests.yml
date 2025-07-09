@@ -9,56 +9,10 @@ on:
       - swift-6-and-strict-concurrency
 
 jobs:
-  # build:
-  #   runs-on: macos-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Show workspace before build
-  #       run: ls -al
-
-  #     - name: Set up Swift
-  #       uses: swift-actions/setup-swift@v2
-  #       with:
-  #         swift-version: "6.0"
-
-  #     - name: Build package
-  #       run: swift build --build-tests
-
-  #     - name: Show build
-  #       run: ls -al .build
-
-  #     - name: Show working directory before upload
-  #       run: pwd
-
-  #     - name: Archive .build directory
-  #       run: tar -czf build-artifacts.tar.gz .build
-
-  #     - name: Upload build artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: swift-build
-  #         path: build-artifacts.tar.gz
-
   macOS:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
-      # - name: Download build artifacts
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: swift-build
-      #     path: .artifacts
-  
-      # - name: Show .artifacts directory after download
-      #   run: ls -al .artifacts || echo ".artifacts does not exist"
-  
-      # - name: Extract build artifacts
-      #   run: tar -xzf .artifacts/build-artifacts.tar.gz
-  
-      # - name: Show .build directory after extraction
-      #   run: ls -al .build || echo ".build does not exist"
 
       - name: Set up Swift
         uses: swift-actions/setup-swift@v2
@@ -67,6 +21,7 @@ jobs:
   
       - name: Run tests
         run: swift test
+
   iOS:
     runs-on: macos-latest
     steps:
@@ -89,6 +44,55 @@ jobs:
           xcodebuild test \
             -scheme PopNetworking \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.2' \
+            | xcpretty
+
+  watchOS:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+  
+      - name: Set up Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Show available simulators
+        run: xcrun simctl list
+
+      - name: Run tests on watchOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme PopNetworking \
+            -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 2 (49mm),OS=11.2' \
+            | xcpretty
+
+            
+  tvOS:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+  
+      - name: Set up Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Show available simulators
+        run: xcrun simctl list
+
+      - name: Run tests on tvOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme PopNetworking \
+            -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=18.2' \
             | xcpretty
 
 # jobs:
