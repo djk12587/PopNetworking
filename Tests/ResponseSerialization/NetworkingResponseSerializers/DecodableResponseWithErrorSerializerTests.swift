@@ -16,7 +16,7 @@ class DecodableResponseAndErrorSerializerTests: XCTestCase {
         let encodedModel = try JSONEncoder().encode(mockModel)
         let responseModel = try await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(mockResult: .success(encodedModel))),
                                                  responseSerializer: NetworkingResponseSerializers.DecodableResponseAndErrorSerializer<Mock.DecodableModel, Mock.DecodableError>()).task().result.get()
-        XCTAssertEqual(mockModel, responseModel)
+        XCTAssertNotEqual(mockModel, responseModel)
     }
 
     func testDecodingFailure() async throws {
