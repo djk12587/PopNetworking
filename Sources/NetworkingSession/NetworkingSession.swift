@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// `NetworkingSessionProtocol` is responsible for executing an instance of ``NetworkingRoute`` and returning the route's `SerializedObject`
+/// `NetworkingSessionProtocol` is responsible for executing an instance of ``NetworkingRoute`` and returning the route's ``NetworkingResponseSerializer/SerializedObject``
 public protocol NetworkingSessionProtocol: Sendable {
 
     var urlSession: URLSession { get }
@@ -23,17 +23,17 @@ public extension NetworkingSession {
     static let shared = NetworkingSession()
 }
 
-/// ``NetworkingSession`` is a wrapper class for `URLSession`.
+/// ``NetworkingSession`` is a wrapper class for `URLSession`. Conforms to ``NetworkingSessionProtocol``
 ///
-/// This class takes an instance of ``NetworkingRoute`` to perform the following actions.
-/// * build the `URLRequest`
-/// * adapt the `URLRequest` (``NetworkingAdapter``)
-/// * execute the HTTP request
-/// * validate the response (``NetworkingResponseValidator``)
-/// * serialize the response (``NetworkingResponseSerializer``)
-/// * retry the request, if an error occurred (``NetworkingRetrier``)
-/// * repeat the ``NetworkingRoute`` if needed
-/// * return the ``NetworkingRoute``'s `SerializedObject`
+/// When ``NetworkingSession/execute(route:)`` is called, the following actions are performed on an instance of ``NetworkingRoute``
+/// * builds the `URLRequest` - (``NetworkingRoute``.``NetworkingRoute/urlRequest-5u991``)
+/// * adapts the `URLRequest` - (``NetworkingRoute``.``NetworkingRoute/adapter-1x7eb``)
+/// * executes the REST request with ``NetworkingSession/urlSession``
+/// * validates the REST response - (``NetworkingRoute``.``NetworkingRoute/responseValidator-220e4``)
+/// * serializes the REST response into the ``NetworkingResponseSerializer/SerializedObject`` - (``NetworkingRoute``.``NetworkingRoute/responseSerializer``)
+/// * if an error occurred error, retry the request - (``NetworkingRoute``.``NetworkingRoute/adapter-8np6``
+/// * repeats the ``NetworkingRoute`` if needed - (``NetworkingRoute``.``NetworkingRoute/repeater-397rr``)
+/// * returns the ``NetworkingRoute``'s ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
 public final class NetworkingSession: NetworkingSessionProtocol {
 
     public var urlSession: URLSession { self._urlSession.session }

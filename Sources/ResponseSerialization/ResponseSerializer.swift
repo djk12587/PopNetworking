@@ -8,14 +8,14 @@
 
 import Foundation
 
-/// The ``NetworkingResponseSerializer``'s job is to serialize/parse a networking response data into whatever type you set for the ``SerializedObject``.
+/// The ``NetworkingResponseSerializer``'s job is to serialize/parse networking response data into whatever type you set for the ``NetworkingResponseSerializer/SerializedObject``.
 ///
-/// - Note: An example of a  NetworkingResponseSerializer sets the ``SerializedObject`` to be of type `Decodable`. With this, you can serialize networking response data into one of your preexisting `Decodable` Models. To see how check out ``NetworkingResponseSerializers/DecodableResponseSerializer``.
+/// - Note: An example of a NetworkingResponseSerializer is ``NetworkingResponseSerializers/DecodableResponseSerializer``. See more `NetworkingResponseSerializer`'s ``NetworkingResponseSerializers``
 public protocol NetworkingResponseSerializer: Sendable {
     /// The type you expect the raw response of a networking request to parse into.
     associatedtype SerializedObject: Sendable
 
-    /// Responsible for serializing the HTTP response data into whatever type ``SerializedObject`` is set to.
+    /// Responsible for serializing the REST response data into a ``NetworkingResponseSerializer/SerializedObject``.
     ///
     /// - Parameters:
     ///     - responseResult: A `Result` type that returns the response `Data` and `URLResponse` or an `Error`

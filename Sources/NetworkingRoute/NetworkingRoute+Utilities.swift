@@ -7,10 +7,10 @@
 
 import Foundation
 
-/// ``NetworkingRequestParameterEncoding`` declares how your requests parameters should be added to a `URLRequest`.
+/// ``NetworkingRouteParameterEncoding`` declares how your requests parameters should be added to a `URLRequest`.
 ///
 /// For an in-depth look at how parameters are encoded you can look into ``URLEncoding`` and ``JSONEncoding``
-public enum NetworkingRequestParameterEncoding: Sendable {
+public enum NetworkingRouteParameterEncoding: Sendable {
 
     /// Uses `JSONSerialization` to create a JSON representation of the parameters object, which is set as the body of the request. The Content-Type HTTP header field of an encoded request is set to application/json.
     case json(params: [String: Sendable]?,

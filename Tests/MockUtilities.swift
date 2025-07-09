@@ -15,7 +15,7 @@ enum Mock {
         var baseUrl: String
         var path: String
         var method: NetworkingRouteHttpMethod
-        var parameterEncoding: NetworkingRequestParameterEncoding?
+        var parameterEncoding: NetworkingRouteParameterEncoding?
         var session: NetworkingSessionProtocol
         var responseValidator: NetworkingResponseValidator?
         var responseSerializer: ResponseSerializer
@@ -29,7 +29,7 @@ enum Mock {
         init(baseUrl: String = "https://mockUrl.com",
              path: String = "",
              method: NetworkingRouteHttpMethod = .get,
-             parameterEncoding: NetworkingRequestParameterEncoding? = nil,
+             parameterEncoding: NetworkingRouteParameterEncoding? = nil,
              session: NetworkingSessionProtocol = NetworkingSession(urlSession: Mock.UrlSession()),
              responseValidator: NetworkingResponseValidator? = nil,
              responseSerializer: ResponseSerializer,
