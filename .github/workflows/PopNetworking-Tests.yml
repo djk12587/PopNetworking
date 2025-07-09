@@ -25,6 +25,12 @@ jobs:
       - name: Build package
         run: swift build --build-tests
 
+      - name: Show workspace structure
+        run: |
+          pwd
+          ls -al
+          ls -al .build || echo ".build not found"
+
       - name: Show .build directory after build
         run: ls -al
 
