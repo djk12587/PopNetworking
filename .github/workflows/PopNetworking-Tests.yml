@@ -39,30 +39,30 @@ jobs:
         with:
           name: swift-build
           path: build-artifacts.tar.gz
-          
-      # - name: Upload build artifacts
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: swift-build
-      #     path: .build/**/*
 
-  # macOS:
-  #   runs-on: macos-latest
-  #   needs: build
-  #   steps:
-  #     - uses: actions/checkout@v4
+  macOS:
+    runs-on: macos-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: swift-build
-  #         path: .artifacts
-
-  #     - name: Show .artifacts directory after download
-  #       run: ls -al .artifacts || echo ".artifacts does not exist"
-
-  #     - name: Run tests
-  #       run: swift test
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: swift-build
+          path: .artifacts
+  
+      - name: Show .artifacts directory after download
+        run: ls -al .artifacts || echo ".artifacts does not exist"
+  
+      - name: Extract build artifacts
+        run: tar -xzf .artifacts/build-artifacts.tar.gz
+  
+      - name: Show .build directory after extraction
+        run: ls -al .build || echo ".build does not exist"
+  
+      - name: Run tests
+        run: swift test
 
 # jobs:
 #   build:
