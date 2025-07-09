@@ -25,20 +25,16 @@ jobs:
       - name: Build package
         run: swift build --build-tests
 
-      - name: Show workspace structure
+      - name: Show workspace structure after build
         run: |
           pwd
           ls -al
-          ls -al .build || echo ".build not found"
-
-      - name: Show .build directory after build
-        run: ls -al
-
+          
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: swift-build
-          path: .build
+          path: ${{ github.workspace }}/.build
 
   # macOS:
   #   runs-on: macos-latest
