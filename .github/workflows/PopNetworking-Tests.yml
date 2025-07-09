@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Show workspace before build
+        run: ls -al
+
       - name: Set up Swift
         uses: swift-actions/setup-swift@v2
         with:
@@ -22,13 +25,10 @@ jobs:
       - name: Build package
         run: swift build --build-tests
 
-      - name: List build dir
-        run: |
-          echo "Listing .build directory:"
-          ls -al .build || echo ".build directory does not exist"
+      - name: Show .build directory after build
+        run: ls -al .build || echo ".build does not exist"
 
       - name: Upload build artifacts
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: swift-build
@@ -46,10 +46,8 @@ jobs:
           name: swift-build
           path: .build
 
-      - name: List downloaded build dir
-        run: |
-          echo "Listing downloaded .build directory:"
-          ls -al .build || echo ".build directory does not exist"
+      - name: Show .build directory after download
+        run: ls -al .build || echo ".build does not exist"
 
       - name: Run tests
         run: swift test
