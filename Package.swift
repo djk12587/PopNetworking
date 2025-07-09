@@ -22,7 +22,7 @@ let package = Package(
             name: "PopNetworking",
             path: "Sources",
             swiftSettings: [
-              .enableUpcomingFeature("StrictConcurrency")
+                .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
         .testTarget(
