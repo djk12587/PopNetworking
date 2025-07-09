@@ -30,15 +30,18 @@ jobs:
 
       - name: Show working directory before upload
         run: pwd
-
-      - name: Check permissions
-        run: ls -lR .build
           
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: swift-build
           path: .build
+          
+      - name: Upload build.db
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-build-db
+          path: .build/build.db
 
   # macOS:
   #   runs-on: macos-latest
