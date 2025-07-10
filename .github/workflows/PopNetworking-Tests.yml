@@ -73,8 +73,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
     
-      - name: Set up Xcode
-        uses: actions/setup-xcode@v4
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
           xcode-version: '16.2'
 
