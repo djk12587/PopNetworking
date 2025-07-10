@@ -1,8 +1,6 @@
-# PopNetworking
+# PopNetworking [![PopNetworking Tests](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml/badge.svg)](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml)
 
 PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for protocol-oriented programming.
-
-[![PopNetworking Tests](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml/badge.svg)](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml)
 
 ## Requirements
 - Xcode 14.0+
