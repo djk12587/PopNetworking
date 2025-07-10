@@ -83,5 +83,5 @@ jobs:
           set -o pipefail
           xcodebuild test \
             -scheme PopNetworking \
-            -destination 'platform=visionOS Simulator,name=Apple Vision Pro,OS=2.0' \
+            -destination 'platform=visionOS Simulator,name=Apple Vision Pro,OS=1.0' \
             | xcpretty
