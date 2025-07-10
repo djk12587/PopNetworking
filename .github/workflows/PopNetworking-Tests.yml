@@ -72,17 +72,16 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_15.3.app
-
-      - name: simulator list
-        run: xcrun simctl list devices
+    
+      - name: Set up Xcode
+        uses: actions/setup-xcode@v4
+        with:
+          xcode-version: '16.2'
 
       - name: Run tests on visionOS Simulator
         run: |
           set -o pipefail
           xcodebuild test \
             -scheme PopNetworking \
-            -destination 'platform=visionOS Simulator,name=Apple Vision Pro,OS=1.0' \
+            -destination 'platform=visionOS Simulator,name=Apple Vision Pro,OS=2.0' \
             | xcpretty
