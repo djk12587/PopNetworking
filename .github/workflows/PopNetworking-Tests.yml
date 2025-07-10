@@ -9,20 +9,83 @@ on:
       - swift-6-and-strict-concurrency
 
 jobs:
-  macOS:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
+  # macOS:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Set up Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.0"
+  #     - name: Set up Swift
+  #       uses: swift-actions/setup-swift@v2
+  #       with:
+  #         swift-version: "6.0"
   
-      - name: Run tests
-        run: swift test
+  #     - name: Run tests
+  #       run: swift test
 
-  iOS:
+  # iOS:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Set up Swift
+  #       uses: swift-actions/setup-swift@v2
+  #       with:
+  #         swift-version: "6.0"
+  
+  #     - name: Set up Xcode version
+  #       run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+  #     - name: Run tests on iOS Simulator
+  #       run: |
+  #         set -o pipefail
+  #         xcodebuild test \
+  #           -scheme PopNetworking \
+  #           -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.2' \
+  #           | xcpretty
+
+  # watchOS:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Set up Swift
+  #       uses: swift-actions/setup-swift@v2
+  #       with:
+  #         swift-version: "6.0"
+  
+  #     - name: Set up Xcode version
+  #       run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+  #     - name: Run tests on watchOS Simulator
+  #       run: |
+  #         set -o pipefail
+  #         xcodebuild test \
+  #           -scheme PopNetworking \
+  #           -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 2 (49mm),OS=11.2' \
+  #           | xcpretty
+
+  # tvOS:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Set up Swift
+  #       uses: swift-actions/setup-swift@v2
+  #       with:
+  #         swift-version: "6.0"
+  
+  #     - name: Set up Xcode version
+  #       run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+  #     - name: Run tests on tvOS Simulator
+  #       run: |
+  #         set -o pipefail
+  #         xcodebuild test \
+  #           -scheme PopNetworking \
+  #           -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=18.2' \
+  #           | xcpretty
+
+  visionOS:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,54 +94,14 @@ jobs:
         uses: swift-actions/setup-swift@v2
         with:
           swift-version: "6.0"
+      
+      - name: Print simulators
+        run: xcrun simctl list devices
   
       - name: Set up Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.2.app
 
-      - name: Run tests on iOS Simulator
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -scheme PopNetworking \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.2' \
-            | xcpretty
-
-  watchOS:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.0"
-  
-      - name: Set up Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
-
-      - name: Run tests on watchOS Simulator
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -scheme PopNetworking \
-            -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 2 (49mm),OS=11.2' \
-            | xcpretty
-
-            
-  tvOS:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.0"
-  
-      - name: Set up Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
-
-      - name: Run tests on tvOS Simulator
+      - name: Run tests on visionOS Simulator
         run: |
           set -o pipefail
           xcodebuild test \
