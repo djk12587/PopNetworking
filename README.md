@@ -6,7 +6,7 @@ PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for 
 
 ## Requirements
 - Xcode 14.0+
-- iOS 13+ / watchOS 6+ / tvOS 13+ / macOS 10.15+
+- iOS 13+ / watchOS 6+ / tvOS 13+ / macOS 10.15+ / visionOS 1.0+
 
 ## Documentation
 - https://djk12587.github.io/PopNetworking/documentation/popnetworking/
