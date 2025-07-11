@@ -3,7 +3,7 @@
 A protocol oriented HTTP CRUD networking layer. Built with Swift 6 and strict concurrency.
 
 ## NetworkingRoute high level visualization
-@Image(source: popnetworking_diagram, alt: "A high level visualization of how Popnetworking works.")
+ [![Description](popnetworking_diagram)](https://djk12587.github.io/PopNetworking/images/PopNetworking/popnetworking_diagram~dark.svg)
 
 ## Topics
 
