@@ -31,7 +31,7 @@ public extension NetworkingSession {
 /// * executes the REST request with ``NetworkingSession/urlSession``
 /// * validates the REST response - (``NetworkingRoute``.``NetworkingRoute/responseValidator-220e4``)
 /// * serializes the REST response into the ``NetworkingResponseSerializer/SerializedObject`` - (``NetworkingRoute``.``NetworkingRoute/responseSerializer``)
-/// * if an error occurred error, retry the request - (``NetworkingRoute``.``NetworkingRoute/adapter-8np6``
+/// * if an error occurred error, retry the request - (``NetworkingRoute``.``NetworkingRoute/retrier-5xple``
 /// * repeats the ``NetworkingRoute`` if needed - (``NetworkingRoute``.``NetworkingRoute/repeater-397rr``)
 /// * returns the ``NetworkingRoute``'s ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
 public final class NetworkingSession: NetworkingSessionProtocol {

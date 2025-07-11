@@ -16,7 +16,7 @@ public enum NetworkingResponseSerializers {
     /// The `DecodableResponseSerializer` will attempt to parse response `Data` into a the generic `SuccessType`. `SuccessType` must adhere to `Decodable`.
     ///
     /// - Note: `DecodableResponseSerializer` cannot handle API's errors. To handle custom API errors see ``DecodableResponseAndErrorSerializer``
-    public struct DecodableResponseSerializer<SuccessType: Decodable>: NetworkingResponseSerializer {
+    public struct DecodableResponseSerializer<SuccessType: Decodable & Sendable>: NetworkingResponseSerializer {
 
         /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
         public typealias SerializedObject = SuccessType
@@ -38,7 +38,7 @@ public enum NetworkingResponseSerializers {
     }
 
     /// The ``DecodableResponseAndErrorSerializer`` will attempt to parse response `Data` into a the generic `SuccessType`.  If your networking request failed, the `DecodableResponseAndErrorSerializer` will also attempt to parse response `Data` into the generic `FailureType`. `FailureType` & `SuccessType` must adhere to  `Decodable`. In addition, `FailureType` must also adhere to `Error`.
-    public struct DecodableResponseAndErrorSerializer<SuccessType: Decodable,
+    public struct DecodableResponseAndErrorSerializer<SuccessType: Decodable & Sendable,
                                                       FailureType: Decodable & Error>: NetworkingResponseSerializer {
 
         /// The ``NetworkingResponseSerializer/SerializedObject`` must adhere to `Decodable`.
