@@ -1,4 +1,4 @@
-name: PopNetworking Tests
+name: Tests
 
 on:
   push:
