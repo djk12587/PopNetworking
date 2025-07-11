@@ -11,7 +11,7 @@ import Combine
 
 class CombineTests: XCTestCase {
 
-    func testPublisherSuccess() {
+    @MainActor func testPublisherSuccess() {
         let expectation = expectation(description: "wait for response")
         var cancellables = Set<AnyCancellable>()
 
@@ -31,7 +31,7 @@ class CombineTests: XCTestCase {
         waitForExpectations(timeout: 5)
     }
 
-    func testPublisherFailure() {
+    @MainActor func testPublisherFailure() {
         let expectation = expectation(description: "wait for response")
         var cancellables = Set<AnyCancellable>()
 
@@ -52,7 +52,7 @@ class CombineTests: XCTestCase {
         waitForExpectations(timeout: 5)
     }
 
-    func testFailablePublisherSuccess() {
+    @MainActor func testFailablePublisherSuccess() {
         let expectation = expectation(description: "wait for response")
         var cancellables = Set<AnyCancellable>()
 
@@ -69,7 +69,7 @@ class CombineTests: XCTestCase {
         waitForExpectations(timeout: 5)
     }
 
-    func testFailablePublisherFailure() {
+    @MainActor func testFailablePublisherFailure() {
         let expectation = expectation(description: "wait for response")
         var cancellables = Set<AnyCancellable>()
 
@@ -90,7 +90,7 @@ class CombineTests: XCTestCase {
         waitForExpectations(timeout: 5)
     }
 
-    func testPublisherCancellation() {
+    @MainActor func testPublisherCancellation() {
         var cancellables = Set<AnyCancellable>()
         let expectation = expectation(description: "wait for response")
 
@@ -108,7 +108,7 @@ class CombineTests: XCTestCase {
         waitForExpectations(timeout: 5)
     }
 
-    func testFailablePublisherCancellation() {
+    @MainActor func testFailablePublisherCancellation() {
         var cancellables = Set<AnyCancellable>()
         let expectation = expectation(description: "wait for response")
 

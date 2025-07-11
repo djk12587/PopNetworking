@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -9,7 +9,8 @@ let package = Package(
         .iOS(.v13),
         .tvOS(.v13),
         .watchOS(.v6),
-        .macOS(.v10_15)
+        .macOS(.v10_15),
+        .visionOS(.v1)
     ],
     products: [
         .library(
@@ -17,13 +18,13 @@ let package = Package(
             targets: ["PopNetworking"]
         ),
     ],
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
-    ],
     targets: [
         .target(
             name: "PopNetworking",
-            path: "Sources"
+            path: "Sources",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
         ),
         .testTarget(
             name: "PopNetworkingTests",

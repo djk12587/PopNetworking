@@ -11,47 +11,56 @@ import XCTest
 class RepeaterTests: XCTestCase {
 
     func testRepeaterRetry() async {
-        var numberOfRetries = 0
+        let expectation = expectation(description: "wait for repeater to finish")
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
-                             repeater: { _, _, repeatCount in
-            numberOfRetries = repeatCount
-            return repeatCount > 1 ? .doNotRetry : .retry
+                             repeater: { _, _, _, repeatCount  in
+            let retrierResult: NetworkingRetrierResult = repeatCount > 1 ? .doNotRetry : .retry
+            if case .doNotRetry = retrierResult, repeatCount == 2 {
+                expectation.fulfill()
+            }
+            return retrierResult
         }).result
 
-        XCTAssertEqual(numberOfRetries, 2)
+        await fulfillment(of: [expectation], timeout: 1.0)
     }
 
     func testRepeaterRetryWithDelay() async {
-        var numberOfRetries = 0
+        let expectation = expectation(description: "wait for repeater to finish")
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
-                             repeater: { _, _, repeatCount in
-            numberOfRetries = repeatCount
-            return repeatCount > 0 ? .doNotRetry : .retryWithDelay(0)
+                             repeater: { _, _, _, repeatCount in
+            let retrierResult: NetworkingRetrierResult = repeatCount > 0 ? .doNotRetry : .retryWithDelay(0)
+            if case .doNotRetry = retrierResult, repeatCount == 1 {
+                expectation.fulfill()
+            }
+            return retrierResult
         }).result
 
-        XCTAssertEqual(numberOfRetries, 1)
+        await fulfillment(of: [expectation], timeout: 1.0)
     }
 
     func testRepeaterDoNotRetry() async {
-        var numberOfRetries = 0
+        let expectation = expectation(description: "wait for repeater to finish")
         _ = await Mock.Route(baseUrl: "base",
                              responseSerializer: Mock.ResponseSerializer(.success("success")),
-                             repeater: { _, _, repeatCount in
-            numberOfRetries = repeatCount
+                             repeater: { _, _, _, repeatCount in
+            if repeatCount == 0 {
+                expectation.fulfill()
+            }
             return .doNotRetry
         }).result
 
-        XCTAssertEqual(numberOfRetries, 0)
+        await fulfillment(of: [expectation], timeout: 1.0)
     }
 
     func testRepeaterParameters() async throws {
         _ = try await Mock.Route(baseUrl: "base",
                                  session: NetworkingSession(urlSession: Mock.UrlSession(mockUrlResponse: HTTPURLResponse())),
                                  responseSerializer: Mock.ResponseSerializer(.success("success")),
-                                 repeater: { result, response, repeatCount in
+                                 repeater: { result, request, response, repeatCount in
             XCTAssertEqual(try? result.get(), "success")
+            XCTAssertNotNil(request)
             XCTAssertNotNil(response)
             XCTAssertEqual(repeatCount, 0)
             return .doNotRetry
@@ -61,7 +70,7 @@ class RepeaterTests: XCTestCase {
     func testRepeaterCancellation() async throws {
         let routeTask = Route(baseUrl: "www.thisRequestWillBeCancelled.com",
                               responseSerializer: NetworkingResponseSerializers.DataResponseSerializer(),
-                              repeater: { result, response, repeatCount in
+                              repeater: { result, _, _, _ in
             XCTAssertEqual((result.error as? NSError)?.code, URLError.cancelled.rawValue)
             return .doNotRetry
         }).task()

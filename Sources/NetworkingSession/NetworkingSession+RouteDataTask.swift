@@ -7,110 +7,172 @@
 
 import Foundation
 
+internal protocol RouteDataTaskDelegate: AnyObject, Sendable {
+
+    func retry<Route: NetworkingRoute>(_ routeDataTask: NetworkingSession.RouteDataTask<Route>,
+                                       delay: TimeInterval?) async -> Result<Route.ResponseSerializer.SerializedObject, Error>
+
+}
+
 extension NetworkingSession {
-    internal actor RouteDataTask<Route: NetworkingRoute> {
+
+    internal struct RouteDataTask<Route: NetworkingRoute>: Sendable {
+
+        private actor SafeMutableData {
+
+            private(set) var retryCount = 0
+            private(set) var repeatCount = 0
+            private(set) var currentUrlRequest: URLRequest?
+
+            func incrementRetryCount() {
+                self.retryCount.increment()
+            }
+
+            func incrementRepeatCount() {
+                self.repeatCount.increment()
+            }
+
+            func resetRetryCount() {
+                self.retryCount.reset()
+            }
+
+            func resetRepeatCount() {
+                self.repeatCount.reset()
+            }
+
+            func set(currentUrlRequest: URLRequest) {
+                self.currentUrlRequest = currentUrlRequest
+            }
+        }
 
         private let route: Route
-        private var retryCount = 0
-        private var repeatCount = 0
-        private weak var networkingSessionDelegate: NetworkingSessionDelegate?
+        private let mutableData = SafeMutableData()
+        private weak var delegate: RouteDataTaskDelegate?
+        internal var adapter: NetworkingAdapter? { self.route.adapter }
+        internal var retrier: NetworkingRetrier? { self.route.retrier }
+        internal var interceptor: NetworkingInterceptor? { self.route.interceptor }
 
-        init(route: Route,
-             networkingSessionDelegate: NetworkingSessionDelegate) {
+        init(route: Route, delegate: RouteDataTaskDelegate?) {
             self.route = route
-            self.networkingSessionDelegate = networkingSessionDelegate
+            self.delegate = delegate
         }
 
-        func execute(on urlSession: URLSessionProtocol,
-                     adapter: NetworkingRequestAdapter?) async -> (Result<Data, Error>, HTTPURLResponse?, URLRequest?) {
-
-            let urlRequestResult: Result<URLRequest, Error> = await Result {
-                let urlRequest = try route.urlRequest
-                let adaptedUrlRequest = try await adapter?.adapt(urlRequest: urlRequest)
-                return adaptedUrlRequest ?? urlRequest
-            }
-
-            do {
-                let urlRequest = try urlRequestResult.get()
-                let (responseData, response) = try await urlSession.data(for: urlRequest)
-                return (.success(responseData), response as? HTTPURLResponse, urlRequest)
-            }
-            catch {
-                return (.failure(error), nil, try? urlRequestResult.get())
+        var urlRequestResult: Result<URLRequest, Error> {
+            get async {
+                return await Result {
+                    if let currentUrlRequest = await self.mutableData.currentUrlRequest {
+                        return currentUrlRequest
+                    } else {
+                        let routeRequest = try await self.route.urlRequest
+                        await self.mutableData.set(currentUrlRequest: routeRequest)
+                        return routeRequest
+                    }
+                }
             }
         }
 
-        func executeResponseValidator(result: Result<Data, Error>,
-                                      response: HTTPURLResponse?) -> Result<Data, Error> {
-            do {
-                try route.responseValidator?.validate(result: result, urlResponse: response)
-                return result
-            } catch let validationError {
-                return .failure(validationError)
-            }
-        }
-
-        func executeResponseSerializer(result: Result<Data, Error>,
-                                       response: HTTPURLResponse?) -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-            return route.responseSerializer.serialize(result: result,
-                                                      urlResponse: response)
-        }
-
-        func executeRetrier(retrier: NetworkingRequestRetrier?,
-                            serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                            urlRequest: URLRequest?,
-                            response: HTTPURLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        func execute(adapter: NetworkingAdapter,
+                     on urlRequestResult: Result<URLRequest, Error>) async -> Result<URLRequest, Error> {
             guard
-                let retrier = retrier,
-                let networkingSessionDelegate = networkingSessionDelegate,
+                let urlRequest = try? urlRequestResult.get()
+            else { return urlRequestResult }
+
+            return await Result {
+                let adaptedUrlRequest = try await adapter.adapt(urlRequest: urlRequest)
+                await self.mutableData.set(currentUrlRequest: adaptedUrlRequest)
+                return adaptedUrlRequest
+            }
+        }
+
+        func start(urlRequestResult: Result<URLRequest, Error>,
+                   on urlSession: URLSessionProtocol) async -> (Result<Route.ResponseSerializer.SerializedObject, Error>, URLResponse?) {
+            if let mockSerializedResult = await self.route.mockSerializedResult {
+                return (mockSerializedResult, nil)
+            } else {
+                var responseResult = await Result {
+                    let urlRequest = try urlRequestResult.get()
+                    return try await urlSession.data(for: urlRequest)
+                }
+
+                responseResult = await self.executeResponseValidator(responseResult: responseResult)
+                let serializedResponse = await self.executeResponseSerializer(responseResult: responseResult)
+
+                return (serializedResponse, try? responseResult.get().1)
+            }
+        }
+
+        func execute(retrier: NetworkingRetrier,
+                     serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
+                     urlRequest: URLRequest?,
+                     urlResponse: URLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+            guard
+                let delegate = self.delegate,
                 let error = serializedResult.error
             else {
-                retryCount.reset()
+                await self.mutableData.resetRetryCount()
                 return serializedResult
             }
 
             switch await retrier.retry(urlRequest: urlRequest,
                                        dueTo: error,
-                                       urlResponse: response,
-                                       retryCount: retryCount) {
+                                       urlResponse: urlResponse,
+                                       retryCount: self.mutableData.retryCount) {
                 case .retry:
-                    retryCount.increment()
-                    return await networkingSessionDelegate.retry(self, delay: nil)
+                    await self.mutableData.incrementRetryCount()
+                    return await delegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    retryCount.increment()
-                    return await networkingSessionDelegate.retry(self, delay: delay)
+                    await self.mutableData.incrementRetryCount()
+                    return await delegate.retry(self, delay: delay)
 
                 case .doNotRetry:
-                    retryCount.reset()
-                    return serializedResult
+                    await self.mutableData.resetRetryCount()
+                return serializedResult
             }
         }
 
         func executeRepeater(serializedResult: Result<Route.ResponseSerializer.SerializedObject, Error>,
-                             response: HTTPURLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+                             urlRequest: URLRequest?,
+                             urlResponse: URLResponse?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
             guard
-                let routeRetrier = route.repeater,
-                let networkingSessionDelegate = networkingSessionDelegate
+                let repeater = self.route.repeater,
+                let delegate = self.delegate
             else {
-                repeatCount.reset()
+                await self.mutableData.resetRepeatCount()
                 return serializedResult
             }
 
-            switch await routeRetrier(serializedResult, response, repeatCount) {
+            switch await repeater(serializedResult,
+                                  urlRequest,
+                                  urlResponse,
+                                  self.mutableData.repeatCount) {
                 case .retry:
-                    repeatCount.increment()
-                    return await networkingSessionDelegate.retry(self, delay: nil)
+                    await self.mutableData.incrementRepeatCount()
+                    return await delegate.retry(self, delay: nil)
 
                 case .retryWithDelay(let delay):
-                    repeatCount.increment()
-                    return await networkingSessionDelegate.retry(self, delay: delay)
+                    await self.mutableData.incrementRepeatCount()
+                    return await delegate.retry(self, delay: delay)
 
                 case .doNotRetry:
-                    repeatCount.reset()
+                    await self.mutableData.resetRepeatCount()
                     return serializedResult
             }
         }
+
+        private func executeResponseValidator(responseResult: Result<(Data, URLResponse), Error>) async -> Result<(Data, URLResponse), Error> {
+            do {
+                try await self.route.responseValidator?.validate(responseResult: responseResult)
+                return responseResult
+            } catch {
+                return .failure(error)
+            }
+        }
+
+        private func executeResponseSerializer(responseResult: Result<(Data, URLResponse), Error>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+            return await self.route.responseSerializer.serialize(responseResult: responseResult)
+        }
+
     }
 }
 
@@ -132,7 +194,7 @@ internal extension Result {
 }
 
 internal extension Result where Failure == Error {
-    init(asyncCatching: () async throws -> Success) async {
+    init(asyncCatching: @Sendable () async throws -> Success) async {
         do {
             let success = try await asyncCatching()
             self = .success(success)
