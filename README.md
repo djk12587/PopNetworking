@@ -1,4 +1,4 @@
-# PopNetworking [![PopNetworking Tests](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml/badge.svg)](https://github.com/djk12587/PopNetworking/actions/workflows/PopNetworking-Tests.yml)
+# PopNetworking [![Tests](https://github.com/djk12587/PopNetworking/actions/workflows/Run-Tests.yml/badge.svg)](https://github.com/djk12587/PopNetworking/actions/workflows/Run-Tests.yml)
 
 PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for protocol-oriented programming.
 
