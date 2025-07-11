@@ -19,4 +19,4 @@ PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for 
 </a>
 
 ## Example Usage
-Example implementation app - [PopNetworking-ExampleApp](https://github.com/djk12587/PopNetworking-ExampleApp)
+- [PopNetworking-ExampleApp](https://github.com/djk12587/PopNetworking-ExampleApp)
