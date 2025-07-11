@@ -9,5 +9,12 @@ PopNetworking is a protocol oriented HTTP CRUD networking layer. Pop stands for 
 ## Documentation
 - https://djk12587.github.io/PopNetworking/documentation/popnetworking/
 
+## High level visualization
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://djk12587.github.io/PopNetworking/images/PopNetworking/popnetworking_diagram~dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://djk12587.github.io/PopNetworking/images/PopNetworking/popnetworking_diagram.svg">
+  <img alt="PopNetworking high level visualization" src="https://djk12587.github.io/PopNetworking/images/PopNetworking/popnetworking_diagram.svg">
+</picture>
+
 ## Example Usage
-Check out the [official example app](https://github.com/djk12587/PopNetworking-ExampleApp), to see PopNetworking in action.
+Example implementation app - [PopNetworking-ExampleApp](https://github.com/djk12587/PopNetworking-ExampleApp)
