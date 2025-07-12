@@ -13,7 +13,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        ios: ['17.2', '16.4'] # List all iOS versions installed for this Xcode
+        ios: ['17.2', '17.0.1'] # List all iOS versions installed for this Xcode
 
     steps:
       - uses: actions/checkout@v4
@@ -23,12 +23,15 @@ jobs:
         with:
           xcode-version: '16.2'
 
+      - name: simulators
+        run: xcrun simctl list devices available
+
       - name: Run tests on iOS ${{ matrix.ios }}
         run: |
           set -o pipefail
           xcodebuild test \
             -scheme PopNetworking \
-            -destination 'platform=iOS Simulator,name=iPhone 14,OS=${{ matrix.ios }}' \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=${{ matrix.ios }}' \
             | xcpretty
   # macOS:
   #   runs-on: macos-15
