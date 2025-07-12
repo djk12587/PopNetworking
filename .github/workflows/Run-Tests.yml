@@ -21,7 +21,7 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
-          xcode-version: '16.4'
+          xcode-version: '16.2'
 
       - name: Run tests on iOS ${{ matrix.ios }}
         run: |
