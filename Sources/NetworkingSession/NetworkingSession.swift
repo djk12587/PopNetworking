@@ -8,49 +8,62 @@
 
 import Foundation
 
-// MARK: - NetworkingSession
+/// `NetworkingSessionProtocol` is responsible for executing an instance of ``NetworkingRoute`` and returning the route's ``NetworkingResponseSerializer/SerializedObject``
+public protocol NetworkingSessionProtocol: Sendable {
 
-internal protocol NetworkingSessionDelegate: AnyObject {
+    var urlSession: URLSession { get }
+    func execute<Route: NetworkingRoute>(route: Route) async throws -> Route.ResponseSerializer.SerializedObject
 
-    func retry<Route: NetworkingRoute>(_ routeDataTask: NetworkingSession.RouteDataTask<Route>,
-                                       delay: TimeInterval?) async -> Result<Route.ResponseSerializer.SerializedObject, Error>
 }
 
 public extension NetworkingSession {
     /// A singleton ``NetworkingSession`` object.
     ///
-    /// For basic requests, the ``NetworkingSession`` class provides a shared singleton session object that gives you a reasonable default behavior for creating tasks. Note: the ``NetworkingSession/shared`` instance does not utilize a ``NetworkingRequestAdapter`` or ``NetworkingRequestRetrier``
+    /// The ``NetworkingSession`` class provides a shared singleton session object that utilizes `URLSession` with a `URLSessionConfiguration.default` configuration.
     static let shared = NetworkingSession()
 }
 
-/// Is  a wrapper class for `URLSession`. This class takes a ``NetworkingRoute`` and kicks off the HTTP request.
-public class NetworkingSession {
+/// ``NetworkingSession`` is a wrapper class for `URLSession`. Conforms to ``NetworkingSessionProtocol``
+///
+/// When ``NetworkingSession/execute(route:)`` is called, the following actions are performed on an instance of ``NetworkingRoute``
+/// * builds the `URLRequest` - (``NetworkingRoute/urlRequest``)
+/// * adapts the `URLRequest` - (``NetworkingRoute/adapter``)
+/// * executes the REST request with ``NetworkingSession/urlSession``
+/// * validates the REST response - (``NetworkingRoute/responseValidator``)
+/// * serializes the REST response into the ``NetworkingResponseSerializer/SerializedObject`` - (``NetworkingRoute/responseSerializer``)
+/// * if an error occurred, retries the request - (``NetworkingRoute/retrier``)
+/// * repeats the ``NetworkingRoute`` if needed - (``NetworkingRoute/repeater``)
+/// * returns the ``NetworkingRoute``'s ``NetworkingResponseSerializer/SerializedObject`` or an `Error`
+public final class NetworkingSession: NetworkingSessionProtocol {
 
-    private let urlSession: URLSessionProtocol
-    private let requestAdapter: NetworkingRequestAdapter?
-    private let requestRetrier: NetworkingRequestRetrier?
+    public var urlSession: URLSession { self._urlSession.session }
 
-    public init(urlSession: URLSession = URLSession(configuration: .default),
-                requestAdapter: NetworkingRequestAdapter? = nil,
-                requestRetrier: NetworkingRequestRetrier? = nil) {
-        self.urlSession = urlSession
-        self.requestAdapter = requestAdapter
-        self.requestRetrier = requestRetrier
-    }
+    private let _urlSession: URLSessionProtocol
+    private let adapter: NetworkingAdapter?
+    private let retrier: NetworkingRetrier?
 
-    public init(urlSession: URLSession = URLSession(configuration: .default),
-                requestInterceptor: NetworkingRequestInterceptor? = nil) {
-        self.urlSession = urlSession
-        self.requestAdapter = requestInterceptor
-        self.requestRetrier = requestInterceptor
-    }
-
+    /// Creates an instance of a ``NetworkingSession``.
+    /// - Parameters:
+    ///   - urlSession: The ``URLSessionProtocol`` that executes the HTTP requests. `URLSession` conforms to ``URLSessionProtocol``.
+    ///   - adapter: The ``NetworkingAdapter`` that runs for every ``NetworkingRoute``
+    ///   - retrier: The ``NetworkingRetrier`` that runs for every ``NetworkingRoute``
     public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                requestAdapter: NetworkingRequestAdapter? = nil,
-                requestRetrier: NetworkingRequestRetrier? = nil) {
-        self.urlSession = urlSession
-        self.requestAdapter = requestAdapter
-        self.requestRetrier = requestRetrier
+                adapter: NetworkingAdapter? = nil,
+                retrier: NetworkingRetrier? = nil) {
+        self.adapter = adapter
+        self.retrier = retrier
+        self._urlSession = urlSession
+    }
+
+    /// Creates an instance of a ``NetworkingSession`` with a shared ``NetworkingInterceptor``.
+    /// - Parameters:
+    ///   - urlSession: The ``URLSessionProtocol`` that executes the HTTP requests. `URLSession` conforms to ``URLSessionProtocol``.
+    ///   - interceptor: The ``NetworkingInterceptor`` that runs for every ``NetworkingRoute``
+    public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
+                interceptor: NetworkingInterceptor?) {
+        self.adapter = interceptor
+        self.retrier = interceptor
+        self._urlSession = urlSession
     }
 
     /// Performs an HTTP request and parses the HTTP response into the `Route.ResponseSerializer.SerializedObject`
@@ -58,46 +71,69 @@ public class NetworkingSession {
     ///     - route: The ``NetworkingRoute`` you want to execute.
     /// - Returns: The `Route.ResponseSerializer.SerializedObject` or throws an `Error`.
     public func execute<Route: NetworkingRoute>(route: Route) async throws -> Route.ResponseSerializer.SerializedObject {
-        if let mockResponse = route.mockResponse {
-            return try mockResponse.get()
-        }
-        else {
-            let routeDataTask = RouteDataTask(route: route, networkingSessionDelegate: self)
-            return try await execute(routeDataTask).get()
-        }
-    }
-}
-
-extension NetworkingSession: NetworkingSessionDelegate {
-
-    func retry<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>, delay: TimeInterval?) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        if let delay = delay {
-            try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
-        }
-        return await execute(routeDataTask)
+        return try await self.start(RouteDataTask(route: route)).get()
     }
 }
 
 private extension NetworkingSession {
 
-    func execute<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
-        let (responseDataResult, urlResponse, urlRequest) = await routeDataTask.execute(on: urlSession,
-                                                                                        adapter: requestAdapter)
+    /// Top-level iterative driver. Runs one attempt (adapters + request + retriers) to a terminal
+    /// `(result, urlRequest, urlResponse)`, evaluates the repeater against that terminal state, and
+    /// either returns or loops for another full attempt.
+    func start<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> Result<Route.ResponseSerializer.SerializedObject, Error> {
+        while true {
+            let response = await self.run(routeDataTask)
 
-        let validatedResponseDataResult = await routeDataTask.executeResponseValidator(result: responseDataResult,
-                                                                                       response: urlResponse)
+            switch await routeDataTask.executeRepeater(serializedResult: response.result,
+                                                       urlRequest: response.urlRequest,
+                                                       urlResponse: response.urlResponse) {
+                case .doNotRetry:
+                    return response.result
+                case .retry:
+                    continue
+                case .retryWithDelay(let delay):
+                    do {
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    } catch {
+                        return .failure(URLError(.cancelled))
+                    }
+                    continue
+            }
+        }
+    }
 
-        var serializedResult = await routeDataTask.executeResponseSerializer(result: validatedResponseDataResult,
-                                                                             response: urlResponse)
+    /// Inner iterative loop: adapt the request, run it, ask the retriers what to do. Returns the
+    /// terminal `(result, urlRequest, urlResponse)` for this attempt once the retriers return
+    /// `.doNotRetry` (either because nothing failed, or because none of them want to retry).
+    func run<Route: NetworkingRoute>(_ routeDataTask: RouteDataTask<Route>) async -> (result: Result<Route.ResponseSerializer.SerializedObject, Error>, urlRequest: URLRequest?, urlResponse: URLResponse?) {
+        while true {
+            var urlRequestResult = await routeDataTask.urlRequestResult
 
-        serializedResult = await routeDataTask.executeRetrier(retrier: requestRetrier,
-                                                              serializedResult: serializedResult,
-                                                              urlRequest: urlRequest,
-                                                              response: urlResponse)
+            for adapter in [self.adapter, routeDataTask.adapter, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority {
+                urlRequestResult = await routeDataTask.executeAdapter(adapter, on: urlRequestResult)
+            }
 
-        serializedResult = await routeDataTask.executeRepeater(serializedResult: serializedResult,
-                                                               response: urlResponse)
+            let (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult, on: self._urlSession)
 
-        return serializedResult
+            let retriers = [self.retrier, routeDataTask.retrier, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority
+            let retryDecision = await routeDataTask.executeRetrier(serializedResult: serializedResult,
+                                                                   urlRequest: try? urlRequestResult.get(),
+                                                                   urlResponse: urlResponse,
+                                                                   retriers: retriers)
+
+            switch retryDecision {
+                case .doNotRetry:
+                    return (serializedResult, try? urlRequestResult.get(), urlResponse)
+                case .retry:
+                    continue
+                case .retryWithDelay(let delay):
+                    do {
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    } catch {
+                        return (.failure(URLError(.cancelled)), try? urlRequestResult.get(), urlResponse)
+                    }
+                    continue
+            }
+        }
     }
 }
