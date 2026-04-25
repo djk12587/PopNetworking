@@ -13,9 +13,9 @@ import XCTest
 class ResponseSerializerTests: XCTestCase {
 
     func testResponseSerializerSerializesSuccessResponse() async throws {
-        let result = await Mock.Route(responseSerializer: Mock.ResponseSerializer(.success("mock_success_response"))).result
+        let serializedValue = try await Mock.Route(responseSerializer: Mock.ResponseSerializer(.success("mock_success_response"))).run
 
-        XCTAssertNoThrow(try result.get())
+        XCTAssertEqual(serializedValue, "mock_success_response")
     }
 
     func testResponseSerializerSerializesFailureResponse() async throws {

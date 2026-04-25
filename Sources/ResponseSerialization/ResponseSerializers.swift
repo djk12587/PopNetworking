@@ -8,15 +8,13 @@
 
 import Foundation
 
-extension Array: Error where Element: Error {}
-
 /// Contains default implementations of ``NetworkingResponseSerializer``. Such as ``DecodableResponseSerializer``, etc.
 public enum NetworkingResponseSerializers {
 
     /// The `DecodableResponseSerializer` will attempt to parse response `Data` into a the generic `SuccessType`. `SuccessType` must adhere to `Decodable`.
     ///
-    /// - Note: `DecodableResponseSerializer` cannot handle API's errors. To handle custom API errors see ``DecodableResponseWithErrorSerializer``
-    public struct DecodableResponseSerializer<SuccessType: Decodable>: NetworkingResponseSerializer {
+    /// - Note: `DecodableResponseSerializer` cannot handle API's errors. To handle custom API errors see ``DecodableResponseAndErrorSerializer``
+    public struct DecodableResponseSerializer<SuccessType: Decodable & Sendable>: NetworkingResponseSerializer {
 
         /// The expected response type of a ``NetworkingRoute``. This type must adhere to `Decodable`
         public typealias SerializedObject = SuccessType
@@ -30,18 +28,18 @@ public enum NetworkingResponseSerializers {
             self.jsonDecoder = jsonDecoder
         }
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
-            return result.flatMap { data in
-                Result { try jsonDecoder.decode(SerializedObject.self, from: data) }
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SuccessType, Error> {
+            return responseResult.flatMap { (responseData, _) in
+                Result { try self.jsonDecoder.decode(SerializedObject.self, from: responseData) }
             }
         }
     }
 
-    /// The `DecodableResponseWithErrorSerializer` will attempt to parse response `Data` into a the generic `SuccessType`.  If your networking request failed, the `DecodableResponseWithErrorSerializer` will also attempt to parse response `Data` into the generic `FailureType`. `FailureType` & `SuccessType` must adhere to  `Decodable`. In addition, `FailureType` must aslo adhere to `Error`.
-    public struct DecodableResponseWithErrorSerializer<SuccessType: Decodable,
-                                                       FailureType: Decodable & Error>: NetworkingResponseSerializer {
+    /// The ``DecodableResponseAndErrorSerializer`` will attempt to parse response `Data` into a the generic `SuccessType`.  If your networking request failed, the `DecodableResponseAndErrorSerializer` will also attempt to parse response `Data` into the generic `FailureType`. `FailureType` & `SuccessType` must adhere to  `Decodable`. In addition, `FailureType` must also adhere to `Error`.
+    public struct DecodableResponseAndErrorSerializer<SuccessType: Decodable & Sendable,
+                                                      FailureType: Decodable & Error>: NetworkingResponseSerializer {
 
-        /// The ``SerializedObject`` must adhere to `Decodable`.
+        /// The ``NetworkingResponseSerializer/SerializedObject`` must adhere to `Decodable`.
         ///
         /// - Note: Typically this would be one of your existing Model objects. That existing model must already adhere to `Decodable`
         public typealias SerializedObject = SuccessType
@@ -51,18 +49,31 @@ public enum NetworkingResponseSerializers {
         /// - Note: Typically this would be one of your existing API Error models. That existing error model must already adheres to `Decodable` & `Codable`
         public typealias SerializedErrorObject = FailureType
 
+        /// Thrown when the response `Data` can be decoded as neither `SuccessType` nor `FailureType`.
+        public struct SerializationError: Error {
+            /// The error thrown while attempting to decode the response as `SuccessType`.
+            public let successTypeDecodingError: Error
+            /// The error thrown while attempting to decode the response as `FailureType`.
+            public let failureTypeDecodingError: Error
+
+            public init(successTypeDecodingError: Error, failureTypeDecodingError: Error) {
+                self.successTypeDecodingError = successTypeDecodingError
+                self.failureTypeDecodingError = failureTypeDecodingError
+            }
+        }
+
         private let successTypeJsonDecoder: JSONDecoder
         private let failureTypeJsonDecoder: JSONDecoder
 
-        /// Initializes an instance of `DecodableResponseWithErrorSerializer`
+        /// Initializes an instance of `DecodableResponseAndErrorSerializer`
         /// - Parameters:
         ///   - jsonDecoder: The `JSONDecoder` that will be used to parse json data
         public init(jsonDecoder: JSONDecoder = JSONDecoder()) {
-            successTypeJsonDecoder = jsonDecoder
-            failureTypeJsonDecoder = jsonDecoder
+            self.successTypeJsonDecoder = jsonDecoder
+            self.failureTypeJsonDecoder = jsonDecoder
         }
 
-        /// Initializes an instance of `DecodableResponseWithErrorSerializer`
+        /// Initializes an instance of `DecodableResponseAndErrorSerializer`
         /// - Parameters:
         ///   - successTypeJsonDecoder: The `JSONDecoder` that will be used to parse the `Decodable` `SuccessType`
         ///   - failureTypeJsonDecoder: The `JSONDecoder` that will be used to parse the `Decodable` `FailureType`
@@ -72,19 +83,22 @@ public enum NetworkingResponseSerializers {
             self.failureTypeJsonDecoder = failureTypeJsonDecoder
         }
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<SuccessType, Error> {
-            return result.flatMap { data in
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<SuccessType, Error> {
+            return responseResult.flatMap { (responseData, _) in
                 do {
-                    let serializedObject = try successTypeJsonDecoder.decode(SerializedObject.self, from: data)
+                    let serializedObject = try self.successTypeJsonDecoder.decode(SerializedObject.self, from: responseData)
                     return .success(serializedObject)
                 }
                 catch let serializedObjectError {
                     do {
-                        let serializedError = try failureTypeJsonDecoder.decode(SerializedErrorObject.self, from: data)
+                        let serializedError = try self.failureTypeJsonDecoder.decode(SerializedErrorObject.self, from: responseData)
                         return .failure(serializedError)
                     }
                     catch let errorSerializerError {
-                        return .failure([serializedObjectError, errorSerializerError])
+                        return .failure(SerializationError(
+                            successTypeDecodingError: serializedObjectError,
+                            failureTypeDecodingError: errorSerializerError
+                        ))
                     }
                 }
             }
@@ -97,10 +111,10 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<Int, Error> {
-            return result.flatMap { _ in
-                guard let response = urlResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
-                return .success(response.statusCode)
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<Int, Error> {
+            return responseResult.flatMap { (_, urlResponse) in
+                guard let httpUrlResponse = urlResponse as? HTTPURLResponse else { return .failure(URLError(.badServerResponse, userInfo: ["Reason": "urlResponse was nil"])) }
+                return .success(httpUrlResponse.statusCode)
             }
         }
     }
@@ -111,6 +125,6 @@ public enum NetworkingResponseSerializers {
 
         public init() {}
 
-        public func serialize(result: Result<Data, Error>, urlResponse: HTTPURLResponse?) -> Result<Data, Error> { result }
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<Data, Error> { responseResult.map({ $0.0 }) }
     }
 }

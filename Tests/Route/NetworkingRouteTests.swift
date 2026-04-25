@@ -11,14 +11,27 @@ import XCTest
 class NetworkingRouteTests: XCTestCase {
 
     func testCancellingNetworkingRoute() async throws {
-        let routeTask = Route(baseUrl: "www.thisRequestWillBeCancelled.com",
-                              responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).task()
-        routeTask.cancel()
+        let task = Task {
+            try await Route(baseUrl: "www.thisRequestWillBeCancelled.com",
+                            responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).run
+        }
+        task.cancel()
         do {
-            _ = try await routeTask.value
-            XCTFail("routeTask.value should throw a cancellation error")
+            _ = try await task.value
+            XCTFail("a cancellation error should be thrown")
         } catch {
             XCTAssertEqual((error as NSError).code, URLError.cancelled.rawValue)
         }
     }
+
+    func testHeadersAddedToUrlRequest() async throws {
+        let headers = ["headerKey1": "headerValue1",
+                       "headerKey2": "headerValue2"]
+        let urlRequest = try await Route(baseUrl: "www.mockedExample.com",
+                                         headers: headers,
+                                         responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).urlRequest
+
+        XCTAssertEqual(urlRequest.allHTTPHeaderFields, headers)
+    }
+
 }
