@@ -1,0 +1,84 @@
+# Tests for PopNetworking.
+#
+# This package is platform-agnostic (Foundation only, no UIKit / WatchKit /
+# platform conditionals), so platform coverage is split into two concerns:
+#
+#   test  - Runs `swift test` on multiple macOS runners. Exercises the full
+#           runtime test suite against different Swift compiler versions.
+#   build - Compiles the package against each non-macOS platform SDK
+#           (iOS, tvOS, watchOS, visionOS, Mac Catalyst) using
+#           `generic/platform=...` destinations. Catches API availability
+#           issues without booting a simulator.
+#
+# Xcode selection:
+#   Uses the runner's default Xcode. macOS-14's default (Xcode 15.4 / Swift 5.10)
+#   is too old for Package.swift's Swift 6 tools version, so we override to the
+#   latest installed Xcode only when the default Swift version is < 6.
+
+name: tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: "swift test (${{ matrix.runner }})"
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-14, macos-15, macos-26]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode
+        run: |
+          SWIFT_VERSION=$(swift --version 2>&1 | grep -oE 'Swift version [0-9]+' | grep -oE '[0-9]+')
+          if [ "${SWIFT_VERSION:-0}" -lt 6 ]; then
+            XCODE=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+            echo "Default Swift $SWIFT_VERSION is too old, selecting $XCODE"
+            sudo xcode-select -s "$XCODE"
+          fi
+          xcodebuild -version
+
+      - name: Run swift test
+        run: swift test
+
+  build:
+    name: "build (${{ matrix.platform }})"
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: iOS
+            destination: "generic/platform=iOS"
+          - platform: tvOS
+            destination: "generic/platform=tvOS"
+          - platform: watchOS
+            destination: "generic/platform=watchOS"
+          - platform: visionOS
+            destination: "generic/platform=visionOS"
+          - platform: Mac Catalyst
+            destination: "generic/platform=macOS,variant=Mac Catalyst"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build for ${{ matrix.platform }}
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -scheme PopNetworking \
+            -destination '${{ matrix.destination }}' \
+            | xcpretty

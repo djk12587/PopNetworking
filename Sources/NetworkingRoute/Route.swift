@@ -7,9 +7,9 @@
 
 import Foundation
 
-/// A `Route` is a basic implementation of a ``NetworkingRoute``. Use `Route` as a quick and dirty way to get an endpoint up and running
+/// A `Route` is a basic implementation of a ``NetworkingRoute``. Use `Route` as a way to explore ``PopNetworking``'s functionality.
 ///
-/// ```
+/// ```swift
 /// //Example usage
 /// Route(baseUrl: "https://www.baseUrl.com",
 ///       responseSerializer: NetworkingResponseSerializers.DataResponseSerializer()).request { result in
@@ -27,22 +27,30 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
     public var path: String
     public var method: NetworkingRouteHttpMethod
     public var headers: NetworkingRouteHttpHeaders?
-    public var parameterEncoding: NetworkingRequestParameterEncoding?
-    public var session: NetworkingSession
+    public var parameterEncoding: NetworkingRouteParameterEncoding?
+    public var session: NetworkingSessionProtocol
     public var responseValidator: NetworkingResponseValidator?
     public var responseSerializer: ResponseSerializer
+    public var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>?
     public var timeoutInterval: TimeInterval?
+    public var adapter: NetworkingAdapter?
+    public var retrier: NetworkingRetrier?
+    public var interceptor: NetworkingInterceptor?
     public var repeater: Repeater?
 
     public init(baseUrl: String,
                 path: String = "",
                 method: NetworkingRouteHttpMethod = .get,
                 headers: NetworkingRouteHttpHeaders? = nil,
-                parameterEncoding: NetworkingRequestParameterEncoding? = nil,
-                session: NetworkingSession = .shared,
+                parameterEncoding: NetworkingRouteParameterEncoding? = nil,
+                session: NetworkingSessionProtocol = NetworkingSession.shared,
                 responseValidator: NetworkingResponseValidator? = nil,
                 responseSerializer: ResponseSerializer,
+                mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? = nil,
                 timeoutInterval: TimeInterval? = nil,
+                adapter: NetworkingAdapter? = nil,
+                retrier: NetworkingRetrier? = nil,
+                interceptor: NetworkingInterceptor? = nil,
                 repeater: Repeater? = nil) {
         self.baseUrl = baseUrl
         self.path = path
@@ -52,7 +60,11 @@ public struct Route<ResponseSerializer: NetworkingResponseSerializer>: Networkin
         self.session = session
         self.responseValidator = responseValidator
         self.responseSerializer = responseSerializer
+        self.mockSerializedResult = mockSerializedResult
         self.timeoutInterval = timeoutInterval
+        self.adapter = adapter
+        self.retrier = retrier
+        self.interceptor = interceptor
         self.repeater = repeater
     }
 }
