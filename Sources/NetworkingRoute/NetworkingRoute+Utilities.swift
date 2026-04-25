@@ -28,6 +28,12 @@ public enum NetworkingRouteParameterEncoding: Sendable {
     case url(params: [String: Sendable]?,
              encoder: URLEncoding = .default)
 
+    /// Encodes the given parts as a `multipart/form-data` body. The Content-Type HTTP header field of an encoded request is set to `multipart/form-data; boundary=<boundary>`.
+    case multipart(parts: [MultipartPart],
+                   encoder: MultipartEncoding = .default,
+                   urlParams: [String: Sendable]? = nil,
+                   urlEncoder: URLEncoding = .queryString)
+
     /// Mutates a `URLRequest` by adding HTTP parameters
     /// - Parameter urlRequest: the `URLRequest` to add HTTP parameters to
     func encodeParams(into urlRequest: inout URLRequest) throws {
@@ -41,6 +47,10 @@ public enum NetworkingRouteParameterEncoding: Sendable {
 
             case .json(let params, let jsonEncoder, let urlParams, let urlEncoder):
                 try jsonEncoder.encode(&urlRequest, with: params)
+                try urlEncoder.encode(&urlRequest, with: urlParams)
+
+            case .multipart(let parts, let multipartEncoder, let urlParams, let urlEncoder):
+                try multipartEncoder.encode(&urlRequest, with: parts)
                 try urlEncoder.encode(&urlRequest, with: urlParams)
         }
     }

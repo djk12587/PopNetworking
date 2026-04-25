@@ -10,6 +10,7 @@ A protocol-oriented networking layer for Swift. Define endpoints as types, execu
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Core Concepts](#core-concepts)
+  - [Parameter Encoding](#parameter-encoding)
   - [Response Serializers](#response-serializers)
   - [Response Validation](#response-validation)
   - [NetworkingSession](#networkingsession)
@@ -133,6 +134,87 @@ let data = try await Route(
 ```
 
 ## Core Concepts
+
+### Parameter Encoding
+
+`NetworkingRouteParameterEncoding` describes how a route's parameters are added to its `URLRequest`. Set it on the route's `parameterEncoding` property. Three cases are built in: URL-encoded, JSON, and multipart.
+
+#### URL-encoded
+
+`.url(params:encoder:)` percent-encodes a dictionary of parameters. By default the `URLEncoding.default` destination is `.methodDependent` — `GET`/`HEAD`/`DELETE` get a query string, anything else gets an `application/x-www-form-urlencoded` body. Pass `.queryString` or `.httpBody` to override.
+
+```swift
+struct SearchUsers: NetworkingRoute {
+    let query: String
+
+    var baseUrl: String { "https://api.example.com" }
+    var path: String { "users" }
+    var method: NetworkingRouteHttpMethod { .get }
+    var parameterEncoding: NetworkingRouteParameterEncoding? {
+        .url(params: ["q": query, "limit": 20])
+    }
+    var responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<[User]> { .init() }
+}
+```
+
+#### JSON
+
+`.json(params:encoder:urlParams:urlEncoder:)` serializes a dictionary as JSON and sets `Content-Type: application/json`. The optional `urlParams` are appended to the URL as a query string, so you can mix a JSON body with query parameters in one call.
+
+```swift
+struct CreateUser: NetworkingRoute {
+    let name: String
+    let email: String
+
+    var baseUrl: String { "https://api.example.com" }
+    var path: String { "users" }
+    var method: NetworkingRouteHttpMethod { .post }
+    var parameterEncoding: NetworkingRouteParameterEncoding? {
+        .json(params: ["name": name, "email": email])
+    }
+    var responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<User> { .init() }
+}
+```
+
+If you already have JSON-encoded `Data` (e.g., from a `JSONEncoder`), use `.jsonData(data:...)` instead.
+
+#### Multipart / Form Data
+
+`.multipart(parts:encoder:urlParams:urlEncoder:)` builds a `multipart/form-data` body — useful for image uploads, form submissions with file attachments, etc. Build an array of `MultipartPart`:
+
+```swift
+struct UploadAvatar: NetworkingRoute {
+    let imageData: Data
+
+    var baseUrl: String { "https://api.example.com" }
+    var path: String { "users/me/avatar" }
+    var method: NetworkingRouteHttpMethod { .post }
+    var parameterEncoding: NetworkingRouteParameterEncoding? {
+        .multipart(parts: [
+            .text(name: "caption", value: "hello"),
+            .data(name: "avatar",
+                  data: imageData,
+                  filename: "avatar.png",
+                  mimeType: "image/png")
+        ])
+    }
+    var responseSerializer: NetworkingResponseSerializers.DataResponseSerializer { .init() }
+}
+```
+
+`MultipartPart` has three cases:
+
+| Case | Use Case |
+|---|---|
+| `.text(name:, value:)` | Plain text field |
+| `.data(name:, data:, filename:, mimeType:)` | Binary part with explicit filename and MIME type |
+| `.file(name:, fileURL:, filename:, mimeType:)` | Read a file from disk at encode time |
+
+For `.file`, `filename` defaults to `fileURL.lastPathComponent` and `mimeType` is auto-detected from the file extension (iOS 14+ / macOS 11+), falling back to `application/octet-stream`.
+
+The `Content-Type: multipart/form-data; boundary=…` header is set automatically with an auto-generated boundary, and non-ASCII filenames emit both an ASCII-safe `filename="..."` fallback and an RFC 5987 `filename*=UTF-8''...` parameter for cross-server compatibility.
+
+> **Note:** File parts are read into memory at encode time. For very large uploads where streaming from disk matters, construct your own `URLSession.uploadTask(with:fromFile:)` until upload-task support is added.
 
 ### Response Serializers
 
