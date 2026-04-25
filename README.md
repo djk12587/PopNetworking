@@ -33,7 +33,7 @@ Add PopNetworking to your project via Swift Package Manager:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/djk12587/PopNetworking.git", from: "2.0.0")
+    .package(url: "https://github.com/djk12587/PopNetworking.git", from: "4.0.0")
 ]
 ```
 
@@ -52,12 +52,12 @@ flowchart LR
     C --> D[Validator]
     D --> E[Serializer]
     E --> F{Success?}
-    F -- Yes --> G[Return Result]
+    F -- Yes --> I{Repeater}
     F -- No --> H{Retrier}
     H -- Retry --> B
-    H -- Do Not Retry --> I{Repeater}
+    H -- Do Not Retry --> I
     I -- Repeat --> A
-    I -- Do Not Repeat --> G
+    I -- Do Not Repeat --> G[Return Result]
 ```
 
 ## Quick Start
