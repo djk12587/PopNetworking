@@ -41,12 +41,12 @@ import Foundation
 ///
 /// `BoolEncoding` can be used to configure how boolean values are encoded. The default behavior is to encode
 /// `true` as 1 and `false` as 0.
-public struct URLEncoding {
+public struct URLEncoding: Sendable {
     // MARK: Helper Types
 
     /// Defines whether the url-encoded query string is applied to the existing query string or HTTP body of the
     /// resulting URL request.
-    public enum Destination {
+    public enum Destination: Sendable {
         /// Applies encoded query string result to existing query string for `GET`, `HEAD` and `DELETE` requests and
         /// sets as the HTTP body for requests with any other HTTP method.
         case methodDependent
@@ -65,7 +65,7 @@ public struct URLEncoding {
     }
 
     /// Configures how `Array` parameters are encoded.
-    public enum ArrayEncoding {
+    public enum ArrayEncoding: Sendable {
         /// An empty set of square brackets is appended to the key for every value. This is the default behavior.
         case brackets
         /// No brackets are appended. The key is encoded as is.
@@ -82,7 +82,7 @@ public struct URLEncoding {
     }
 
     /// Configures how `Bool` parameters are encoded.
-    public enum BoolEncoding {
+    public enum BoolEncoding: Sendable {
         /// Encode `true` as `1` and `false` as `0`. This is the default behavior.
         case numeric
         /// Encode `true` and `false` as string literals.
@@ -152,8 +152,8 @@ public struct URLEncoding {
                 urlRequest.url = urlComponents.url
             }
         } else {
-            if urlRequest.allHTTPHeaderFields?["Content-Type"] == nil {
-                urlRequest.allHTTPHeaderFields?.updateValue("application/x-www-form-urlencoded; charset=utf-8", forKey: "Content-Type")
+            if urlRequest.value(forHTTPHeaderField: "Content-Type") == nil {
+                urlRequest.setValue("application/x-www-form-urlencoded; charset=utf-8", forHTTPHeaderField: "Content-Type")
             }
             urlRequest.httpBody = Data(query(parameters).utf8)
         }
@@ -235,7 +235,7 @@ private extension CharacterSet {
 
 /// Uses `JSONSerialization` to create a JSON representation of the parameters object, which is set as the body of the
 /// request. The `Content-Type` HTTP header field of an encoded request is set to `application/json`.
-public struct JSONEncoding {
+public struct JSONEncoding: Sendable {
     // MARK: Properties
 
     /// Returns a `JSONEncoding` instance with default writing options.
@@ -265,8 +265,8 @@ public struct JSONEncoding {
         do {
             let data = try JSONSerialization.data(withJSONObject: parameters, options: options)
 
-            if urlRequest.allHTTPHeaderFields?["Content-Type"] == nil {
-                urlRequest.allHTTPHeaderFields?.updateValue("application/json", forKey: "Content-Type")
+            if urlRequest.value(forHTTPHeaderField: "Content-Type") == nil {
+                urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
             }
 
             urlRequest.httpBody = data
@@ -279,8 +279,8 @@ public struct JSONEncoding {
 
         guard let data = data else { return }
 
-        if urlRequest.allHTTPHeaderFields?["Content-Type"] == nil {
-            urlRequest.allHTTPHeaderFields?.updateValue("application/json", forKey: "Content-Type")
+        if urlRequest.value(forHTTPHeaderField: "Content-Type") == nil {
+            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
         urlRequest.httpBody = data
