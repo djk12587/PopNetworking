@@ -1,5 +1,5 @@
 //
-//  NetworkingRoute+MultipartEncoding.swift
+//  MultipartEncoding.swift
 //  PopNetworking
 //
 

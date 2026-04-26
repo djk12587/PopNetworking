@@ -33,9 +33,9 @@ public struct NetworkingPriority: Sendable, Comparable {
 public extension NetworkingPriority {
 
     static let highest = NetworkingPriority(Int.max)
-    static let high = NetworkingPriority(Int(Double(Int.max) * 0.5))
+    static let high = NetworkingPriority(Int.max / 2)
     static let standard = NetworkingPriority(0)
-    static let low = NetworkingPriority(Int(Double(Int.min) * 0.5))
+    static let low = NetworkingPriority(Int.min / 2)
     static let lowest = NetworkingPriority(Int.min)
 
 }
