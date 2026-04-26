@@ -1,6 +1,6 @@
 # PopNetworking [![tests](https://github.com/djk12587/PopNetworking/actions/workflows/Run-Tests.yml/badge.svg)](https://github.com/djk12587/PopNetworking/actions/workflows/Run-Tests.yml)
 
-A protocol-oriented networking layer for Swift. Define endpoints as types, execute them with async/await, and compose adapters, retriers, and interceptors to handle cross-cutting concerns like authentication. Built with Swift 6 strict concurrency.
+PopNetworking is a protocol-oriented Swift networking layer where every HTTP endpoint (route) is a self-documenting value type that carries its URL, body, validation, serialization, and retry policy in one place. Run any route via async/await, Combine, callbacks, or Result. Built as a thin layer over URLSession with the safety of Swift 6 strict concurrency.
 
 ## Table of Contents
 
@@ -17,6 +17,7 @@ A protocol-oriented networking layer for Swift. Define endpoints as types, execu
   - [Adapters](#adapters)
   - [Retriers](#retriers)
   - [Interceptors](#interceptors)
+  - [Attaching Modifiers](#attaching-modifiers)
   - [Priority](#priority)
   - [Repeater](#repeater)
   - [Testing](#testing)
@@ -43,6 +44,12 @@ dependencies: [
 - [Full API Reference](https://djk12587.github.io/PopNetworking/documentation/popnetworking)
 
 ## Architecture
+
+A few aspects of this design are worth calling out:
+
+- **Protocol-oriented end to end.** Every layer is a protocol: `NetworkingRoute`, the serializer, validator, adapter, retrier, interceptor, session, and `URLSessionProtocol`. Any piece can be swapped or mocked without touching the rest. Default protocol extensions provide most of the implementation, so a minimal route only declares its URL, method, and serializer, and gets every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) for free.
+- **Two loops, not one.** The retrier handles failures *within* a single attempt (token refresh, transient errors). The repeater evaluates an attempt's terminal result and decides whether to start a brand-new one (polling, conditional re-runs). They solve different problems and stay distinct concepts.
+- **Modifiers compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides.
 
 ### Request Lifecycle
 
@@ -121,7 +128,7 @@ UserAPI.GetUser(userId: 42).failablePublisher
           receiveValue: { user in print(user) })
 ```
 
-### Quick Route (No Custom Type)
+### One-off Route
 
 For one-off requests, use the built-in `Route` struct:
 
@@ -145,15 +152,10 @@ let data = try await Route(
 
 ```swift
 struct SearchUsers: NetworkingRoute {
-    let query: String
-
-    var baseUrl: String { "https://api.example.com" }
-    var path: String { "users" }
-    var method: NetworkingRouteHttpMethod { .get }
     var parameterEncoding: NetworkingRouteParameterEncoding? {
-        .url(params: ["q": query, "limit": 20])
+        .url(params: ["q": "search term", "limit": 20])
     }
-    var responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<[User]> { .init() }
+    // ...
 }
 ```
 
@@ -162,17 +164,11 @@ struct SearchUsers: NetworkingRoute {
 `.json(params:encoder:urlParams:urlEncoder:)` serializes a dictionary as JSON and sets `Content-Type: application/json`. The optional `urlParams` are appended to the URL as a query string, so you can mix a JSON body with query parameters in one call.
 
 ```swift
-struct CreateUser: NetworkingRoute {
-    let name: String
-    let email: String
-
-    var baseUrl: String { "https://api.example.com" }
-    var path: String { "users" }
-    var method: NetworkingRouteHttpMethod { .post }
+struct RegisterUser: NetworkingRoute {
     var parameterEncoding: NetworkingRouteParameterEncoding? {
-        .json(params: ["name": name, "email": email])
+        .json(params: ["name": "Dan", "email": "dan@example.com"])
     }
-    var responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<User> { .init() }
+    // ...
 }
 ```
 
@@ -186,9 +182,6 @@ If you already have JSON-encoded `Data` (e.g., from a `JSONEncoder`), use `.json
 struct UploadAvatar: NetworkingRoute {
     let imageData: Data
 
-    var baseUrl: String { "https://api.example.com" }
-    var path: String { "users/me/avatar" }
-    var method: NetworkingRouteHttpMethod { .post }
     var parameterEncoding: NetworkingRouteParameterEncoding? {
         .multipart(parts: [
             .text(name: "caption", value: "hello"),
@@ -198,7 +191,7 @@ struct UploadAvatar: NetworkingRoute {
                   mimeType: "image/png")
         ])
     }
-    var responseSerializer: NetworkingResponseSerializers.DataResponseSerializer { .init() }
+    // ...
 }
 ```
 
@@ -214,7 +207,7 @@ For `.file`, `filename` defaults to `fileURL.lastPathComponent` and `mimeType` i
 
 The `Content-Type: multipart/form-data; boundary=…` header is set automatically with an auto-generated boundary, and non-ASCII filenames emit both an ASCII-safe `filename="..."` fallback and an RFC 5987 `filename*=UTF-8''...` parameter for cross-server compatibility.
 
-> **Note:** File parts are read into memory at encode time. For very large uploads where streaming from disk matters, construct your own `URLSession.uploadTask(with:fromFile:)` until upload-task support is added.
+> **Note:** File parts are read into memory at encode time. For very large uploads where streaming from disk matters, construct your own `URLSession.uploadTask(with:fromFile:)`.
 
 ### Response Serializers
 
@@ -227,7 +220,7 @@ Serializers parse raw response data into typed objects. PopNetworking includes f
 | `DataResponseSerializer` | `Data` | Raw response data |
 | `HttpStatusCodeResponseSerializer` | `Int` | HTTP status code only |
 
-Implement `NetworkingResponseSerializer` to create your own:
+To write a custom serializer, conform to `NetworkingResponseSerializer`:
 
 ```swift
 struct StringResponseSerializer: NetworkingResponseSerializer {
@@ -265,22 +258,20 @@ struct GetUser: NetworkingRoute {
 
 ### NetworkingSession
 
-`NetworkingSession` wraps `URLSession` and orchestrates the request lifecycle. Every route uses `NetworkingSession.shared` by default, or you can create custom sessions:
+`NetworkingSession` wraps `URLSession` and orchestrates the [request lifecycle](#request-lifecycle). Every route uses `NetworkingSession.shared` by default, or you can create custom sessions:
 
 ```swift
-let session = NetworkingSession(
+let ephemeralSession = NetworkingSession(
     urlSession: URLSession(configuration: .ephemeral),
     adapter: authAdapter,
     retrier: authRetrier
 )
 
 struct GetUser: NetworkingRoute {
-    var session: NetworkingSessionProtocol { session }
+    var session: NetworkingSessionProtocol { ephemeralSession }
     // ...
 }
 ```
-
-Session-level adapters and retriers run for every route executed on that session. Route-level modifiers compose with session-level ones, ordered by priority.
 
 ### Adapters
 
@@ -298,18 +289,7 @@ struct AuthAdapter: NetworkingAdapter {
 }
 ```
 
-Attach to a route or a session:
-
-```swift
-// Route-level
-struct GetUser: NetworkingRoute {
-    var adapter: NetworkingAdapter? { AuthAdapter(token: "...") }
-    // ...
-}
-
-// Session-level (applies to all routes on this session)
-let session = NetworkingSession(adapter: AuthAdapter(token: "..."))
-```
+See [Attaching Modifiers](#attaching-modifiers) for how to wire one in.
 
 ### Retriers
 
@@ -331,6 +311,8 @@ struct RetryOn401: NetworkingRetrier {
     }
 }
 ```
+
+See [Attaching Modifiers](#attaching-modifiers) for how to wire one in.
 
 ### Interceptors
 
@@ -364,7 +346,7 @@ struct AuthInterceptor: NetworkingInterceptor {
 let session = NetworkingSession(interceptor: AuthInterceptor(tokenStore: store))
 ```
 
-Use `RouteInterceptor` to compose multiple adapters and retriers:
+Each route or session accepts only one adapter, one retrier, and one interceptor. To attach multiple of any kind, bundle them with `RouteInterceptor`:
 
 ```swift
 let interceptor = RouteInterceptor(
@@ -372,6 +354,23 @@ let interceptor = RouteInterceptor(
     retriers: [authRetrier, networkRetrier]
 )
 ```
+
+### Attaching Modifiers
+
+Adapters, retriers, and interceptors all attach the same way: as a property on a route, an init parameter on a session, or both.
+
+```swift
+// Route-level (extra logging on just this endpoint while debugging)
+struct GetUser: NetworkingRoute {
+    var adapter: NetworkingAdapter? { LoggingAdapter() }
+    // ...
+}
+
+// Session-level (auth applies to every route on this session)
+let session = NetworkingSession(adapter: AuthAdapter(token: "..."))
+```
+
+Both modifiers run for `GetUser`: the session-level adapter adds the auth header, the route-level adapter adds logging.
 
 ### Priority
 
@@ -388,7 +387,7 @@ Built-in levels: `.highest`, `.high`, `.standard` (default), `.low`, `.lowest`. 
 
 ### Repeater
 
-A repeater retries the entire request lifecycle (including adapters) based on the serialized result. Useful for polling:
+A repeater restarts the entire [request lifecycle](#request-lifecycle) (including adapters) based on the serialized result. Unlike a retrier, which handles failures within a single attempt, a repeater evaluates the final result and decides whether to start a fresh attempt. Useful for polling:
 
 ```swift
 struct PollStatus: NetworkingRoute {
@@ -404,29 +403,28 @@ struct PollStatus: NetworkingRoute {
 }
 ```
 
-The key difference from a retrier: retriers handle failures within a single attempt, repeaters evaluate the final result (success or failure) and decide whether to start a completely new attempt.
-
 ### Testing
 
-PopNetworking supports testing at two levels:
+PopNetworking supports testing at two levels. Use the first for unit tests of code that consumes a route; use the second for integration tests of the full request/response pipeline.
 
 **Mock the serialized result** to skip the network entirely:
 
 ```swift
-let route = Route(
-    baseUrl: "https://api.example.com",
-    path: "users/1",
-    responseSerializer: NetworkingResponseSerializers.DecodableResponseSerializer<User>(),
-    mockSerializedResult: .success(User(id: 1, name: "Test"))
-)
-let user = try await route.run // no network call
+struct GetUser: NetworkingRoute {
+    var mockSerializedResult: Result<User, Error>? {
+        .success(User(id: 1, name: "Test"))
+    }
+    // ...
+}
+
+let user = try await GetUser().run // no network call
 ```
 
 **Mock URLSession** by conforming to `URLSessionProtocol`:
 
 ```swift
 struct MockURLSession: URLSessionProtocol {
-    var session: URLSession { URLSession(configuration: .default) }
+    let session = URLSession(configuration: .default)
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         let json = #"{"id": 1, "name": "Test"}"#.data(using: .utf8)!
