@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Dan_Koza on 6/1/21.
 //
@@ -33,68 +33,10 @@ public struct NetworkingRoutePublisher<Route: NetworkingRoute>: Publisher {
                                                 S: Sendable,
                                                 Failure == S.Failure,
                                                 Output == S.Input {
-        subscriber.receive(subscription: Inner(route: route, downstream: subscriber))
-    }
-}
-
-private extension NetworkingRoutePublisher {
-    struct Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable, Sendable where Downstream.Input == NetworkingRoutePublisher.Output {
-
-        private actor SafeMutableProperties {
-
-            private(set) var downstream: Downstream?
-            private(set) var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
-            private(set) var isCancelled = false
-
-            init(downstream: Downstream?) {
-                self.downstream = downstream
-            }
-
-            func clearDownstream() {
-                self.downstream = nil
-            }
-
-            func set(routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?) {
-                if self.isCancelled {
-                    routeTask?.cancel()
-                    return
-                }
-                self.routeTask = routeTask
-            }
-
-            func cancelRoute() {
-                self.isCancelled = true
-                self.routeTask?.cancel()
-                self.routeTask = nil
-            }
-        }
-
-        let combineIdentifier = CombineIdentifier()
-        private let route: Route
-        private let mutableProperties: SafeMutableProperties
-
-        init(route: Route, downstream: Downstream) {
-            self.route = route
-            self.mutableProperties = SafeMutableProperties(downstream: downstream)
-        }
-
-        func request(_ demand: Subscribers.Demand) {
-            Task {
-                guard let downstream = await self.mutableProperties.downstream else { return }
-                await self.mutableProperties.clearDownstream()
-                await self.mutableProperties.set(routeTask: self.route.request { result in
-                    _ = downstream.receive(result)
-                    downstream.receive(completion: .finished)
-                })
-            }
-        }
-
-        func cancel() {
-            Task {
-                await self.mutableProperties.cancelRoute()
-                await self.mutableProperties.clearDownstream()
-            }
-        }
+        subscriber.receive(subscription: RouteSubscription(route: route, downstream: subscriber) { result, downstream in
+            _ = downstream.receive(result)
+            downstream.receive(completion: .finished)
+        })
     }
 }
 
@@ -115,72 +57,78 @@ public struct NetworkingRouteFailablePublisher<Route: NetworkingRoute & Sendable
                                                 Failure == S.Failure,
                                                 Output == S.Input,
                                                 S.Input: Sendable {
-        subscriber.receive(subscription: Inner(route: route, downstream: subscriber))
+        subscriber.receive(subscription: RouteSubscription(route: route, downstream: subscriber) { result, downstream in
+            switch result {
+                case .success(let responseModel):
+                    _ = downstream.receive(responseModel)
+                    downstream.receive(completion: .finished)
+                case .failure(let error):
+                    downstream.receive(completion: .failure(error))
+            }
+        })
     }
 }
 
-private extension NetworkingRouteFailablePublisher {
-    struct Inner<Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable, Sendable where Downstream.Input == NetworkingRouteFailablePublisher.Output,
-                                                                                                       Downstream.Failure == NetworkingRouteFailablePublisher.Failure {
-        private actor SafeMutableProperties {
+private struct RouteSubscription<Route: NetworkingRoute, Downstream: Subscriber & Sendable>: Subscription, Combine.Cancellable, Sendable {
 
-            private(set) var downstream: Downstream?
-            private(set) var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
-            private(set) var isCancelled = false
+    typealias Deliver = @Sendable (Result<Route.ResponseSerializer.SerializedObject, Error>, Downstream) -> Void
 
-            init(downstream: Downstream?) {
-                self.downstream = downstream
-            }
+    private actor SafeMutableProperties {
 
-            func clearDownstream() {
-                self.downstream = nil
-            }
+        private(set) var downstream: Downstream?
+        private(set) var routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?
+        private(set) var isCancelled = false
 
-            func set(routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?) {
-                if self.isCancelled {
-                    routeTask?.cancel()
-                    return
-                }
-                self.routeTask = routeTask
-            }
-
-            func cancelRoute() {
-                self.isCancelled = true
-                self.routeTask?.cancel()
-                self.routeTask = nil
-            }
+        init(downstream: Downstream?) {
+            self.downstream = downstream
         }
 
-        let combineIdentifier = CombineIdentifier()
-        private let route: Route
-        private let mutableProperties: SafeMutableProperties
-
-        init(route: Route, downstream: Downstream) {
-            self.route = route
-            self.mutableProperties = SafeMutableProperties(downstream: downstream)
+        func clearDownstream() {
+            self.downstream = nil
         }
 
-        func request(_ demand: Subscribers.Demand) {
-            Task {
-                guard let downstream = await self.mutableProperties.downstream else { return }
-                await self.mutableProperties.clearDownstream()
-                await self.mutableProperties.set(routeTask: self.route.request { result in
-                    switch result {
-                        case .success(let responseModel):
-                            _ = downstream.receive(responseModel)
-                            downstream.receive(completion: .finished)
-                        case .failure(let error):
-                            downstream.receive(completion: .failure(error))
-                    }
-                })
+        func set(routeTask: Task<Route.ResponseSerializer.SerializedObject, Error>?) {
+            if self.isCancelled {
+                routeTask?.cancel()
+                return
             }
+            self.routeTask = routeTask
         }
 
-        func cancel() {
-            Task {
-                await self.mutableProperties.cancelRoute()
-                await self.mutableProperties.clearDownstream()
-            }
+        func cancelRoute() {
+            self.isCancelled = true
+            self.routeTask?.cancel()
+            self.routeTask = nil
+        }
+    }
+
+    let combineIdentifier = CombineIdentifier()
+    private let route: Route
+    private let mutableProperties: SafeMutableProperties
+    private let deliver: Deliver
+
+    init(route: Route, downstream: Downstream, deliver: @escaping Deliver) {
+        self.route = route
+        self.mutableProperties = SafeMutableProperties(downstream: downstream)
+        self.deliver = deliver
+    }
+
+    func request(_ demand: Subscribers.Demand) {
+        guard demand > .none else { return }
+
+        Task {
+            guard let downstream = await self.mutableProperties.downstream else { return }
+            await self.mutableProperties.clearDownstream()
+            await self.mutableProperties.set(routeTask: self.route.request { result in
+                self.deliver(result, downstream)
+            })
+        }
+    }
+
+    func cancel() {
+        Task {
+            await self.mutableProperties.cancelRoute()
+            await self.mutableProperties.clearDownstream()
         }
     }
 }
