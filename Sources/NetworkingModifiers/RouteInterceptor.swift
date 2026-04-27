@@ -27,50 +27,22 @@ public struct RouteInterceptor: Sendable, NetworkingInterceptor {
     }
 
     public func adapt(urlRequest: URLRequest) async throws -> URLRequest {
-        return try await self.adapt(urlRequest: urlRequest, with: self.adapters)
-    }
-
-    private func adapt(urlRequest: URLRequest, with adapters: [NetworkingAdapter]) async throws -> URLRequest {
-
-        var adapters = adapters
-        guard !adapters.isEmpty else { return urlRequest }
-
-        let adapter = adapters.removeFirst()
-        let adaptedRequest = try await adapter.adapt(urlRequest: urlRequest)
-        return try await self.adapt(urlRequest: adaptedRequest, with: adapters)
+        var request = urlRequest
+        for adapter in self.adapters {
+            request = try await adapter.adapt(urlRequest: request)
+        }
+        return request
     }
 
     public func retry(urlRequest: URLRequest?, dueTo error: Error, urlResponse: URLResponse?, retryCount: Int) async -> NetworkingRetrierResult {
-        return await self.retry(urlRequest: urlRequest,
-                                dueTo: error,
-                                urlResponse: urlResponse,
-                                retryCount: retryCount,
-                                retriers: self.retriers)
-    }
-
-    private func retry(urlRequest: URLRequest?,
-                       dueTo error: Error,
-                       urlResponse: URLResponse?,
-                       retryCount: Int,
-                       retriers: [NetworkingRetrier]) async -> NetworkingRetrierResult {
-
-        var retriers = retriers
-        guard !retriers.isEmpty else { return .doNotRetry }
-
-        let retrier = retriers.removeFirst()
-        let retryResult = await retrier.retry(urlRequest: urlRequest,
-                                              dueTo: error,
-                                              urlResponse: urlResponse,
-                                              retryCount: retryCount)
-        switch retryResult {
-            case .retry, .retryWithDelay:
-                return retryResult
-            case .doNotRetry:
-                return await self.retry(urlRequest: urlRequest,
-                                        dueTo: error,
-                                        urlResponse: urlResponse,
-                                        retryCount: retryCount,
-                                        retriers: retriers)
+        for retrier in self.retriers {
+            let result = await retrier.retry(urlRequest: urlRequest,
+                                             dueTo: error,
+                                             urlResponse: urlResponse,
+                                             retryCount: retryCount)
+            if case .doNotRetry = result { continue }
+            return result
         }
+        return .doNotRetry
     }
 }
