@@ -1,25 +1,15 @@
 # Build the DocC site and deploy to GitHub Pages.
 #
-# Production trigger: `release: published` — the live site updates only after a
-# GitHub Release is published, never on raw pushes.
+# Triggered when a GitHub Release is published. The live site at
+# https://djk12587.github.io/PopNetworking/ updates only at that point —
+# never on raw pushes — so prod docs stay pinned to tagged versions.
 #
-# Testing trigger: `push: branches: [release-automation]` — fires on every
-# push to the test branch, so you can iterate by committing. (Note:
-# `workflow_dispatch` would be cleaner but its UI button only appears for
-# workflows on the default branch.)
-#
-# IMPORTANT: while this file is on the `release-automation` branch, the deploy
-# step uploads a regular workflow artifact (download + open `index.html`
-# locally) instead of pushing to Pages. Before merging to `main`, swap the
-# `actions/upload-artifact` step back to `actions/upload-pages-artifact`,
-# remove the test `push:` trigger, and add the `deploy` job described in the
-# comments at the bottom.
+# Pairs with `Draft-Release.yml`, which auto-drafts a release on tag push.
+# Publishing that draft fires this workflow.
 
 name: deploy-docs
 
 on:
-  push:
-    branches: [release-automation]
   release:
     types: [published]
 
@@ -62,44 +52,23 @@ jobs:
             --hosting-base-path PopNetworking \
             --output-path _site
 
-      # TESTING SHIM: tars the site (DocC paths contain colons, which v4
-      # upload-artifact rejects for NTFS compatibility) and uploads it for
-      # download + inspection. Replace with `actions/upload-pages-artifact@v3`
-      # (and add a `deploy` job using `actions/deploy-pages@v4`) before
-      # merging to main.
-      - name: Tar site for upload
-        run: tar -czf docc-site.tar.gz -C _site .
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
 
-      - name: Upload site artifact (test mode)
-        uses: actions/upload-artifact@v7
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
         with:
-          name: docc-site
-          path: docc-site.tar.gz
-          retention-days: 7
+          path: _site
 
-# PRODUCTION VERSION (apply before merging to main):
-#
-# Replace the "Upload site artifact (test mode)" step with:
-#
-#       - name: Configure Pages
-#         uses: actions/configure-pages@v5
-#
-#       - name: Upload Pages artifact
-#         uses: actions/upload-pages-artifact@v3
-#         with:
-#           path: _site
-#
-# And add a second job:
-#
-#   deploy:
-#     needs: build
-#     runs-on: ubuntu-latest
-#     permissions:
-#       pages: write
-#       id-token: write
-#     environment:
-#       name: github-pages
-#       url: ${{ steps.deployment.outputs.page_url }}
-#     steps:
-#       - id: deployment
-#         uses: actions/deploy-pages@v4
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
