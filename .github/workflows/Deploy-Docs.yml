@@ -1,0 +1,74 @@
+# Build the DocC site and deploy to GitHub Pages.
+#
+# Triggered when a GitHub Release is published. The live site at
+# https://djk12587.github.io/PopNetworking/ updates only at that point —
+# never on raw pushes — so prod docs stay pinned to tagged versions.
+#
+# Pairs with `Draft-Release.yml`, which auto-drafts a release on tag push.
+# Publishing that draft fires this workflow.
+
+name: deploy-docs
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode
+        run: |
+          SWIFT_VERSION=$(swift --version 2>&1 | grep -oE 'Swift version [0-9]+' | grep -oE '[0-9]+')
+          if [ "${SWIFT_VERSION:-0}" -lt 6 ]; then
+            XCODE=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+            echo "Default Swift $SWIFT_VERSION is too old, selecting $XCODE"
+            sudo xcode-select -s "$XCODE"
+          fi
+          xcodebuild -version
+
+      - name: Build DocC archive
+        run: |
+          set -o pipefail
+          xcodebuild docbuild \
+            -scheme PopNetworking \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath .derivedData \
+            | xcpretty
+
+      - name: Transform for static hosting
+        run: |
+          xcrun docc process-archive transform-for-static-hosting \
+            .derivedData/Build/Products/Debug-iphoneos/PopNetworking.doccarchive \
+            --hosting-base-path PopNetworking \
+            --output-path _site
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

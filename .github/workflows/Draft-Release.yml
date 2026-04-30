@@ -1,0 +1,32 @@
+# Draft a GitHub Release whenever a semver tag is pushed.
+#
+# Pushing a tag like `4.2.0` creates a draft release with auto-generated
+# notes from PR titles since the previous tag. Review the draft in the
+# Releases UI, edit if needed, and click Publish. Publishing then fires
+# `Deploy-Docs.yml`, which builds and deploys the DocC site.
+
+name: draft-release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: PopNetworking ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
