@@ -3,19 +3,23 @@
 # Production trigger: `release: published` — the live site updates only after a
 # GitHub Release is published, never on raw pushes.
 #
-# Testing trigger: `workflow_dispatch` — run manually from the Actions UI to
-# validate the build without needing a real release.
+# Testing trigger: `push: branches: [release-automation]` — fires on every
+# push to the test branch, so you can iterate by committing. (Note:
+# `workflow_dispatch` would be cleaner but its UI button only appears for
+# workflows on the default branch.)
 #
 # IMPORTANT: while this file is on the `release-automation` branch, the deploy
 # step uploads a regular workflow artifact (download + open `index.html`
 # locally) instead of pushing to Pages. Before merging to `main`, swap the
-# `actions/upload-artifact` step back to `actions/upload-pages-artifact` and
-# add the `deploy` job described in the comments at the bottom.
+# `actions/upload-artifact` step back to `actions/upload-pages-artifact`,
+# remove the test `push:` trigger, and add the `deploy` job described in the
+# comments at the bottom.
 
 name: deploy-docs
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [release-automation]
   release:
     types: [published]
 
