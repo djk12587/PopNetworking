@@ -62,14 +62,19 @@ jobs:
             --hosting-base-path PopNetworking \
             --output-path _site
 
-      # TESTING SHIM: uploads as a regular artifact for download + inspection.
-      # Replace with `actions/upload-pages-artifact@v3` (and add a `deploy` job
-      # using `actions/deploy-pages@v4`) before merging to main.
+      # TESTING SHIM: tars the site (DocC paths contain colons, which v4
+      # upload-artifact rejects for NTFS compatibility) and uploads it for
+      # download + inspection. Replace with `actions/upload-pages-artifact@v3`
+      # (and add a `deploy` job using `actions/deploy-pages@v4`) before
+      # merging to main.
+      - name: Tar site for upload
+        run: tar -czf docc-site.tar.gz -C _site .
+
       - name: Upload site artifact (test mode)
         uses: actions/upload-artifact@v4
         with:
           name: docc-site
-          path: _site
+          path: docc-site.tar.gz
           retention-days: 7
 
 # PRODUCTION VERSION (apply before merging to main):
