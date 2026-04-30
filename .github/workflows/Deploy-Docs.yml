@@ -30,9 +30,6 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   build:
     runs-on: macos-15
@@ -74,7 +71,7 @@ jobs:
         run: tar -czf docc-site.tar.gz -C _site .
 
       - name: Upload site artifact (test mode)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docc-site
           path: docc-site.tar.gz
