@@ -1,0 +1,96 @@
+# Build the DocC site and deploy to GitHub Pages.
+#
+# Production trigger: `release: published` — the live site updates only after a
+# GitHub Release is published, never on raw pushes.
+#
+# Testing trigger: `workflow_dispatch` — run manually from the Actions UI to
+# validate the build without needing a real release.
+#
+# IMPORTANT: while this file is on the `release-automation` branch, the deploy
+# step uploads a regular workflow artifact (download + open `index.html`
+# locally) instead of pushing to Pages. Before merging to `main`, swap the
+# `actions/upload-artifact` step back to `actions/upload-pages-artifact` and
+# add the `deploy` job described in the comments at the bottom.
+
+name: deploy-docs
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode
+        run: |
+          SWIFT_VERSION=$(swift --version 2>&1 | grep -oE 'Swift version [0-9]+' | grep -oE '[0-9]+')
+          if [ "${SWIFT_VERSION:-0}" -lt 6 ]; then
+            XCODE=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+            echo "Default Swift $SWIFT_VERSION is too old, selecting $XCODE"
+            sudo xcode-select -s "$XCODE"
+          fi
+          xcodebuild -version
+
+      - name: Build DocC archive
+        run: |
+          set -o pipefail
+          xcodebuild docbuild \
+            -scheme PopNetworking \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath .derivedData \
+            | xcpretty
+
+      - name: Transform for static hosting
+        run: |
+          xcrun docc process-archive transform-for-static-hosting \
+            .derivedData/Build/Products/Debug-iphoneos/PopNetworking.doccarchive \
+            --hosting-base-path PopNetworking \
+            --output-path _site
+
+      # TESTING SHIM: uploads as a regular artifact for download + inspection.
+      # Replace with `actions/upload-pages-artifact@v3` (and add a `deploy` job
+      # using `actions/deploy-pages@v4`) before merging to main.
+      - name: Upload site artifact (test mode)
+        uses: actions/upload-artifact@v4
+        with:
+          name: docc-site
+          path: _site
+          retention-days: 7
+
+# PRODUCTION VERSION (apply before merging to main):
+#
+# Replace the "Upload site artifact (test mode)" step with:
+#
+#       - name: Configure Pages
+#         uses: actions/configure-pages@v5
+#
+#       - name: Upload Pages artifact
+#         uses: actions/upload-pages-artifact@v3
+#         with:
+#           path: _site
+#
+# And add a second job:
+#
+#   deploy:
+#     needs: build
+#     runs-on: ubuntu-latest
+#     permissions:
+#       pages: write
+#       id-token: write
+#     environment:
+#       name: github-pages
+#       url: ${{ steps.deployment.outputs.page_url }}
+#     steps:
+#       - id: deployment
+#         uses: actions/deploy-pages@v4

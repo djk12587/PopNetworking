@@ -1,0 +1,41 @@
+# Draft a GitHub Release whenever a semver tag is pushed.
+#
+# Production trigger: `push: tags: ['[0-9]+.[0-9]+.[0-9]+']` — pushing a tag
+# like `4.2.0` creates a draft release. The user reviews, edits if needed,
+# and clicks Publish in the UI. Publishing then fires `Deploy-Docs.yml`.
+#
+# Testing trigger: `workflow_dispatch` with a manual `tag_name` input. Lets
+# you exercise the auto-notes generation against a synthetic tag without
+# pushing real tags. Drafts created this way can be deleted from the
+# Releases page after inspection.
+
+name: draft-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag to draft a release for (must already exist on the repo)"
+        required: true
+        default: "0.0.0-test"
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          draft: true
+          generate_release_notes: true
