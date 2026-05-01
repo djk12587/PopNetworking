@@ -18,7 +18,7 @@ PopNetworking is a protocol-oriented Swift networking layer where every HTTP end
     - [Adapters](#adapters)
     - [Retriers](#retriers)
     - [Interceptors](#interceptors)
-    - [Observers](#observers)
+    - [Transport Observers](#transport-observers)
     - [Attaching Hooks](#attaching-hooks)
     - [Priority](#priority)
   - [Repeater](#repeater)
@@ -49,19 +49,19 @@ dependencies: [
 
 A few aspects of this design are worth calling out:
 
-- **Protocol-oriented end to end.** Every layer is a protocol: `NetworkingRoute`, the serializer, validator, adapter, retrier, interceptor, observers, session, and `URLSessionProtocol`. Any piece can be swapped or mocked without touching the rest. Default protocol extensions provide most of the implementation, so a minimal route only declares its URL, method, and serializer, and gets every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) for free.
+- **Protocol-oriented end to end.** Every layer is a protocol: `NetworkingRoute`, the serializer, validator, adapter, retrier, interceptor, transport observer, session, and `URLSessionProtocol`. Any piece can be swapped or mocked without touching the rest. Default protocol extensions provide most of the implementation, so a minimal route only declares its URL, method, and serializer, and gets every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) for free.
 - **Two loops, not one.** The retrier handles failures *within* a single attempt (token refresh, transient errors). The repeater evaluates an attempt's terminal result and decides whether to start a brand-new one (polling, conditional re-runs). They solve different problems and stay distinct concepts.
-- **Hooks compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides. Observers attach the same way (as an array on either or both), but unlike adapters and retriers, they are side-effect-only. They don't influence the request and fire concurrently for each lifecycle event.
+- **Hooks compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides. Transport observers attach the same way (as an array on either or both), but unlike adapters and retriers, they are side-effect-only. They don't influence the request and fire concurrently for each lifecycle event.
 
 ### Request Lifecycle
 
 ```mermaid
 flowchart LR
     A[Route.urlRequest] --> B[Adapters]
-    B --> O1[Observer.willSend]
+    B --> O1[TransportObserver.willSend]
     O1 --> C[URLSession]
-    C -- Success --> O2[Observer.didReceive]
-    C -- Transport Error --> O3[Observer.didFail]
+    C -- Success --> O2[TransportObserver.didReceive]
+    C -- Transport Error --> O3[TransportObserver.didFail]
     O2 --> D[Validator]
     O3 --> D
     D --> E[Serializer]
@@ -365,9 +365,9 @@ let interceptor = RouteInterceptor(
 )
 ```
 
-#### Observers
+#### Transport Observers
 
-Observers watch a route's lifecycle without changing its behavior. Use them for logging, analytics, or breadcrumbs:
+Transport observers watch a route's lifecycle without changing its behavior. Use them for logging, analytics, or breadcrumbs:
 
 ```swift
 struct LoggingObserver: NetworkingTransportObserver {
@@ -388,10 +388,10 @@ struct LoggingObserver: NetworkingTransportObserver {
 
 Behavior:
 
-- Observers fire **per attempt**, so every retry produces its own `willSend` / `didReceive` / `didFail` cycle.
+- Transport observers fire **per attempt**, so every retry produces its own `willSend` / `didReceive` / `didFail` cycle.
 - `didFail` only fires for transport-level errors (`URLSession.data(for:)` threw). Validator and serializer rejections don't trigger `didFail`; `didReceive` already fired with the raw bytes in those cases.
-- Session-level and route-level observers all fire **concurrently** for each lifecycle event with no ordering guarantee between them.
-- Callbacks run **inline** on the request path. `willSend` runs before `URLSession.data(for:)`; `didReceive`/`didFail` run before the next attempt begins. A slow observer slows every request.
+- Session-level and route-level transport observers all fire **concurrently** for each lifecycle event with no ordering guarantee between them.
+- Callbacks run **inline** on the request path. `willSend` runs before `URLSession.data(for:)`; `didReceive`/`didFail` run before the next attempt begins. A slow transport observer slows every request.
 
 For expensive work (file I/O, third-party SDKs) where you don't need the temporal guarantees, spawn a `Task` inside the callback so the trade-off is visible at the call site:
 
@@ -401,7 +401,7 @@ func willSend(urlRequest: URLRequest) async {
 }
 ```
 
-Attach observers on a route, a session, or both:
+Attach transport observers on a route, a session, or both:
 
 ```swift
 // Route-level
@@ -414,11 +414,11 @@ struct GetUser: NetworkingRoute {
 let session = NetworkingSession(observers: [LoggingObserver()])
 ```
 
-See [Attaching Hooks](#attaching-hooks) for how observers compose with other hooks.
+See [Attaching Hooks](#attaching-hooks) for how transport observers compose with other hooks.
 
 #### Attaching Hooks
 
-Adapters, retriers, and interceptors attach as a single property on a route or as an init parameter on a session, or both. Observers attach as an array, so you can pass as many as you want at each level.
+Adapters, retriers, and interceptors attach as a single property on a route or as an init parameter on a session, or both. Transport observers attach as an array, so you can pass as many as you want at each level.
 
 ```swift
 // Route-level (extra logging on just this endpoint while debugging)
@@ -435,7 +435,7 @@ let session = NetworkingSession(
 )
 ```
 
-Every hook runs for `GetUser`: the session-level adapter adds the auth header, the session-level observers fire, and the route-level adapter and observer fire too.
+Every hook runs for `GetUser`: the session-level adapter adds the auth header, the session-level transport observers fire, and the route-level adapter and transport observer fire too.
 
 #### Priority
 
@@ -450,7 +450,7 @@ struct HighPriorityAdapter: NetworkingAdapter {
 
 Built-in levels: `.highest`, `.high`, `.standard` (default), `.low`, `.lowest`. You can also use `NetworkingPriority(_:)` for custom values.
 
-Observers don't participate in priority sorting. Session-level and route-level observers all fire concurrently with no ordering guarantee between them.
+Transport observers don't participate in priority sorting. Session-level and route-level transport observers all fire concurrently with no ordering guarantee between them.
 
 ### Repeater
 
