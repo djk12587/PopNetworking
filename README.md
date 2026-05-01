@@ -51,7 +51,7 @@ A few aspects of this design are worth calling out:
 
 - **Protocol-oriented end to end.** Every layer is a protocol: `NetworkingRoute`, the serializer, validator, adapter, retrier, interceptor, observers, session, and `URLSessionProtocol`. Any piece can be swapped or mocked without touching the rest. Default protocol extensions provide most of the implementation, so a minimal route only declares its URL, method, and serializer, and gets every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) for free.
 - **Two loops, not one.** The retrier handles failures *within* a single attempt (token refresh, transient errors). The repeater evaluates an attempt's terminal result and decides whether to start a brand-new one (polling, conditional re-runs). They solve different problems and stay distinct concepts.
-- **Hooks compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides. Observers attach the same way (as an array on either or both) but are side-effect-only — they don't influence the request and fire concurrently for each lifecycle event.
+- **Hooks compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides. Observers attach the same way (as an array on either or both), but unlike adapters and retriers, they are side-effect-only. They don't influence the request and fire concurrently for each lifecycle event.
 
 ### Request Lifecycle
 
@@ -154,7 +154,7 @@ let data = try await Route(
 
 #### URL-encoded
 
-`.url(params:encoder:)` percent-encodes a dictionary of parameters. By default the `URLEncoding.default` destination is `.methodDependent` — `GET`/`HEAD`/`DELETE` get a query string, anything else gets an `application/x-www-form-urlencoded` body. Pass `.queryString` or `.httpBody` to override.
+`.url(params:encoder:)` percent-encodes a dictionary of parameters. By default the `URLEncoding.default` destination is `.methodDependent`, which sends `GET`/`HEAD`/`DELETE` parameters as a query string and all other methods as an `application/x-www-form-urlencoded` body. Pass `.queryString` or `.httpBody` to override.
 
 ```swift
 struct SearchUsers: NetworkingRoute {
@@ -182,7 +182,7 @@ If you already have JSON-encoded `Data` (e.g., from a `JSONEncoder`), use `.json
 
 #### Multipart / Form Data
 
-`.multipart(parts:encoder:urlParams:urlEncoder:)` builds a `multipart/form-data` body — useful for image uploads, form submissions with file attachments, etc. Build an array of `MultipartPart`:
+`.multipart(parts:encoder:urlParams:urlEncoder:)` builds a `multipart/form-data` body for image uploads, form submissions with file attachments, and similar use cases. Build an array of `MultipartPart`:
 
 ```swift
 struct UploadAvatar: NetworkingRoute {
@@ -388,9 +388,9 @@ struct LoggingObserver: NetworkingTransportObserver {
 
 Behavior:
 
-- Observers fire **per attempt** — every retry produces its own `willSend` / `didReceive` / `didFail` cycle.
+- Observers fire **per attempt**, so every retry produces its own `willSend` / `didReceive` / `didFail` cycle.
 - `didFail` only fires for transport-level errors (`URLSession.data(for:)` threw). Validator and serializer rejections don't trigger `didFail`; `didReceive` already fired with the raw bytes in those cases.
-- All observers — session-level and route-level — fire **concurrently** for each lifecycle event with no ordering guarantee between them.
+- Session-level and route-level observers all fire **concurrently** for each lifecycle event with no ordering guarantee between them.
 - Callbacks run **inline** on the request path. `willSend` runs before `URLSession.data(for:)`; `didReceive`/`didFail` run before the next attempt begins. A slow observer slows every request.
 
 For expensive work (file I/O, third-party SDKs) where you don't need the temporal guarantees, spawn a `Task` inside the callback so the trade-off is visible at the call site:
@@ -418,7 +418,7 @@ See [Attaching Hooks](#attaching-hooks) for how observers compose with other hoo
 
 #### Attaching Hooks
 
-Adapters, retriers, and interceptors attach as a single property on a route or as an init parameter on a session, or both. Observers attach as an array — pass as many as you want at each level.
+Adapters, retriers, and interceptors attach as a single property on a route or as an init parameter on a session, or both. Observers attach as an array, so you can pass as many as you want at each level.
 
 ```swift
 // Route-level (extra logging on just this endpoint while debugging)
@@ -450,7 +450,7 @@ struct HighPriorityAdapter: NetworkingAdapter {
 
 Built-in levels: `.highest`, `.high`, `.standard` (default), `.low`, `.lowest`. You can also use `NetworkingPriority(_:)` for custom values.
 
-Observers don't participate in priority sorting. All observers — session-level and route-level — fire concurrently with no ordering guarantee between them.
+Observers don't participate in priority sorting. Session-level and route-level observers all fire concurrently with no ordering guarantee between them.
 
 ### Repeater
 
