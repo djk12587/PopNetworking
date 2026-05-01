@@ -22,7 +22,7 @@ let package = Package(
     targets: [
         .target(
             name: "PopNetworking",
-            path: "Sources",
+            path: "Sources"
         ),
         .testTarget(
             name: "PopNetworkingTests",
