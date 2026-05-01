@@ -36,5 +36,6 @@
 - ``adapter-8np6``
 - ``retrier-9650z``
 - ``interceptor-pstd``
+- ``observers``
 - ``repeater-397rr``
 - ``Repeater``

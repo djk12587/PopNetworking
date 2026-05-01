@@ -66,6 +66,11 @@ public protocol NetworkingRoute: Sendable {
     /// If ``NetworkingSession`` & ``NetworkingRoute`` have ``NetworkingInterceptor``'s with the same ``NetworkingPriority``, the interceptor tied to the ``NetworkingSession`` runs first. Additionally, assuming the same ``NetworkingPriority``, ``NetworkingAdapter``'s & ``NetworkingRetrier``'s run before ``NetworkingInterceptor``'s.
     var interceptor: NetworkingInterceptor? { get }
 
+    /// ``NetworkingTransportObserver``s tied to the ``NetworkingRoute``.
+    ///
+    /// All observers — those registered on the ``NetworkingSession`` and those declared here — fire concurrently for each lifecycle event with no ordering guarantee between them.
+    var observers: [NetworkingTransportObserver] { get }
+
     /// A `Repeater` allows you to retry the entire request if needed. This can be used if you have to repeatedly poll an endpoint to wait for a specific status to be returned.
     ///
     /// ```swift
@@ -186,6 +191,7 @@ public extension NetworkingRoute {
     var responseValidator: NetworkingResponseValidator? { nil }
     var retrier: NetworkingRetrier? { nil }
     var interceptor: NetworkingInterceptor? { nil }
+    var observers: [NetworkingTransportObserver] { [] }
     var repeater: Repeater? { nil }
 }
 

@@ -43,6 +43,7 @@ extension NetworkingSession {
         internal var adapter: NetworkingAdapter? { self.route.adapter }
         internal var retrier: NetworkingRetrier? { self.route.retrier }
         internal var interceptor: NetworkingInterceptor? { self.route.interceptor }
+        internal var observers: [NetworkingTransportObserver] { self.route.observers }
 
         init(route: Route) {
             self.route = route
@@ -76,14 +77,14 @@ extension NetworkingSession {
         }
 
         func start(urlRequestResult: Result<URLRequest, Error>,
-                   on urlSession: URLSessionProtocol) async -> (Result<Route.ResponseSerializer.SerializedObject, Error>, URLResponse?) {
+                   on urlSession: URLSessionProtocol,
+                   observers: [NetworkingTransportObserver]) async -> (Result<Route.ResponseSerializer.SerializedObject, Error>, URLResponse?) {
             if let mockSerializedResult = self.route.mockSerializedResult {
                 return (mockSerializedResult, nil)
             } else {
-                var responseResult = await Result {
-                    let urlRequest = try urlRequestResult.get()
-                    return try await urlSession.data(for: urlRequest)
-                }
+                var responseResult = await self.executeRequest(urlRequestResult: urlRequestResult,
+                                                               on: urlSession,
+                                                               observers: observers)
 
                 responseResult = await self.executeResponseValidator(responseResult: responseResult)
                 let serializedResponse = await self.executeResponseSerializer(responseResult: responseResult)
@@ -139,6 +140,32 @@ extension NetworkingSession {
                     await self.mutableData.incrementRepeatCount()
             }
             return decision
+        }
+
+        /// Executes the `URLRequest` (if available) and notifies `observers` at each lifecycle point. Fires
+        /// `willSend` before sending, then exactly one of `didReceive` (transport success) or `didFail`
+        /// (transport error). When `urlRequestResult` is already a failure, no observer methods fire.
+        ///
+        /// All observers for a given lifecycle point fire concurrently. The function still awaits the full
+        /// group before returning, so the temporal contract relative to the request (`willSend` before
+        /// `URLSession.data(for:)`, `didReceive`/`didFail` before the next attempt) is preserved.
+        private func executeRequest(urlRequestResult: Result<URLRequest, Error>,
+                                    on urlSession: URLSessionProtocol,
+                                    observers: [NetworkingTransportObserver]) async -> Result<(Data, URLResponse), Error> {
+            switch urlRequestResult {
+                case .failure(let error):
+                    return .failure(error)
+                case .success(let urlRequest):
+                    await observers.notifyConcurrently { await $0.willSend(urlRequest: urlRequest) }
+                    do {
+                        let (data, urlResponse) = try await urlSession.data(for: urlRequest)
+                        await observers.notifyConcurrently { await $0.didReceive(data: data, urlResponse: urlResponse) }
+                        return .success((data, urlResponse))
+                    } catch {
+                        await observers.notifyConcurrently { await $0.didFail(urlRequest: urlRequest, dueTo: error) }
+                        return .failure(error)
+                    }
+            }
         }
 
         private func executeResponseValidator(responseResult: Result<(Data, URLResponse), Error>) async -> Result<(Data, URLResponse), Error> {

@@ -8,19 +8,25 @@ PopNetworking is a protocol-oriented Swift networking layer where every HTTP end
 - [Installation](#installation)
 - [Documentation](#documentation)
 - [Architecture](#architecture)
+  - [Request Lifecycle](#request-lifecycle)
 - [Quick Start](#quick-start)
-- [Core Concepts](#core-concepts)
+  - [Define a Route](#define-a-route)
+  - [Execute](#execute)
+  - [One-off Route](#one-off-route)
+- [Routes](#routes)
   - [Parameter Encoding](#parameter-encoding)
-  - [Response Serializers](#response-serializers)
   - [Response Validation](#response-validation)
-  - [NetworkingSession](#networkingsession)
+  - [Response Serializers](#response-serializers)
+- [NetworkingSession](#networkingsession)
+- [Hooks](#hooks)
   - [Adapters](#adapters)
   - [Retriers](#retriers)
   - [Interceptors](#interceptors)
-  - [Attaching Modifiers](#attaching-modifiers)
+  - [Transport Observers](#transport-observers)
+  - [Attaching Hooks](#attaching-hooks)
   - [Priority](#priority)
-  - [Repeater](#repeater)
-  - [Testing](#testing)
+- [Repeater](#repeater)
+- [Testing](#testing)
 - [License](#license)
 
 ## Requirements
@@ -47,17 +53,21 @@ dependencies: [
 
 A few aspects of this design are worth calling out:
 
-- **Protocol-oriented end to end.** Every layer is a protocol: `NetworkingRoute`, the serializer, validator, adapter, retrier, interceptor, session, and `URLSessionProtocol`. Any piece can be swapped or mocked without touching the rest. Default protocol extensions provide most of the implementation, so a minimal route only declares its URL, method, and serializer, and gets every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) for free.
+- **Protocol-oriented end to end.** Every layer is a protocol: `NetworkingRoute`, the serializer, validator, adapter, retrier, interceptor, transport observer, session, and `URLSessionProtocol`. Any piece can be swapped or mocked without touching the rest. Default protocol extensions provide most of the implementation, so a minimal route only declares its URL, method, and serializer, and gets every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) for free.
 - **Two loops, not one.** The retrier handles failures *within* a single attempt (token refresh, transient errors). The repeater evaluates an attempt's terminal result and decides whether to start a brand-new one (polling, conditional re-runs). They solve different problems and stay distinct concepts.
-- **Modifiers compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides.
+- **Hooks compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides. Transport observers attach the same way (as an array on either or both), but unlike adapters and retriers, they are side-effect-only. They don't influence the request and fire concurrently around each `URLSession` transport call.
 
 ### Request Lifecycle
 
 ```mermaid
 flowchart LR
     A[Route.urlRequest] --> B[Adapters]
-    B --> C[URLSession]
-    C --> D[Validator]
+    B --> O1[TransportObserver.willSend]
+    O1 --> C[URLSession]
+    C -- Success --> O2[TransportObserver.didReceive]
+    C -- Transport Error --> O3[TransportObserver.didFail]
+    O2 --> D[Validator]
+    O3 --> D
     D --> E[Serializer]
     E --> F{Success?}
     F -- Yes --> I{Repeater}
@@ -71,6 +81,8 @@ flowchart LR
 ## Quick Start
 
 ### Define a Route
+
+Conform a type (typically a `struct`) to `NetworkingRoute` and declare what the endpoint needs: at minimum a `baseUrl`, `path`, `method`, and `responseSerializer`. Group related endpoints inside an `enum` namespace to keep call sites readable.
 
 ```swift
 enum UserAPI {
@@ -140,7 +152,9 @@ let data = try await Route(
 ).run
 ```
 
-## Core Concepts
+## Routes
+
+A `NetworkingRoute` is a value type that describes a single HTTP endpoint. It carries the URL, method, parameters, validation, and serializer in one place. Conform a struct or enum to the protocol, set the few required properties, and every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) is provided by default protocol extensions. The sections below cover the building blocks a route can declare.
 
 ### Parameter Encoding
 
@@ -148,7 +162,7 @@ let data = try await Route(
 
 #### URL-encoded
 
-`.url(params:encoder:)` percent-encodes a dictionary of parameters. By default the `URLEncoding.default` destination is `.methodDependent` — `GET`/`HEAD`/`DELETE` get a query string, anything else gets an `application/x-www-form-urlencoded` body. Pass `.queryString` or `.httpBody` to override.
+`.url(params:encoder:)` percent-encodes a dictionary of parameters. By default the `URLEncoding.default` destination is `.methodDependent`, which sends `GET`/`HEAD`/`DELETE` parameters as a query string and all other methods as an `application/x-www-form-urlencoded` body. Pass `.queryString` or `.httpBody` to override.
 
 ```swift
 struct SearchUsers: NetworkingRoute {
@@ -176,7 +190,7 @@ If you already have JSON-encoded `Data` (e.g., from a `JSONEncoder`), use `.json
 
 #### Multipart / Form Data
 
-`.multipart(parts:encoder:urlParams:urlEncoder:)` builds a `multipart/form-data` body — useful for image uploads, form submissions with file attachments, etc. Build an array of `MultipartPart`:
+`.multipart(parts:encoder:urlParams:urlEncoder:)` builds a `multipart/form-data` body for image uploads, form submissions with file attachments, and similar use cases. Build an array of `MultipartPart`:
 
 ```swift
 struct UploadAvatar: NetworkingRoute {
@@ -209,6 +223,27 @@ The `Content-Type: multipart/form-data; boundary=…` header is set automaticall
 
 > **Note:** File parts are read into memory at encode time. For very large uploads where streaming from disk matters, construct your own `URLSession.uploadTask(with:fromFile:)`.
 
+### Response Validation
+
+Validate raw responses before serialization. Throw to indicate failure:
+
+```swift
+struct StatusCodeValidator: NetworkingResponseValidator {
+    func validate(responseResult: Result<(Data, URLResponse), Error>) throws {
+        let (_, response) = try responseResult.get()
+        guard let http = response as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+    }
+}
+
+struct GetUser: NetworkingRoute {
+    // ...
+    var responseValidator: NetworkingResponseValidator? { StatusCodeValidator() }
+}
+```
+
 ### Response Serializers
 
 Serializers parse raw response data into typed objects. PopNetworking includes four built-in serializers:
@@ -235,28 +270,7 @@ struct StringResponseSerializer: NetworkingResponseSerializer {
 }
 ```
 
-### Response Validation
-
-Validate raw responses before serialization. Throw to indicate failure:
-
-```swift
-struct StatusCodeValidator: NetworkingResponseValidator {
-    func validate(responseResult: Result<(Data, URLResponse), Error>) throws {
-        let (_, response) = try responseResult.get()
-        guard let http = response as? HTTPURLResponse,
-              (200..<300).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-    }
-}
-
-struct GetUser: NetworkingRoute {
-    // ...
-    var responseValidator: NetworkingResponseValidator? { StatusCodeValidator() }
-}
-```
-
-### NetworkingSession
+## NetworkingSession
 
 `NetworkingSession` wraps `URLSession` and orchestrates the [request lifecycle](#request-lifecycle). Every route uses `NetworkingSession.shared` by default, or you can create custom sessions:
 
@@ -272,6 +286,10 @@ struct GetUser: NetworkingRoute {
     // ...
 }
 ```
+
+## Hooks
+
+Hooks let you extend the request lifecycle at specific points. Some hooks modify the request (adapters, retriers, interceptors); others are side-effect-only and just observe (transport observers). All of them compose across session and route.
 
 ### Adapters
 
@@ -289,11 +307,11 @@ struct AuthAdapter: NetworkingAdapter {
 }
 ```
 
-See [Attaching Modifiers](#attaching-modifiers) for how to wire one in.
+See [Attaching Hooks](#attaching-hooks) for how to wire one in.
 
 ### Retriers
 
-Retriers decide whether to retry a failed request. They receive the error, the response, and the current retry count:
+Retriers decide whether to retry a failed request *within* a single attempt. To restart the whole request lifecycle from a successful or failed terminal result (for example, polling), use a [Repeater](#repeater) instead. They receive the error, the response, and the current retry count:
 
 ```swift
 struct RetryOn401: NetworkingRetrier {
@@ -312,7 +330,7 @@ struct RetryOn401: NetworkingRetrier {
 }
 ```
 
-See [Attaching Modifiers](#attaching-modifiers) for how to wire one in.
+See [Attaching Hooks](#attaching-hooks) for how to wire one in.
 
 ### Interceptors
 
@@ -355,22 +373,77 @@ let interceptor = RouteInterceptor(
 )
 ```
 
-### Attaching Modifiers
+### Transport Observers
 
-Adapters, retriers, and interceptors all attach the same way: as a property on a route, an init parameter on a session, or both.
+Transport observers watch a route's `URLSession` transport call without changing its behavior. They fire around the underlying HTTP exchange. They do not fire around adapters, validators, serializers, retriers, or repeaters. Use them for logging, analytics, or breadcrumbs:
+
+```swift
+struct LoggingObserver: NetworkingTransportObserver {
+    func willSend(urlRequest: URLRequest) async {
+        print("REQUEST: \(urlRequest.httpMethod ?? "GET") \(urlRequest.url?.absoluteString ?? "")")
+    }
+
+    func didReceive(data: Data, urlResponse: URLResponse) async {
+        let status = (urlResponse as? HTTPURLResponse)?.statusCode ?? 0
+        print("RESPONSE: \(status) (\(data.count) bytes)")
+    }
+
+    func didFail(urlRequest: URLRequest, dueTo error: Error) async {
+        print("FAILED: \(urlRequest.url?.absoluteString ?? ""): \(error)")
+    }
+}
+```
+
+Behavior:
+
+- Transport observers fire **per attempt**, so every retry produces its own `willSend` / `didReceive` / `didFail` cycle.
+- `didFail` only fires for transport-level errors (`URLSession.data(for:)` threw). Validator and serializer rejections don't trigger `didFail`; `didReceive` already fired with the raw bytes in those cases.
+- Session-level and route-level transport observers all fire **concurrently** for each transport event with no ordering guarantee between them.
+- Callbacks run **inline** on the request path. `willSend` runs before `URLSession.data(for:)`; `didReceive`/`didFail` run before the next attempt begins. A slow transport observer slows every request.
+
+For expensive work (file I/O, third-party SDKs) where you don't need the temporal guarantees, spawn a `Task` inside the callback so the trade-off is visible at the call site:
+
+```swift
+func willSend(urlRequest: URLRequest) async {
+    Task.detached { await self.expensiveLog(urlRequest) }
+}
+```
+
+Attach transport observers on a route, a session, or both:
+
+```swift
+// Route-level
+struct GetUser: NetworkingRoute {
+    var observers: [NetworkingTransportObserver] { [LoggingObserver()] }
+    // ...
+}
+
+// Session-level
+let session = NetworkingSession(observers: [LoggingObserver()])
+```
+
+See [Attaching Hooks](#attaching-hooks) for how transport observers compose with other hooks.
+
+### Attaching Hooks
+
+Adapters, retriers, and interceptors attach as a single property on a route or as an init parameter on a session, or both. Transport observers attach as an array, so you can pass as many as you want at each level.
 
 ```swift
 // Route-level (extra logging on just this endpoint while debugging)
 struct GetUser: NetworkingRoute {
     var adapter: NetworkingAdapter? { LoggingAdapter() }
+    var observers: [NetworkingTransportObserver] { [LoggingObserver()] }
     // ...
 }
 
-// Session-level (auth applies to every route on this session)
-let session = NetworkingSession(adapter: AuthAdapter(token: "..."))
+// Session-level (auth and global telemetry apply to every route on this session)
+let session = NetworkingSession(
+    adapter: AuthAdapter(token: "..."),
+    observers: [LoggingObserver()]
+)
 ```
 
-Both modifiers run for `GetUser`: the session-level adapter adds the auth header, the route-level adapter adds logging.
+Every hook runs for `GetUser`: the session-level adapter adds the auth header, the session-level transport observers fire, and the route-level adapter and transport observer fire too.
 
 ### Priority
 
@@ -385,9 +458,11 @@ struct HighPriorityAdapter: NetworkingAdapter {
 
 Built-in levels: `.highest`, `.high`, `.standard` (default), `.low`, `.lowest`. You can also use `NetworkingPriority(_:)` for custom values.
 
-### Repeater
+Transport observers don't participate in priority sorting. Session-level and route-level transport observers all fire concurrently with no ordering guarantee between them.
 
-A repeater restarts the entire [request lifecycle](#request-lifecycle) (including adapters) based on the serialized result. Unlike a retrier, which handles failures within a single attempt, a repeater evaluates the final result and decides whether to start a fresh attempt. Useful for polling:
+## Repeater
+
+A repeater restarts the entire [request lifecycle](#request-lifecycle) (including adapters) based on the serialized result. Unlike a [retrier](#retriers), which handles failures within a single attempt, a repeater evaluates the final result and decides whether to start a fresh attempt. Useful for polling:
 
 ```swift
 struct PollStatus: NetworkingRoute {
@@ -403,7 +478,7 @@ struct PollStatus: NetworkingRoute {
 }
 ```
 
-### Testing
+## Testing
 
 PopNetworking supports testing at two levels. Use the first for unit tests of code that consumes a route; use the second for integration tests of the full request/response pipeline.
 
