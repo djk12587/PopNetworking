@@ -51,7 +51,7 @@ A few aspects of this design are worth calling out:
 
 - **Protocol-oriented end to end.** Every layer is a protocol: `NetworkingRoute`, the serializer, validator, adapter, retrier, interceptor, transport observer, session, and `URLSessionProtocol`. Any piece can be swapped or mocked without touching the rest. Default protocol extensions provide most of the implementation, so a minimal route only declares its URL, method, and serializer, and gets every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) for free.
 - **Two loops, not one.** The retrier handles failures *within* a single attempt (token refresh, transient errors). The repeater evaluates an attempt's terminal result and decides whether to start a brand-new one (polling, conditional re-runs). They solve different problems and stay distinct concepts.
-- **Hooks compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides. Transport observers attach the same way (as an array on either or both), but unlike adapters and retriers, they are side-effect-only. They don't influence the request and fire concurrently for each lifecycle event.
+- **Hooks compose across session and route.** Adapters, retriers, and interceptors can live on the session, the route, or both. They merge into a single execution chain ordered by `NetworkingPriority`, so app-wide concerns like auth layer cleanly under route-specific overrides. Transport observers attach the same way (as an array on either or both), but unlike adapters and retriers, they are side-effect-only. They don't influence the request and fire concurrently around each `URLSession` transport call.
 
 ### Request Lifecycle
 
@@ -281,7 +281,7 @@ struct GetUser: NetworkingRoute {
 
 ### Hooks
 
-Hooks let you observe and modify the request lifecycle at specific points. They compose across session and route.
+Hooks let you extend the request lifecycle at specific points. Some hooks modify the request (adapters, retriers, interceptors); others are side-effect-only and just observe (transport observers). All of them compose across session and route.
 
 #### Adapters
 
@@ -367,7 +367,7 @@ let interceptor = RouteInterceptor(
 
 #### Transport Observers
 
-Transport observers watch a route's lifecycle without changing its behavior. Use them for logging, analytics, or breadcrumbs:
+Transport observers watch a route's `URLSession` transport call without changing its behavior. They fire around the underlying HTTP exchange — not around adapters, validators, serializers, retriers, or repeaters. Use them for logging, analytics, or breadcrumbs:
 
 ```swift
 struct LoggingObserver: NetworkingTransportObserver {
@@ -390,7 +390,7 @@ Behavior:
 
 - Transport observers fire **per attempt**, so every retry produces its own `willSend` / `didReceive` / `didFail` cycle.
 - `didFail` only fires for transport-level errors (`URLSession.data(for:)` threw). Validator and serializer rejections don't trigger `didFail`; `didReceive` already fired with the raw bytes in those cases.
-- Session-level and route-level transport observers all fire **concurrently** for each lifecycle event with no ordering guarantee between them.
+- Session-level and route-level transport observers all fire **concurrently** for each transport event with no ordering guarantee between them.
 - Callbacks run **inline** on the request path. `willSend` runs before `URLSession.data(for:)`; `didReceive`/`didFail` run before the next attempt begins. A slow transport observer slows every request.
 
 For expensive work (file I/O, third-party SDKs) where you don't need the temporal guarantees, spawn a `Task` inside the callback so the trade-off is visible at the call site:
