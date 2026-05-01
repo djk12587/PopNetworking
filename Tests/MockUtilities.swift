@@ -25,6 +25,7 @@ enum Mock {
         var adapter: NetworkingAdapter?
         var retrier: NetworkingRetrier?
         var interceptor: NetworkingInterceptor?
+        var observers: [NetworkingTransportObserver]
 
         init(baseUrl: String = "https://mockUrl.com",
              path: String = "",
@@ -38,6 +39,7 @@ enum Mock {
              adapter: NetworkingAdapter? = nil,
              retrier: NetworkingRetrier? = nil,
              interceptor: NetworkingInterceptor? = nil,
+             observers: [NetworkingTransportObserver] = [],
              repeater: Repeater? = nil) {
             self.baseUrl = baseUrl
             self.path = path
@@ -51,6 +53,7 @@ enum Mock {
             self.adapter = adapter
             self.retrier = retrier
             self.interceptor = interceptor
+            self.observers = observers
             self.repeater = repeater
         }
     }
@@ -85,6 +88,53 @@ enum Mock {
             try? await Task.sleep(nanoseconds: UInt64(mockDelay ?? 0) * 1_000_000_000)
             await self.mutableData.set(lastRequest: request)
             return (try mockResult.get(), self.mockUrlResponse ?? URLResponse())
+        }
+
+        func data(for request: URLRequest, delegate: URLSessionTaskDelegate?) async throws -> (Data, URLResponse) {
+            try await self.data(for: request)
+        }
+    }
+
+    /// A `URLSessionProtocol` that returns a different `mockResults[i]` per call. Use when a single test
+    /// needs to exercise multiple attempts (e.g. transport failure followed by success across a retry).
+    struct UrlSessions: URLSessionProtocol {
+
+        private actor SafeMutableData {
+            var index = 0
+            private(set) var lastRequest: URLRequest?
+
+            func consumeNextIndex() -> Int {
+                let current = self.index
+                self.index += 1
+                return current
+            }
+
+            func set(lastRequest: URLRequest?) {
+                self.lastRequest = lastRequest
+            }
+        }
+
+        var session: URLSession { URLSession(configuration: .default) }
+        private let mutableData = SafeMutableData()
+        let mockResults: [Result<Data, Error>]
+        let mockUrlResponses: [URLResponse?]
+        var lastRequest: URLRequest? {
+            get async { await self.mutableData.lastRequest }
+        }
+
+        init(mockResults: [Result<Data, Error>], mockUrlResponses: [URLResponse?] = []) {
+            self.mockResults = mockResults
+            self.mockUrlResponses = mockUrlResponses
+        }
+
+        func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+            await self.mutableData.set(lastRequest: request)
+            let index = await self.mutableData.consumeNextIndex()
+            guard index < self.mockResults.count else {
+                fatalError("out of bounds: index >= mockResults.count")
+            }
+            let response = (index < self.mockUrlResponses.count ? self.mockUrlResponses[index] : nil) ?? URLResponse()
+            return (try self.mockResults[index].get(), response)
         }
 
         func data(for request: URLRequest, delegate: URLSessionTaskDelegate?) async throws -> (Data, URLResponse) {
@@ -271,5 +321,70 @@ enum Mock {
             return retrierResult
         }
 
+    }
+
+    struct Observer: NetworkingTransportObserver {
+
+        private actor SafeMutableData {
+            var willSendDidRun = false
+            var didReceiveDidRun = false
+            var didFailDidRun = false
+            var capturedWillSendUrlRequest: URLRequest?
+            var capturedDidReceiveData: Data?
+            var capturedDidReceiveUrlResponse: URLResponse?
+            var capturedDidFailUrlRequest: URLRequest?
+            var capturedDidFailError: Error?
+            var willSendCallCount = 0
+            var didReceiveCallCount = 0
+            var didFailCallCount = 0
+
+            func recordWillSend(urlRequest: URLRequest) {
+                self.willSendDidRun = true
+                self.capturedWillSendUrlRequest = urlRequest
+                self.willSendCallCount += 1
+            }
+
+            func recordDidReceive(data: Data, urlResponse: URLResponse) {
+                self.didReceiveDidRun = true
+                self.capturedDidReceiveData = data
+                self.capturedDidReceiveUrlResponse = urlResponse
+                self.didReceiveCallCount += 1
+            }
+
+            func recordDidFail(urlRequest: URLRequest, error: Error) {
+                self.didFailDidRun = true
+                self.capturedDidFailUrlRequest = urlRequest
+                self.capturedDidFailError = error
+                self.didFailCallCount += 1
+            }
+        }
+
+        private let mutableData = SafeMutableData()
+
+        var willSendDidRun: Bool { get async { await self.mutableData.willSendDidRun } }
+        var didReceiveDidRun: Bool { get async { await self.mutableData.didReceiveDidRun } }
+        var didFailDidRun: Bool { get async { await self.mutableData.didFailDidRun } }
+        var capturedWillSendUrlRequest: URLRequest? { get async { await self.mutableData.capturedWillSendUrlRequest } }
+        var capturedDidReceiveData: Data? { get async { await self.mutableData.capturedDidReceiveData } }
+        var capturedDidReceiveUrlResponse: URLResponse? { get async { await self.mutableData.capturedDidReceiveUrlResponse } }
+        var capturedDidFailUrlRequest: URLRequest? { get async { await self.mutableData.capturedDidFailUrlRequest } }
+        var capturedDidFailError: Error? { get async { await self.mutableData.capturedDidFailError } }
+        var willSendCallCount: Int { get async { await self.mutableData.willSendCallCount } }
+        var didReceiveCallCount: Int { get async { await self.mutableData.didReceiveCallCount } }
+        var didFailCallCount: Int { get async { await self.mutableData.didFailCallCount } }
+
+        init() {}
+
+        func willSend(urlRequest: URLRequest) async {
+            await self.mutableData.recordWillSend(urlRequest: urlRequest)
+        }
+
+        func didReceive(data: Data, urlResponse: URLResponse) async {
+            await self.mutableData.recordDidReceive(data: data, urlResponse: urlResponse)
+        }
+
+        func didFail(urlRequest: URLRequest, dueTo error: Error) async {
+            await self.mutableData.recordDidFail(urlRequest: urlRequest, error: error)
+        }
     }
 }

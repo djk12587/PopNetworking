@@ -46,11 +46,12 @@ let user = try await GetUser(userId: 42).run
 - ``NetworkingResponseSerializers``
 - ``NetworkingResponseValidator``
 
-### Request Modifiers
+### Request Hooks
 
 - ``NetworkingAdapter``
 - ``NetworkingRetrier``
 - ``NetworkingInterceptor``
+- ``NetworkingTransportObserver``
 - ``RouteInterceptor``
 - ``NetworkingRetrierResult``
 - ``NetworkingPriority``

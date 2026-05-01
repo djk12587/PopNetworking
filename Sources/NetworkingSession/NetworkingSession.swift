@@ -28,7 +28,9 @@ public extension NetworkingSession {
 /// When ``NetworkingSession/execute(route:)`` is called, the following actions are performed on an instance of ``NetworkingRoute``
 /// * builds the `URLRequest` - (``NetworkingRoute/urlRequest``)
 /// * adapts the `URLRequest` - (``NetworkingRoute/adapter``)
+/// * notifies ``NetworkingTransportObserver``s that the request will be sent - (``NetworkingTransportObserver/willSend(urlRequest:)``)
 /// * executes the REST request with ``NetworkingSession/urlSession``
+/// * notifies ``NetworkingTransportObserver``s of the response or transport error - (``NetworkingTransportObserver/didReceive(data:urlResponse:)`` / ``NetworkingTransportObserver/didFail(urlRequest:dueTo:)``)
 /// * validates the REST response - (``NetworkingRoute/responseValidator``)
 /// * serializes the REST response into the ``NetworkingResponseSerializer/SerializedObject`` - (``NetworkingRoute/responseSerializer``)
 /// * if an error occurred, retries the request - (``NetworkingRoute/retrier``)
@@ -41,17 +43,21 @@ public final class NetworkingSession: NetworkingSessionProtocol {
     private let _urlSession: URLSessionProtocol
     private let adapter: NetworkingAdapter?
     private let retrier: NetworkingRetrier?
+    private let observers: [NetworkingTransportObserver]
 
     /// Creates an instance of a ``NetworkingSession``.
     /// - Parameters:
     ///   - urlSession: The ``URLSessionProtocol`` that executes the HTTP requests. `URLSession` conforms to ``URLSessionProtocol``.
     ///   - adapter: The ``NetworkingAdapter`` that runs for every ``NetworkingRoute``
     ///   - retrier: The ``NetworkingRetrier`` that runs for every ``NetworkingRoute``
+    ///   - observers: The ``NetworkingTransportObserver``s that run for every ``NetworkingRoute``. All observers fire concurrently for each lifecycle event.
     public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
                 adapter: NetworkingAdapter? = nil,
-                retrier: NetworkingRetrier? = nil) {
+                retrier: NetworkingRetrier? = nil,
+                observers: [NetworkingTransportObserver] = []) {
         self.adapter = adapter
         self.retrier = retrier
+        self.observers = observers
         self._urlSession = urlSession
     }
 
@@ -59,10 +65,13 @@ public final class NetworkingSession: NetworkingSessionProtocol {
     /// - Parameters:
     ///   - urlSession: The ``URLSessionProtocol`` that executes the HTTP requests. `URLSession` conforms to ``URLSessionProtocol``.
     ///   - interceptor: The ``NetworkingInterceptor`` that runs for every ``NetworkingRoute``
+    ///   - observers: The ``NetworkingTransportObserver``s that run for every ``NetworkingRoute``. All observers fire concurrently for each lifecycle event.
     public init(urlSession: URLSessionProtocol = URLSession(configuration: .default),
-                interceptor: NetworkingInterceptor?) {
+                interceptor: NetworkingInterceptor?,
+                observers: [NetworkingTransportObserver] = []) {
         self.adapter = interceptor
         self.retrier = interceptor
+        self.observers = observers
         self._urlSession = urlSession
     }
 
@@ -113,7 +122,10 @@ private extension NetworkingSession {
                 urlRequestResult = await routeDataTask.executeAdapter(adapter, on: urlRequestResult)
             }
 
-            let (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult, on: self._urlSession)
+            let observers = self.observers + routeDataTask.observers
+            let (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult,
+                                                                            on: self._urlSession,
+                                                                            observers: observers)
 
             let retriers = [self.retrier, routeDataTask.retrier, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority
             let retryDecision = await routeDataTask.executeRetrier(serializedResult: serializedResult,

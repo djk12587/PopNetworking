@@ -1,5 +1,5 @@
 //
-//  NetworkingModifierHelpers.swift
+//  NetworkingHookHelpers.swift
 //  PopNetworking
 //
 //  Created by Dan Koza on 7/2/25.

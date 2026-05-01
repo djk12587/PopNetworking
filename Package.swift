@@ -23,14 +23,12 @@ let package = Package(
         .target(
             name: "PopNetworking",
             path: "Sources",
-            swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency")
-            ]
         ),
         .testTarget(
             name: "PopNetworkingTests",
             dependencies: ["PopNetworking"],
             path: "Tests"
         )
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )
