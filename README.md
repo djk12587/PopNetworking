@@ -8,21 +8,25 @@ PopNetworking is a protocol-oriented Swift networking layer where every HTTP end
 - [Installation](#installation)
 - [Documentation](#documentation)
 - [Architecture](#architecture)
+  - [Request Lifecycle](#request-lifecycle)
 - [Quick Start](#quick-start)
-- [Core Concepts](#core-concepts)
+  - [Define a Route](#define-a-route)
+  - [Execute](#execute)
+  - [One-off Route](#one-off-route)
+- [Routes](#routes)
   - [Parameter Encoding](#parameter-encoding)
   - [Response Validation](#response-validation)
   - [Response Serializers](#response-serializers)
-  - [NetworkingSession](#networkingsession)
-  - [Hooks](#hooks)
-    - [Adapters](#adapters)
-    - [Retriers](#retriers)
-    - [Interceptors](#interceptors)
-    - [Transport Observers](#transport-observers)
-    - [Attaching Hooks](#attaching-hooks)
-    - [Priority](#priority)
-  - [Repeater](#repeater)
-  - [Testing](#testing)
+- [NetworkingSession](#networkingsession)
+- [Hooks](#hooks)
+  - [Adapters](#adapters)
+  - [Retriers](#retriers)
+  - [Interceptors](#interceptors)
+  - [Transport Observers](#transport-observers)
+  - [Attaching Hooks](#attaching-hooks)
+  - [Priority](#priority)
+- [Repeater](#repeater)
+- [Testing](#testing)
 - [License](#license)
 
 ## Requirements
@@ -77,6 +81,8 @@ flowchart LR
 ## Quick Start
 
 ### Define a Route
+
+Conform a type (typically a `struct`) to `NetworkingRoute` and declare what the endpoint needs: at minimum a `baseUrl`, `path`, `method`, and `responseSerializer`. Group related endpoints inside an `enum` namespace to keep call sites readable.
 
 ```swift
 enum UserAPI {
@@ -146,7 +152,9 @@ let data = try await Route(
 ).run
 ```
 
-## Core Concepts
+## Routes
+
+A `NetworkingRoute` is a value type that describes a single HTTP endpoint. It carries the URL, method, parameters, validation, and serializer in one place. Conform a struct or enum to the protocol, set the few required properties, and every execution surface (`run`, `result`, `task`, `request`, `publisher`, `failablePublisher`) is provided by default protocol extensions. The sections below cover the building blocks a route can declare.
 
 ### Parameter Encoding
 
@@ -262,7 +270,7 @@ struct StringResponseSerializer: NetworkingResponseSerializer {
 }
 ```
 
-### NetworkingSession
+## NetworkingSession
 
 `NetworkingSession` wraps `URLSession` and orchestrates the [request lifecycle](#request-lifecycle). Every route uses `NetworkingSession.shared` by default, or you can create custom sessions:
 
@@ -279,11 +287,11 @@ struct GetUser: NetworkingRoute {
 }
 ```
 
-### Hooks
+## Hooks
 
 Hooks let you extend the request lifecycle at specific points. Some hooks modify the request (adapters, retriers, interceptors); others are side-effect-only and just observe (transport observers). All of them compose across session and route.
 
-#### Adapters
+### Adapters
 
 Adapters modify a `URLRequest` before it is sent. Common use case: adding auth headers.
 
@@ -301,9 +309,9 @@ struct AuthAdapter: NetworkingAdapter {
 
 See [Attaching Hooks](#attaching-hooks) for how to wire one in.
 
-#### Retriers
+### Retriers
 
-Retriers decide whether to retry a failed request. They receive the error, the response, and the current retry count:
+Retriers decide whether to retry a failed request *within* a single attempt. To restart the whole request lifecycle from a successful or failed terminal result (for example, polling), use a [Repeater](#repeater) instead. They receive the error, the response, and the current retry count:
 
 ```swift
 struct RetryOn401: NetworkingRetrier {
@@ -324,7 +332,7 @@ struct RetryOn401: NetworkingRetrier {
 
 See [Attaching Hooks](#attaching-hooks) for how to wire one in.
 
-#### Interceptors
+### Interceptors
 
 An interceptor combines an adapter and a retrier into a single object. This is useful for auth token refresh flows where the same object needs to both attach a token (adapt) and refresh it on 401 (retry):
 
@@ -365,9 +373,9 @@ let interceptor = RouteInterceptor(
 )
 ```
 
-#### Transport Observers
+### Transport Observers
 
-Transport observers watch a route's `URLSession` transport call without changing its behavior. They fire around the underlying HTTP exchange — not around adapters, validators, serializers, retriers, or repeaters. Use them for logging, analytics, or breadcrumbs:
+Transport observers watch a route's `URLSession` transport call without changing its behavior. They fire around the underlying HTTP exchange. They do not fire around adapters, validators, serializers, retriers, or repeaters. Use them for logging, analytics, or breadcrumbs:
 
 ```swift
 struct LoggingObserver: NetworkingTransportObserver {
@@ -416,7 +424,7 @@ let session = NetworkingSession(observers: [LoggingObserver()])
 
 See [Attaching Hooks](#attaching-hooks) for how transport observers compose with other hooks.
 
-#### Attaching Hooks
+### Attaching Hooks
 
 Adapters, retriers, and interceptors attach as a single property on a route or as an init parameter on a session, or both. Transport observers attach as an array, so you can pass as many as you want at each level.
 
@@ -437,7 +445,7 @@ let session = NetworkingSession(
 
 Every hook runs for `GetUser`: the session-level adapter adds the auth header, the session-level transport observers fire, and the route-level adapter and transport observer fire too.
 
-#### Priority
+### Priority
 
 Adapters, retriers, and interceptors have a `priority` that controls execution order. Higher priority runs first:
 
@@ -452,9 +460,9 @@ Built-in levels: `.highest`, `.high`, `.standard` (default), `.low`, `.lowest`. 
 
 Transport observers don't participate in priority sorting. Session-level and route-level transport observers all fire concurrently with no ordering guarantee between them.
 
-### Repeater
+## Repeater
 
-A repeater restarts the entire [request lifecycle](#request-lifecycle) (including adapters) based on the serialized result. Unlike a retrier, which handles failures within a single attempt, a repeater evaluates the final result and decides whether to start a fresh attempt. Useful for polling:
+A repeater restarts the entire [request lifecycle](#request-lifecycle) (including adapters) based on the serialized result. Unlike a [retrier](#retriers), which handles failures within a single attempt, a repeater evaluates the final result and decides whether to start a fresh attempt. Useful for polling:
 
 ```swift
 struct PollStatus: NetworkingRoute {
@@ -470,7 +478,7 @@ struct PollStatus: NetworkingRoute {
 }
 ```
 
-### Testing
+## Testing
 
 PopNetworking supports testing at two levels. Use the first for unit tests of code that consumes a route; use the second for integration tests of the full request/response pipeline.
 
