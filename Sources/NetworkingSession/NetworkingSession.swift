@@ -122,6 +122,7 @@ private extension NetworkingSession {
                 urlRequestResult = await routeDataTask.executeAdapter(adapter, on: urlRequestResult)
             }
 
+            let urlRequest = try? urlRequestResult.get()
             let observers = self.observers + routeDataTask.observers
             let (serializedResult, urlResponse) = await routeDataTask.start(urlRequestResult: urlRequestResult,
                                                                             on: self._urlSession,
@@ -129,20 +130,20 @@ private extension NetworkingSession {
 
             let retriers = [self.retrier, routeDataTask.retrier, routeDataTask.interceptor].compactMap({ $0 }).sortedByPriority
             let retryDecision = await routeDataTask.executeRetrier(serializedResult: serializedResult,
-                                                                   urlRequest: try? urlRequestResult.get(),
+                                                                   urlRequest: urlRequest,
                                                                    urlResponse: urlResponse,
                                                                    retriers: retriers)
 
             switch retryDecision {
                 case .doNotRetry:
-                    return (serializedResult, try? urlRequestResult.get(), urlResponse)
+                    return (serializedResult, urlRequest, urlResponse)
                 case .retry:
                     continue
                 case .retryWithDelay(let delay):
                     do {
                         try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                     } catch {
-                        return (.failure(URLError(.cancelled)), try? urlRequestResult.get(), urlResponse)
+                        return (.failure(URLError(.cancelled)), urlRequest, urlResponse)
                     }
                     continue
             }
