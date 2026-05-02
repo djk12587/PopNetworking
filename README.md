@@ -246,7 +246,7 @@ struct GetUser: NetworkingRoute {
 
 ### Response Serializers
 
-Serializers parse raw response data into typed objects. PopNetworking includes four built-in serializers:
+Serializers parse raw response data into typed objects. PopNetworking includes five built-in serializers:
 
 | Serializer | Output | Use Case |
 |---|---|---|
@@ -254,6 +254,7 @@ Serializers parse raw response data into typed objects. PopNetworking includes f
 | `DecodableResponseAndErrorSerializer<T, E>` | `T: Decodable` | Parse JSON into a model or a typed API error |
 | `DataResponseSerializer` | `Data` | Raw response data |
 | `HttpStatusCodeResponseSerializer` | `Int` | HTTP status code only |
+| `EmptyResponseSerializer` | `Void` | Discard the response body (e.g. `HEAD` requests, `204`/`205` endpoints) |
 
 To write a custom serializer, conform to `NetworkingResponseSerializer`:
 
