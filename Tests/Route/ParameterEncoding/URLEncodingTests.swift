@@ -17,18 +17,20 @@ final class URLEncodingTests: XCTestCase {
 
     // MARK: - Destination .methodDependent
 
-    func testMethodDependentGetEncodesInQueryString() throws {
-        var request = makeRequest(method: .get)
+    func testMethodDependentGetAndDeleteEncodeInQueryString() throws {
+        for method: NetworkingRouteHttpMethod in [.get, .delete] {
+            var request = makeRequest(method: method)
 
-        try URLEncoding.default.encode(&request, with: ["foo": "bar"])
+            try URLEncoding.default.encode(&request, with: ["foo": "bar"])
 
-        XCTAssertEqual(request.url?.absoluteString, "https://example.com/api?foo=bar")
-        XCTAssertNil(request.httpBody)
-        XCTAssertNil(request.value(forHTTPHeaderField: "Content-Type"))
+            XCTAssertEqual(request.url?.absoluteString, "https://example.com/api?foo=bar")
+            XCTAssertNil(request.httpBody)
+            XCTAssertNil(request.value(forHTTPHeaderField: "Content-Type"))
+        }
     }
 
     func testMethodDependentNonGetEncodesInBody() throws {
-        for method: NetworkingRouteHttpMethod in [.delete, .put, .patch] {
+        for method: NetworkingRouteHttpMethod in [.put, .patch] {
             var request = makeRequest(method: method)
 
             try URLEncoding.default.encode(&request, with: ["foo": "bar"])
