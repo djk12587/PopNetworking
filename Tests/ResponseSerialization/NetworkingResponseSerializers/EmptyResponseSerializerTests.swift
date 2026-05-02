@@ -39,4 +39,15 @@ class EmptyResponseSerializerTests: XCTestCase {
         let dispatched = await urlSession.lastRequest
         XCTAssertEqual(dispatched?.httpMethod, "HEAD")
     }
+
+    func testOptionsRequestDispatchesAsOptions() async throws {
+        let urlSession = Mock.UrlSession(mockResult: .success(Data()))
+        let result = await Mock.Route(method: .options,
+                                      session: NetworkingSession(urlSession: urlSession),
+                                      responseSerializer: NetworkingResponseSerializers.EmptyResponseSerializer()).task().result
+
+        XCTAssertNoThrow(try result.get())
+        let dispatched = await urlSession.lastRequest
+        XCTAssertEqual(dispatched?.httpMethod, "OPTIONS")
+    }
 }

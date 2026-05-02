@@ -18,7 +18,7 @@ final class URLEncodingTests: XCTestCase {
     // MARK: - Destination .methodDependent
 
     func testMethodDependentGetAndDeleteEncodeInQueryString() throws {
-        for method: NetworkingRouteHttpMethod in [.get, .delete, .head] {
+        for method: NetworkingRouteHttpMethod in [.get, .delete, .head, .options] {
             var request = makeRequest(method: method)
 
             try URLEncoding.default.encode(&request, with: ["foo": "bar"])
