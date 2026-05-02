@@ -105,7 +105,7 @@ public extension NetworkingRoute {
             var mutableRequest = URLRequest(url: url, timeoutInterval: self.timeoutInterval ?? 60.0)
             mutableRequest.httpMethod = self.method.rawValue
             try self.parameterEncoding?.encodeParams(into: &mutableRequest)
-            self.headers?.forEach { mutableRequest.addValue($0.value, forHTTPHeaderField: $0.key) }
+            self.headers?.forEach { mutableRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
             return mutableRequest
         }
     }
