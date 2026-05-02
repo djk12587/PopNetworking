@@ -127,4 +127,17 @@ public enum NetworkingResponseSerializers {
 
         public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<Data, Error> { responseResult.map({ $0.0 }) }
     }
+
+    /// The `EmptyResponseSerializer` discards the response body and returns `Void` on success.
+    ///
+    /// Use this for routes whose body you don't care about, such as `HEAD` requests or endpoints that respond with `204 No Content` / `205 Reset Content`. The serializer doesn't validate the body's actual length; it succeeds whenever the underlying request succeeded and propagates any transport error otherwise.
+    public struct EmptyResponseSerializer: NetworkingResponseSerializer {
+        public typealias SerializedObject = Void
+
+        public init() {}
+
+        public func serialize(responseResult: Result<(Data, URLResponse), Error>) async -> Result<Void, Error> {
+            responseResult.map { _ in () }
+        }
+    }
 }

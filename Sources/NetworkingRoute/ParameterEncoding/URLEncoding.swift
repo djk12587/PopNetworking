@@ -47,7 +47,7 @@ public struct URLEncoding: Sendable {
     /// Defines whether the url-encoded query string is applied to the existing query string or HTTP body of the
     /// resulting URL request.
     public enum Destination: Sendable {
-        /// Applies encoded query string result to existing query string for `GET`, `HEAD` and `DELETE` requests and
+        /// Applies encoded query string result to existing query string for `GET`, `HEAD`, `OPTIONS` and `DELETE` requests and
         /// sets as the HTTP body for requests with any other HTTP method.
         case methodDependent
         /// Sets or appends encoded query string result to existing query string.
@@ -57,7 +57,7 @@ public struct URLEncoding: Sendable {
 
         func encodesParametersInURL(for method: NetworkingRouteHttpMethod) -> Bool {
             switch self {
-            case .methodDependent: return [.get].contains(method)
+            case .methodDependent: return [.get, .delete, .head, .options].contains(method)
             case .queryString: return true
             case .httpBody: return false
             }

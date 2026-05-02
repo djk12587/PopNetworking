@@ -123,7 +123,8 @@ final class JSONEncodingTests: XCTestCase {
         var request = makeRequest()
 
         XCTAssertThrowsError(try JSONEncoding.default.encode(&request, with: ["invalid": Data()])) { error in
-            XCTAssertEqual((error as? URLError)?.code, .cannotDecodeContentData)
+            XCTAssertEqual((error as? URLError)?.code, .unknown)
+            XCTAssertEqual((error as? URLError)?.userInfo["reason"] as? String, "parameters are not valid JSON")
         }
     }
 }

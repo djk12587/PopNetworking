@@ -18,19 +18,19 @@ extension NetworkingSession {
             private(set) var currentUrlRequest: URLRequest?
 
             func incrementRetryCount() {
-                self.retryCount.increment()
+                self.retryCount += 1
             }
 
             func incrementRepeatCount() {
-                self.repeatCount.increment()
+                self.repeatCount += 1
             }
 
             func resetRetryCount() {
-                self.retryCount.reset()
+                self.retryCount = 0
             }
 
             func resetRepeatCount() {
-                self.repeatCount.reset()
+                self.repeatCount = 0
             }
 
             func set(currentUrlRequest: URLRequest) {
@@ -181,16 +181,6 @@ extension NetworkingSession {
             return await self.route.responseSerializer.serialize(responseResult: responseResult)
         }
 
-    }
-}
-
-private extension Int {
-    mutating func increment() {
-        self += 1
-    }
-
-    mutating func reset() {
-        self = 0
     }
 }
 

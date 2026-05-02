@@ -34,4 +34,13 @@ class NetworkingRouteTests: XCTestCase {
         XCTAssertEqual(urlRequest.allHTTPHeaderFields, headers)
     }
 
+    func testRouteHeaderOverridesParameterEncodingHeader() async throws {
+        let urlRequest = try await Route(baseUrl: "www.mockedExample.com",
+                                         headers: ["Content-Type": "application/vnd.api+json"],
+                                         parameterEncoding: .json(params: ["key": "value"]),
+                                         responseSerializer: NetworkingResponseSerializers.HttpStatusCodeResponseSerializer()).urlRequest
+
+        XCTAssertEqual(urlRequest.value(forHTTPHeaderField: "Content-Type"), "application/vnd.api+json")
+    }
+
 }

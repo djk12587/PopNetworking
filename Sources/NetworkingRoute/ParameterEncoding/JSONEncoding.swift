@@ -55,7 +55,7 @@ public struct JSONEncoding: Sendable {
         guard let parameters = parameters else { return }
 
         guard JSONSerialization.isValidJSONObject(parameters) else {
-            throw URLError(.cannotDecodeContentData,
+            throw URLError(.unknown,
                            userInfo: ["reason": "parameters are not valid JSON"])
         }
 

@@ -8,6 +8,8 @@ import Foundation
 
 public enum NetworkingRouteHttpMethod: String, Sendable {
     case get = "GET"
+    case head = "HEAD"
+    case options = "OPTIONS"
     case post = "POST"
     case delete = "DELETE"
     case put = "PUT"
