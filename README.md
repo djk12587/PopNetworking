@@ -483,7 +483,7 @@ struct PollStatus: NetworkingRoute {
 
 PopNetworking supports testing at two levels. Use the first for unit tests of code that consumes a route; use the second for integration tests of the full request/response pipeline.
 
-**Mock the serialized result** to skip the network entirely:
+**Mock the serialized result** to skip the network call while still exercising your route's adapters, retriers, interceptors, and repeater:
 
 ```swift
 struct GetUser: NetworkingRoute {
@@ -496,7 +496,9 @@ struct GetUser: NetworkingRoute {
 let user = try await GetUser().run // no network call
 ```
 
-**Mock URLSession** by conforming to `URLSessionProtocol`:
+When `mockSerializedResult` is set, `URLSession.data(for:)`, the response validator, the response serializer, and transport observer notifications are all skipped. Use this for unit tests that focus on the route's request-side behavior.
+
+**Mock URLSession** by conforming to `URLSessionProtocol` to exercise the full [request lifecycle](#request-lifecycle) against fake transport data. Leave `mockSerializedResult` unset, since that property short-circuits before `URLSession.data(for:)` is called:
 
 ```swift
 struct MockURLSession: URLSessionProtocol {

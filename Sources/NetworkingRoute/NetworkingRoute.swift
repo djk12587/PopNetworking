@@ -45,7 +45,11 @@ public protocol NetworkingRoute: Sendable {
     /// If ``NetworkingSession`` & ``NetworkingRoute`` have ``NetworkingAdapter``'s with the same ``NetworkingPriority``, the adapter tied to the ``NetworkingSession`` runs first.
     var adapter: NetworkingAdapter? { get }
 
-    /// Used for testing, a ``mockSerializedResult`` skips ``URLSessionProtocol/data(for:)``, ``responseValidator``, and ``NetworkingResponseSerializer/serialize(responseResult:)``.
+    /// Used for testing. When set, the mock result is returned in place of a real network response.
+    ///
+    /// Runs: ``NetworkingAdapter``, ``NetworkingRetrier``, ``NetworkingInterceptor``, and ``Repeater``.
+    ///
+    /// Skips: ``URLSessionProtocol/data(for:)``, ``responseValidator``, ``NetworkingResponseSerializer/serialize(responseResult:)``, and ``NetworkingTransportObserver`` notifications.
     var mockSerializedResult: Result<ResponseSerializer.SerializedObject, Error>? { get }
 
     /// A `responseValidator` allows you to inspect the raw networking data and URLResponse.
