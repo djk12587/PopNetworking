@@ -36,17 +36,45 @@ public protocol NetworkingTransportObserver: Sendable {
     /// - Parameter urlRequest: The adapted `URLRequest` about to be executed by `URLSession`.
     func willSend(urlRequest: URLRequest) async
 
-    /// Fires when `URLSession.data(for:)` returns successfully, before validator/serializer processing.
+    /// Fires when `URLSession.data(for:)` returns successfully, before serializer processing.
     /// - Parameters:
     ///   - data: The raw response body.
     ///   - urlResponse: The raw `URLResponse`.
     func didReceive(data: Data, urlResponse: URLResponse) async
 
-    /// Fires when `URLSession.data(for:)` throws a transport-level error. Validator and serializer failures do NOT trigger this — in those cases ``didReceive(data:urlResponse:)`` already fired with the raw bytes.
+    /// Fires when `URLSession.data(for:)` throws a transport-level error. Serializer failures do NOT trigger this — in that case ``didReceive(data:urlResponse:)`` already fired with the raw bytes.
     /// - Parameters:
     ///   - urlRequest: The `URLRequest` that was sent.
     ///   - error: The transport error.
     func didFail(urlRequest: URLRequest, dueTo error: Error) async
+
+    /// Fires when a streaming route's connection succeeds (URLResponse received and the serializer
+    /// accepted the response head) and the byte stream is about to begin yielding chunks downstream.
+    /// Has no analogue for response routes — only fires for routes executed via
+    /// ``NetworkingStreamRoute/stream``.
+    ///
+    /// Default implementation: no-op. Implement when you need to react to the start of a streamed
+    /// response (e.g. mark a "stream open" telemetry event).
+    /// - Parameters:
+    ///   - urlRequest: The `URLRequest` that was sent.
+    ///   - urlResponse: The `URLResponse` received from the server.
+    func willBeginStream(urlRequest: URLRequest, urlResponse: URLResponse) async
+
+    /// Fires once when a streaming route's byte stream terminates. `error == nil` indicates clean
+    /// EOF; non-nil indicates the stream errored mid-flight (transport failure or downstream
+    /// cancellation, surfaced as `URLError(.cancelled)`). Has no analogue for response routes.
+    ///
+    /// Default implementation: no-op.
+    /// - Parameters:
+    ///   - urlRequest: The `URLRequest` that was sent.
+    ///   - urlResponse: The `URLResponse` received from the server.
+    ///   - error: The terminating error, or `nil` if the stream finished cleanly.
+    func didFinishStream(urlRequest: URLRequest, urlResponse: URLResponse, error: Error?) async
+}
+
+public extension NetworkingTransportObserver {
+    func willBeginStream(urlRequest: URLRequest, urlResponse: URLResponse) async {}
+    func didFinishStream(urlRequest: URLRequest, urlResponse: URLResponse, error: Error?) async {}
 }
 
 internal extension Array where Element == NetworkingTransportObserver {

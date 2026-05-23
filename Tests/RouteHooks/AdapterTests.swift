@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Dan_Koza on 11/17/21.
 //
@@ -14,9 +14,9 @@ class AdapterTests: XCTestCase {
 
         let mockAdapter = Mock.Interceptor(adapterResult: .doNotAdapt,
                                            retrierResult: .doNotRetry)
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), adapter: mockAdapter),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).result
-        
+        _ = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(), adapter: mockAdapter),
+                                     serializer: Mock.Response.Serializer<Void>()).result
+
         let adapterDidRun = await mockAdapter.adapterDidRun
         XCTAssertTrue(adapterDidRun)
     }
@@ -27,9 +27,9 @@ class AdapterTests: XCTestCase {
         let mockAdapter = Mock.Interceptor(adapterResult: .adapt(adaptedUrlRequest: adaptedUrlRequest),
                                            retrierResult: .doNotRetry)
         let mockUrlSession = Mock.UrlSession()
-        _ = await Mock.Route(baseUrl: "https://originalRequest.com",
-                             session: NetworkingSession(urlSession: mockUrlSession, adapter: mockAdapter),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).result
+        _ = await Mock.ResponseRoute(baseUrl: "https://originalRequest.com",
+                                     session: NetworkingSession(urlSession: mockUrlSession, adapter: mockAdapter),
+                                     serializer: Mock.Response.Serializer<Void>()).result
 
         let adapterDidRun = await mockAdapter.adapterDidRun
         XCTAssertTrue(adapterDidRun)
@@ -43,8 +43,8 @@ class AdapterTests: XCTestCase {
         let mockAdapterError = NSError(domain: "adapter failed", code: 0)
         let mockAdapter = Mock.Interceptor(adapterResult: .failure(error: mockAdapterError),
                                            retrierResult: .doNotRetry)
-        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), adapter: mockAdapter),
-                                      responseSerializer: Mock.ResponseSerializer<Void>()).result
+        let result = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(), adapter: mockAdapter),
+                                              serializer: Mock.Response.Serializer<Void>()).result
 
         XCTAssertThrowsError(try result.get()) { error in
             XCTAssertEqual(error as NSError, mockAdapterError)

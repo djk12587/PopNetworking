@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Dan_Koza on 11/17/21.
 //
@@ -14,8 +14,8 @@ class RetrierTests: XCTestCase {
 
         let mockRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
                                            retrierResult: .doNotRetry)
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).result
+        _ = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
+                                     serializer: Mock.Response.Serializer<Void>()).result
 
         let retrierDidRun = await mockRetrier.retrierDidRun
         XCTAssertFalse(retrierDidRun)
@@ -25,8 +25,8 @@ class RetrierTests: XCTestCase {
 
         let mockRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
                                            retrierResult: .doNotRetry)
-        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
-                                      responseSerializer: Mock.ResponseSerializer<Void>(.failure(NSError(domain: "", code: 0)))).result
+        let result = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
+                                              serializer: Mock.Response.Serializer<Void>(.failure(NSError(domain: "", code: 0)))).result
 
         let retrierDidRun = await mockRetrier.retrierDidRun
         XCTAssertTrue(retrierDidRun)
@@ -37,8 +37,8 @@ class RetrierTests: XCTestCase {
 
         let mockRetrier = Mock.Interceptor(adapterResult: .doNotAdapt,
                                            retrierResult: .retryWithDelay(0))
-        let result = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
-                                      responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "", code: 0)), .success(())])).result
+        let result = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: mockRetrier),
+                                              serializer: Mock.Response.Serializers<Void>([.failure(NSError(domain: "", code: 0)), .success(())])).result
 
         let retrierDidRun = await mockRetrier.retrierDidRun
         let retrierCount = await mockRetrier.retryCounter
@@ -46,7 +46,7 @@ class RetrierTests: XCTestCase {
         XCTAssertEqual(retrierCount, 1)
         XCTAssertNoThrow(try result.get())
     }
-    
+
     func testLowerPriorityRetrierIsSkippedWhenHigherPriorityTriggersRetry() async throws {
         let highPriorityRetrier = Mock.Interceptor(
             retrierResult: .retryWithDelay(0),
@@ -57,9 +57,9 @@ class RetrierTests: XCTestCase {
             priority: .low
         )
 
-        _ = await Mock.Route(
+        _ = await Mock.ResponseRoute(
             session: NetworkingSession(urlSession: Mock.UrlSession(), retrier: lowPriorityRetrier),
-            responseSerializer: Mock.ResponseSerializers<Void>([
+            serializer: Mock.Response.Serializers<Void>([
                 .failure(NSError(domain: "", code: 0)),
                 .success(())
             ]),
@@ -68,6 +68,6 @@ class RetrierTests: XCTestCase {
 
         let lowPriorityCount = await lowPriorityRetrier.retryCounter
         XCTAssertEqual(lowPriorityCount, 0,
-            "When a higher-priority retrier triggers a retry and the retried attempt succeeds, lower-priority retriers should never be consulted.")
+                       "When a higher-priority retrier triggers a retry and the retried attempt succeeds, lower-priority retriers should never be consulted.")
     }
 }

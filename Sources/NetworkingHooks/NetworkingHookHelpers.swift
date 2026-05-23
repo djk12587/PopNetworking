@@ -7,7 +7,9 @@
 
 import Foundation
 
-/// `NetworkingRetrierResult` indicates if a ``NetworkingRoute`` should be retried or not.
+/// `NetworkingRetrierResult` indicates whether a route should be retried or not. Used by both
+/// ``NetworkingResponseRoute`` (after a serialized failure) and ``NetworkingStreamRoute``
+/// (after a connect-time failure).
 public enum NetworkingRetrierResult: Sendable {
 
     case retry

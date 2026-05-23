@@ -1,6 +1,6 @@
 //
 //  InterceptorTests.swift
-//  
+//
 //
 //  Created by Dan_Koza on 11/11/21.
 //
@@ -17,10 +17,10 @@ class InterceptorTests: XCTestCase {
                                                        retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(adapters: [mockRequestInterceptor1, mockRequestInterceptor2],
                                            retriers: [mockRequestInterceptor1, mockRequestInterceptor2])
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        adapter: interceptor,
-                                                        retrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "error", code: 1))])).result
+        _ = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                                adapter: interceptor,
+                                                                retrier: interceptor),
+                                     serializer: Mock.Response.Serializers<Void>([.failure(NSError(domain: "error", code: 1))])).result
 
         let interceptor1AdapterDidRun = await mockRequestInterceptor1.adapterDidRun
         let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
@@ -39,10 +39,10 @@ class InterceptorTests: XCTestCase {
         let mockRequestInterceptor2 = Mock.Interceptor(adapterResult: .doNotAdapt,
                                                        retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        adapter: interceptor,
-                                                        retrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializer<Void>()).result
+        _ = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                                adapter: interceptor,
+                                                                retrier: interceptor),
+                                     serializer: Mock.Response.Serializer<Void>()).result
 
         let interceptor1AdapterDidRun = await mockRequestInterceptor1.adapterDidRun
         let interceptor2AdapterDidRun = await mockRequestInterceptor2.adapterDidRun
@@ -57,10 +57,10 @@ class InterceptorTests: XCTestCase {
         let mockRequestInterceptor2 = Mock.Interceptor(adapterResult: .doNotAdapt,
                                                        retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        adapter: interceptor,
-                                                        retrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
+        _ = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                                adapter: interceptor,
+                                                                retrier: interceptor),
+                                     serializer: Mock.Response.Serializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
 
         let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
         let interceptor2RetrierDidRun = await mockRequestInterceptor2.retrierDidRun
@@ -75,10 +75,10 @@ class InterceptorTests: XCTestCase {
         let mockRequestInterceptor2 = Mock.Interceptor(adapterResult: .doNotAdapt,
                                                        retrierResult: .doNotRetry)
         let interceptor = RouteInterceptor(requestInterceptors: [mockRequestInterceptor1, mockRequestInterceptor2])
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession(),
-                                                        adapter: interceptor,
-                                                        retrier: interceptor),
-                             responseSerializer: Mock.ResponseSerializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
+        _ = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession(),
+                                                                adapter: interceptor,
+                                                                retrier: interceptor),
+                                     serializer: Mock.Response.Serializers([.failure(NSError(domain: "", code: 0)), .success(())])).result
 
         let interceptor1RetrierDidRun = await mockRequestInterceptor1.retrierDidRun
         let interceptor2RetrierDidRun = await mockRequestInterceptor2.retrierDidRun
@@ -89,9 +89,9 @@ class InterceptorTests: XCTestCase {
     func testRouteInterceptor() async throws {
         let mockInterceptor = Mock.Interceptor(adapterResult: .doNotAdapt,
                                                retrierResult: .doNotRetry)
-        _ = await Mock.Route(session: NetworkingSession(urlSession: Mock.UrlSession()),
-                             responseSerializer: Mock.ResponseSerializers<Void>([.failure(NSError(domain: "", code: 0))]),
-                             interceptor: mockInterceptor).result
+        _ = await Mock.ResponseRoute(session: NetworkingSession(urlSession: Mock.UrlSession()),
+                                     serializer: Mock.Response.Serializers<Void>([.failure(NSError(domain: "", code: 0))]),
+                                     interceptor: mockInterceptor).result
 
         let interceptorAdapterDidRun = await mockInterceptor.adapterDidRun
         let interceptorRetrierDidRun = await mockInterceptor.retrierDidRun
